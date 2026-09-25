@@ -592,14 +592,18 @@ function renderHome() {
   trend.append(chartBox);
   trend.append(createTrendTable());
   const insight=element('aside','insight-panel');
+  let insightMetric=18;
   if(selectedFilters().length) {
     const relevant=metric(18);
     const observation=filteredFinding('D');
-    insight.append(element('span','insight-tag','筛后观察'),element('h3','',relevant.kind==='rate'?`试用转正率 ${percent(relevant.value)}`:'当前筛选下试用转正率不适用'),
-      element('p','',observation?.id===18?observation.text:`${relevant.reason??'当前组合没有可比样本'}。`));
+    insightMetric=observation?.id??18;
+    const title=insightMetric!==18?`${catalogItem(insightMetric).name} · ${displayValue(insightMetric)}`:
+      relevant.kind==='rate'?`试用转正率 ${percent(relevant.value)}`:'当前筛选下试用转正率不适用';
+    insight.append(element('span','insight-tag','筛后观察'),element('h3','',title),
+      element('p','',observation?.text??`${relevant.reason??'当前组合没有可比样本'}。`));
   } else insight.append(element('span','insight-tag','本周需要看'),element('h3','','试用转正率下降 1.6 个百分点'),
                  element('p','',filteredFinding('D')?.text??'成熟试用批次数据暂不可用。'));
-  const storyLink=element('a','insight-link','查看订阅诊断与证据 ↗'); storyLink.href=routeHref('D',18); insight.append(storyLink);
+  const storyLink=element('a','insight-link','查看订阅诊断与证据 ↗'); storyLink.href=routeHref('D',insightMetric); insight.append(storyLink);
   story.append(trend,insight); dash.append(story,journeyTitle,rail);
 
   const lower=element('div','lower-grid');
@@ -1201,6 +1205,40 @@ function filteredFinding(page) {
     sourceData.catalog.find(item=>item.page===page&&m(item.id).kind!=='na')?.id;
   return fallback?{id:fallback,text:`${catalogItem(fallback).name}为 ${displayValue(fallback)}。当前筛选下缺少可核验的趋势比较；请查看本项分子、分母和来源。`}:null;
 }
+function metricInspector(id,page) {
+  const item=catalogItem(id),contract=contractFor(id),value=metric(id);
+  const panel=element('div','metric-inspector-content');
+  panel.append(element('p','inspector-kicker',`指标摘要 / #${String(id).padStart(2,'0')}`),
+    element('h3','',item.name),element('strong','inspector-value',displayValue(id)));
+  const rows=element('dl','inspector-facts');
+  const fact=(label,text)=>{
+    const row=element('div','');row.append(element('dt','',label),element('dd','',text));rows.append(row);
+  };
+  fact('统计对象',contract.entity);
+  fact('时间窗口',contract.window);
+  if(value.kind==='rate')fact('本期分子 / 分母',`${number(value.numerator)} / ${number(value.denominator)}`);
+  else if(value.kind==='na')fact('当前状态',value.reason);
+  const history=metricHistory(id);
+  if(history) {
+    const index=filterState.week&&history.labels[0]?.startsWith('W')?
+      history.labels.indexOf(`W${filterState.week}`):history.values.length-1;
+    const current=history.values[index],previous=history.values[index-1];
+    if(index>0&&Number.isFinite(current)&&Number.isFinite(previous)) {
+      const delta=current-previous;
+      const amount=history.unit==='%'?`${Math.abs(delta).toFixed(1)} 个百分点`:
+        history.unit==='美元/人'?`$${Math.abs(delta).toFixed(2)}`:
+          `${number(Math.abs(Math.round(delta)))} ${history.unit}`;
+      fact('较上一期',`${Math.abs(delta)<.05?'基本持平':`${delta>0?'上升':'下降'} ${amount}`} · ${history.labels[index-1]} → ${history.labels[index]}`);
+    }
+  }
+  panel.append(rows);
+  panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
+    id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
+      selectedFilters().length?'当前筛选结果含模拟分片估算；请结合下方数据核对。':'结果来自演示底表；趋势中的构造数据在图注中说明。'));
+  const link=element('a','inspector-link','查看图表与完整数据 ↓');
+  link.href=routeHref(page,id);panel.append(link);
+  return panel;
+}
 function renderDetail(page,selectedMetric) {
   disposeCharts();
   const detail=pages[page];
@@ -1217,13 +1255,31 @@ function renderDetail(page,selectedMetric) {
   body.append(filterBar(page));
   const overview=element('section','detail-section');
   overview.append(sectionTitle('01  /  SIGNALS','关键观察',period));
+  const overviewGrid=element('div','signals-layout');
+  const overviewMain=element('div','signals-main');
   const hero=element('div','detail-kpis');
+  const inspector=element('aside','metric-inspector');
+  inspector.setAttribute('aria-label','选中指标摘要');
+  inspector.tabIndex=-1;
+  const selectMetric=id=>{
+    inspector.replaceChildren(metricInspector(id,page));
+    hero.querySelectorAll('.detail-kpi').forEach(card=>{
+      const selected=Number(card.dataset.metricId)===id;
+      card.classList.toggle('selected',selected);
+      card.querySelector('.detail-select')?.setAttribute('aria-pressed',String(selected));
+    });
+  };
   info.heroIds.forEach(id=>{
     const item=catalogItem(id);
     const card=element('article',`detail-kpi${id===selectedMetric?' selected':''}`);
+    card.dataset.metricId=String(id);
     const heading=element('div','metric-heading');heading.append(element('h3','',item.name),definition(id,item.name));
+    const select=element('button','detail-select',displayValue(id));select.type='button';
+    select.setAttribute('aria-label',`在右侧查看${item.name}摘要`);
+    select.setAttribute('aria-pressed',String(id===selectedMetric));
+    select.addEventListener('click',()=>{selectMetric(id);inspector.focus({preventScroll:true});});
     const link=element('a','detail-evidence-link','查看对应数据 ↓');link.href=routeHref(page,id);
-    card.append(element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),heading,element('strong','',displayValue(id)),link);
+    card.append(element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),heading,select,link);
     const trend=headlineTrend(id);if(trend)card.append(trend);
     if(metric(id).kind==='na')card.append(element('p','metric-na-reason',metric(id).reason));
     hero.append(card);
@@ -1247,7 +1303,9 @@ function renderDetail(page,selectedMetric) {
     const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
     related.href=routeHref(info.crossLink);finding.append(related);
   }
-  overview.append(finding,hero);body.append(overview);
+  overviewMain.append(hero,finding);overviewGrid.append(overviewMain,inspector);
+  overview.append(overviewGrid);body.append(overview);
+  selectMetric(info.heroIds.includes(selectedMetric)?selectedMetric:info.heroIds[0]);
   const evidenceFor=metricEvidence(selectedMetric,page);body.append(evidenceFor.node);
   const evidence=element('section','detail-section');
   const drawSpecs=[];
