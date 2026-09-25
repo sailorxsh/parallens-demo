@@ -1,0 +1,626 @@
+[
+  {
+    "week": 1,
+    "weekEnd": "2026-06-28",
+    "registrationCohort": {
+      "eligible": 2420,
+      "registered": 2420,
+      "bound72h": 1742,
+      "firstImage7d": 1573,
+      "valueActivated7dBird": 949,
+      "birdEligible": 1694,
+      "trialStarted7d": 1137
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 64400,
+      "appMAU": 43500,
+      "activeDevices": 82000
+    },
+    "paidUsersIncludingPackOnly": 12000
+  },
+  {
+    "week": 2,
+    "weekEnd": "2026-07-05",
+    "registrationCohort": {
+      "eligible": 2490,
+      "registered": 2490,
+      "bound72h": 1803,
+      "firstImage7d": 1618,
+      "valueActivated7dBird": 976,
+      "birdEligible": 1743,
+      "trialStarted7d": 1170
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 64720,
+      "appMAU": 43800,
+      "activeDevices": 82500
+    },
+    "paidUsersIncludingPackOnly": 12050
+  },
+  {
+    "week": 3,
+    "weekEnd": "2026-07-12",
+    "registrationCohort": {
+      "eligible": 2510,
+      "registered": 2510,
+      "bound72h": 1827,
+      "firstImage7d": 1632,
+      "valueActivated7dBird": 984,
+      "birdEligible": 1757,
+      "trialStarted7d": 1180
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 65040,
+      "appMAU": 44100,
+      "activeDevices": 83000
+    },
+    "paidUsersIncludingPackOnly": 12100
+  },
+  {
+    "week": 4,
+    "weekEnd": "2026-07-19",
+    "registrationCohort": {
+      "eligible": 2460,
+      "registered": 2460,
+      "bound72h": 1771,
+      "firstImage7d": 1599,
+      "valueActivated7dBird": 964,
+      "birdEligible": 1722,
+      "trialStarted7d": 1156
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 65360,
+      "appMAU": 44400,
+      "activeDevices": 83500
+    },
+    "paidUsersIncludingPackOnly": 12150
+  },
+  {
+    "week": 5,
+    "weekEnd": "2026-07-26",
+    "registrationCohort": {
+      "eligible": 2600,
+      "registered": 2600,
+      "bound72h": 1882,
+      "firstImage7d": 1690,
+      "valueActivated7dBird": 1019,
+      "birdEligible": 1820,
+      "trialStarted7d": 1222
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 65680,
+      "appMAU": 44700,
+      "activeDevices": 84000
+    },
+    "paidUsersIncludingPackOnly": 12200
+  },
+  {
+    "week": 6,
+    "weekEnd": "2026-08-02",
+    "registrationCohort": {
+      "eligible": 2580,
+      "registered": 2580,
+      "bound72h": 1878,
+      "firstImage7d": 1677,
+      "valueActivated7dBird": 1011,
+      "birdEligible": 1806,
+      "trialStarted7d": 1213
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 66000,
+      "appMAU": 45000,
+      "activeDevices": 84500
+    },
+    "paidUsersIncludingPackOnly": 12250
+  },
+  {
+    "week": 7,
+    "weekEnd": "2026-08-09",
+    "registrationCohort": {
+      "eligible": 2670,
+      "registered": 2670,
+      "bound72h": 1922,
+      "firstImage7d": 1736,
+      "valueActivated7dBird": 1047,
+      "birdEligible": 1869,
+      "trialStarted7d": 1255
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 66320,
+      "appMAU": 45300,
+      "activeDevices": 85000
+    },
+    "paidUsersIncludingPackOnly": 12300
+  },
+  {
+    "week": 8,
+    "weekEnd": "2026-08-16",
+    "registrationCohort": {
+      "eligible": 2640,
+      "registered": 2640,
+      "bound72h": 1911,
+      "firstImage7d": 1716,
+      "valueActivated7dBird": 1035,
+      "birdEligible": 1848,
+      "trialStarted7d": 1241
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 4200,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 1680
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 66640,
+      "appMAU": 45600,
+      "activeDevices": 85500
+    },
+    "paidUsersIncludingPackOnly": 12350
+  },
+  {
+    "week": 9,
+    "weekEnd": "2026-08-23",
+    "registrationCohort": {
+      "eligible": 2700,
+      "registered": 2700,
+      "bound72h": 1966,
+      "firstImage7d": 1728,
+      "valueActivated7dBird": 907,
+      "birdEligible": 1890,
+      "trialStarted7d": 1269
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 450,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 6,
+        "converted": 194
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 5800,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 3280
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 67040,
+      "appMAU": 45900,
+      "activeDevices": 83778
+    },
+    "paidUsersIncludingPackOnly": 12400
+  },
+  {
+    "week": 10,
+    "weekEnd": "2026-08-30",
+    "registrationCohort": {
+      "eligible": 2730,
+      "registered": 2730,
+      "bound72h": 1966,
+      "firstImage7d": 1747,
+      "valueActivated7dBird": 917,
+      "birdEligible": 1911,
+      "trialStarted7d": 1283
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 434,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 22,
+        "converted": 178
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 5800,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 3280
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 67360,
+      "appMAU": 46200,
+      "activeDevices": 84278
+    },
+    "paidUsersIncludingPackOnly": 12450
+  },
+  {
+    "week": 11,
+    "weekEnd": "2026-09-06",
+    "registrationCohort": {
+      "eligible": 2690,
+      "registered": 2690,
+      "bound72h": 1948,
+      "firstImage7d": 1722,
+      "valueActivated7dBird": 904,
+      "birdEligible": 1883,
+      "trialStarted7d": 1264
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 434,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 22,
+        "converted": 178
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 5800,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 3280
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 67680,
+      "appMAU": 46500,
+      "activeDevices": 84778
+    },
+    "paidUsersIncludingPackOnly": 12500
+  },
+  {
+    "week": 12,
+    "weekEnd": "2026-09-13",
+    "registrationCohort": {
+      "eligible": 2750,
+      "registered": 2750,
+      "bound72h": 2002,
+      "firstImage7d": 1760,
+      "valueActivated7dBird": 924,
+      "birdEligible": 1925,
+      "trialStarted7d": 1292
+    },
+    "bindingAttempts": {
+      "total": 2000,
+      "successful": 1800
+    },
+    "trialMaturity": {
+      "completed": 1000,
+      "converted": 434,
+      "plusMonthlyAndroid": {
+        "completed": 400,
+        "paymentAttempts": 200,
+        "paymentFailed": 22,
+        "converted": 178
+      },
+      "otherSegments": {
+        "converted": 256
+      }
+    },
+    "renewal": {
+      "due": 500,
+      "successful": 430
+    },
+    "deviceEventsBird": {
+      "triggers": 10000,
+      "empty": 5800,
+      "k6Firmware28": {
+        "triggers": 4000,
+        "empty": 3280
+      },
+      "others": {
+        "triggers": 6000,
+        "empty": 2520
+      }
+    },
+    "activity": {
+      "compositeMAU": 68000,
+      "appMAU": 46800,
+      "activeDevices": 85278
+    },
+    "paidUsersIncludingPackOnly": 12550
+  }
+]

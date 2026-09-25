@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14251f">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <title>用户与设备经营总览 · Parallens</title>
+  <link rel="stylesheet" href="./style.css?v=20260925-24">
+  <script defer src="./vendor/echarts.min.js"></script>
+  <script defer src="./app.js?v=20260925-24"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <div class="shell">
+    <aside class="app-sidebar" aria-label="页面导航">
+      <div class="sidebar-inner">
+        <div class="brand" aria-label="Parallens">P<span class="brand-dot">·</span> PARALLENS</div>
+        <div class="brand-caption">用户与设备经营观察台</div>
+        <nav class="sidebar-nav" aria-label="主导航">
+          <a class="nav-link" data-page="" href="#/">经营总览</a>
+          <span class="nav-stage">诊断专题</span>
+          <a class="nav-link" data-page="A" href="#/A">A · 新客与激活</a>
+          <a class="nav-link" data-page="B" href="#/B">B · 活跃与留存</a>
+          <a class="nav-link" data-page="C" href="#/C">C · 设备健康</a>
+          <a class="nav-link" data-page="D" href="#/D">D · 订阅转化</a>
+          <a class="nav-link" data-page="E" href="#/E">E · 付费价值</a>
+          <a class="nav-link" data-page="F" href="#/F">F · 用户与设备结构</a>
+          <a class="nav-link" data-page="G" href="#/G">G · 异常与数据质量</a>
+        </nav>
+        <p class="sidebar-foot">模拟数据 · 桌面原型</p>
+      </div>
+    </aside>
+    <div class="app-content">
+      <main id="main" tabindex="-1"></main>
+      <footer class="site-foot"><span>PARALLENS / OPERATIONS REVIEW</span><span>本看板为演示原型，数据为模拟生成</span></footer>
+    </div>
+  </div>
+  <div id="announcement" class="visually-hidden" aria-live="polite"></div>
+  <div id="metric-definition-popover" popover="auto" role="dialog" aria-label="指标口径" hidden></div>
+</body>
+</html>

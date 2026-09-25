@@ -1,0 +1,1368 @@
+[
+  {
+    "id": 2,
+    "name": "有效订阅用户",
+    "page": "D",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "当前订阅状态为有效且已实际付费的去重主账号数；不含试用、测试账号；观鸟线Free档为基础权益不计入。",
+    "source": "App订阅状态表、Apple/Google/Stripe等订阅状态",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 3,
+    "name": "MRR",
+    "page": "D",
+    "entity": "日",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "MRR＝Σ当期有效月付套餐价格＋Σ(当期有效年付套餐价格/12)＋Σ当期有效增值Pack月价；基础订阅与增值Pack分列后汇总，不含试用和Free。",
+    "source": "订阅状态表、支付/续费交易、增值Pack订阅记录",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 4,
+    "name": "活跃用户",
+    "page": "B",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "复合活跃用户＝周期内满足任一：①App打开②绑定设备产生新内容③推送送达且点击 的去重用户；主账号活跃率＝复合活跃主账号÷有效主账号。",
+    "source": "App活跃事件、设备内容日志、推送送达/点击日志、用户-设备关系表",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 5,
+    "name": "订阅状态快照",
+    "page": "D",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "状态条以有效主账号为全集，逐日互斥归类。观鸟线：Free/试用中·早期（剩余>3天）/试用中·临期（剩余≤3天）/付费中/已取消未到期/支付失败；狩猎线以无权益替代Free，另含已过期。归类优先级：试用、有效付费（其中已取消未到期单列）、支付失败、已过期、Free或无权益。付费权益有效人数包含已取消未到期且尚有权益者；支付失败是否仍有权益须依据宽限期状态判定。",
+    "source": "订阅状态表、用户-设备关系",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。缺少按套餐拆分的互斥状态人数。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 6,
+    "name": "主账号订阅率",
+    "page": "D",
+    "entity": "月",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": 12400,
+    "denominator": 82400,
+    "formula": "主账号订阅率＝当前有效付费订阅主账号÷具备订阅资格的有效主账号（订阅资格＝绑定≥1台设备，见基础实体页）。",
+    "source": "用户-设备关系、订阅状态表；销售渠道维度为用户申报数据",
+    "rateComponents": [
+      {
+        "name": "主账号订阅率",
+        "numerator": 12400,
+        "denominator": 82400
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 7,
+    "name": "累计用户与绑定用户",
+    "page": "A",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "累计注册用户＝截至当前完成注册的去重正式用户数；绑定用户＝当前至少绑定1台设备的去重主账号数。",
+    "source": "App用户主数据、用户-设备关系表",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 8,
+    "name": "累计激活设备与绑定设备",
+    "page": "C",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "累计激活设备＝历史首次产出内容（首图/首视频）的去重设备；当前绑定设备＝当前存在有效主账号绑定关系的设备。",
+    "source": "设备主数据、设备内容日志、用户-设备关系表",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 9,
+    "name": "新增用户与绑定转化",
+    "page": "A",
+    "entity": "用户",
+    "window": "最近完整周及最近12周趋势",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "userType",
+      "week"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "新增注册用户＝统计期首次注册用户数；新增绑定用户＝统计期首次完成主账号设备绑定的用户数。",
+    "source": "App用户主数据、用户-设备关系事件",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 10,
+    "name": "注册后设备绑定率",
+    "page": "A",
+    "entity": "用户Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "userType",
+      "week"
+    ],
+    "numerator": 2002,
+    "denominator": 2750,
+    "formula": "72h绑定率＝注册后72小时内完成设备绑定的新注册用户÷进入完整观察期的新注册用户；7天绑定率同理。",
+    "source": "用户注册数据、Owner绑定事件",
+    "rateComponents": [
+      {
+        "name": "注册后设备绑定率",
+        "numerator": 2002,
+        "denominator": 2750
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 11,
+    "name": "首次绑定成功率与耗时",
+    "page": "A",
+    "entity": "绑定尝试",
+    "window": "最近完整周及最近12周趋势",
+    "dimensions": [
+      "appPlatform",
+      "deviceModel",
+      "deviceStatus",
+      "week"
+    ],
+    "numerator": 1800,
+    "denominator": 2000,
+    "formula": "首次绑定成功率＝首次绑定成功次数÷首次有效绑定尝试次数；绑定耗时＝从开始绑定到成功绑定的时间，展示中位数/P90。",
+    "source": "App绑定埋点、蓝牙配网日志、绑定接口/错误日志、用户-设备关系事件",
+    "rateComponents": [
+      {
+        "name": "首次绑定成功率与耗时",
+        "numerator": 1800,
+        "denominator": 2000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 12,
+    "name": "注册后7/30天激活率",
+    "page": "A",
+    "entity": "用户Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "week"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "7天激活率＝注册后7天内绑定设备且产出首图的新注册用户÷进入完整观察期的新注册用户；30天同理。",
+    "source": "用户注册数据、绑定事件、设备内容日志",
+    "rateComponents": [
+      {
+        "name": "value/D7",
+        "numerator": 1760,
+        "denominator": 2750
+      },
+      {
+        "name": "value/D30",
+        "numerator": 2140,
+        "denominator": 2670
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 13,
+    "name": "价值激活率（7日）",
+    "page": "A",
+    "entity": "用户Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType",
+      "season",
+      "week"
+    ],
+    "numerator": 924,
+    "denominator": 1925,
+    "formula": "7日价值激活率＝注册后完整观察满7日、且7日内达成价值激活的观鸟线新注册用户÷已满7日观察期的观鸟线新注册用户。狩猎线定义未确认时不适用。",
+    "source": "用户注册、设备内容日志、AI识别结果",
+    "rateComponents": [
+      {
+        "name": "价值激活率（7日）",
+        "numerator": 924,
+        "denominator": 1925
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。仅观鸟线有当前口径，狩猎线不适用。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 14,
+    "name": "绑定→首图时长",
+    "page": "A",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "绑定→首图时长＝设备首次产出内容时间－绑定完成时间；展示中位数/P90及0-1h/1-6h/6-24h/1-3天/3天+分布。",
+    "source": "用户-设备关系事件、设备内容日志",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 15,
+    "name": "绑定未激活设备清单",
+    "page": "A",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "已绑定且超过设定观察天数（建议3/7/14天分级）仍无首图记录的设备。",
+    "source": "用户-设备关系事件、设备内容日志、CRM/客服状态",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 16,
+    "name": "新增激活设备",
+    "page": "A",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "salesChannel"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "新增激活设备＝统计期首次产出内容（首图/首视频）的设备数。",
+    "source": "设备内容日志、设备主数据",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 17,
+    "name": "试用开启率",
+    "page": "D",
+    "entity": "用户Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan",
+      "week"
+    ],
+    "numerator": 1292,
+    "denominator": 2750,
+    "formula": "试用开启率＝注册后7天内开启试用的新注册用户÷进入完整7日观察期的新注册用户；若需分析其他开启窗口，单独标注。",
+    "source": "用户注册、订阅试用记录",
+    "rateComponents": [
+      {
+        "name": "试用开启率",
+        "numerator": 1292,
+        "denominator": 2750
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 18,
+    "name": "试用→转正率",
+    "page": "D",
+    "entity": "试用Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan",
+      "week"
+    ],
+    "numerator": 434,
+    "denominator": 1000,
+    "formula": "试用转正率＝试用到期成功扣费用户÷同期完成7日试用的用户；支付失败宽限期内不计入转正。",
+    "source": "订阅状态历史、支付/扣费结果",
+    "rateComponents": [
+      {
+        "name": "试用→转正率",
+        "numerator": 434,
+        "denominator": 1000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 19,
+    "name": "首次订阅率",
+    "page": "D",
+    "entity": "Eligible用户Cohort",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": 650,
+    "denominator": 2500,
+    "formula": "首次订阅率＝绑定完成后30天内首次成功付费的主账号÷进入完整30天观察期、绑定时从未订阅过的可订阅主账号；默认按首次绑定批次，设备激活批次作为单独切换视图。",
+    "source": "Owner资格规则、订阅历史、用户/设备主数据",
+    "rateComponents": [
+      {
+        "name": "首次订阅率",
+        "numerator": 650,
+        "denominator": 2500
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 20,
+    "name": "订阅页与弹窗转化率",
+    "page": "D",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "appPlatform",
+      "productLine",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "订阅页转化率＝访问订阅页后7天内付费的用户÷有效访问订阅页用户；弹窗转化率同理（曝光后7天归因窗口）。",
+    "source": "App埋点、订阅支付、运营Campaign/弹窗记录",
+    "rateComponents": [
+      {
+        "name": "value/combined",
+        "numerator": 120,
+        "denominator": 1400
+      },
+      {
+        "name": "value/subscriptionPage",
+        "numerator": 90,
+        "denominator": 900
+      },
+      {
+        "name": "value/popup",
+        "numerator": 30,
+        "denominator": 500
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 21,
+    "name": "订阅用户新增与流失",
+    "page": "D",
+    "entity": "用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "期末有效订阅用户＝期初有效订阅用户＋首次付费（试用转正＋直购）＋恢复订阅－失去有效付费权益的用户；同一用户期内多次状态变更按状态流水处理，净增与期初/期末快照核对。",
+    "source": "订阅状态历史、支付/续费结果",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。缺少分产品线的期初/进入/退出流转。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 22,
+    "name": "Free档权益消耗率（观鸟线）",
+    "page": "D",
+    "entity": "用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "userType",
+      "plan"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "AI识别用满率＝消耗≥30次/月的Free用户占比；存储占用率＝≥1GB占比；影像传输用满率＝≥20次/月占比。首页“Free权益用满用户数”＝当月任一权益达到对应阈值的去重Free主账号数。",
+    "source": "Free权益使用记录、订阅状态",
+    "rateComponents": [
+      {
+        "name": "value/anyExhausted",
+        "numerator": 312,
+        "denominator": 47880
+      },
+      {
+        "name": "value/aiExhausted",
+        "numerator": 220,
+        "denominator": 47880
+      },
+      {
+        "name": "value/storageExhausted",
+        "numerator": 160,
+        "denominator": 47880
+      },
+      {
+        "name": "value/transferExhausted",
+        "numerator": 140,
+        "denominator": 47880
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。仅观鸟线有当前口径，狩猎线不适用。仅观鸟Free权益，Plus/Pro套餐不适用。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 23,
+    "name": "续订率与流失率",
+    "page": "D",
+    "entity": "用户",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan",
+      "week"
+    ],
+    "numerator": 430,
+    "denominator": 500,
+    "formula": "续订率＝成功续订用户÷当期到期应续订用户；流失率＝周期内失去有效订阅状态用户÷期初有效订阅用户（观鸟线区分回落Free与彻底流失）。",
+    "source": "订阅状态历史、续费交易、支付失败、取消原因",
+    "rateComponents": [
+      {
+        "name": "续订率与流失率",
+        "numerator": 430,
+        "denominator": 500
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 24,
+    "name": "月度用户留存率",
+    "page": "B",
+    "entity": "用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "userType"
+    ],
+    "numerator": 27000,
+    "denominator": 35000,
+    "formula": "月度留存率＝上月复合活跃且本月仍复合活跃用户÷上月复合活跃用户。",
+    "source": "统一活跃事件事实表",
+    "rateComponents": [
+      {
+        "name": "月度用户留存率",
+        "numerator": 27000,
+        "denominator": 35000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 25,
+    "name": "日/周/月活跃用户",
+    "page": "B",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "DAU/WAU/MAU＝对应自然日、周、月内满足复合活跃（三类任一，见基础实体页）的去重用户；App口径作子项并列。",
+    "source": "App活跃事件、设备内容日志、推送送达/点击日志",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 26,
+    "name": "用户使用频次与时长",
+    "page": "B",
+    "entity": "Session",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "人均会话次数＝有效会话数÷活跃用户；会话时长展示中位数/P90（不展示平均值）。",
+    "source": "App前后台Session埋点",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 27,
+    "name": "核心功能使用率",
+    "page": "B",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "userType",
+      "functionType"
+    ],
+    "numerator": 26000,
+    "denominator": 68000,
+    "formula": "某功能使用率＝周期内至少使用1次该功能的活跃主账号÷活跃主账号。",
+    "source": "App功能埋点、通知设置、Owner关系表",
+    "rateComponents": [
+      {
+        "name": "核心功能使用率",
+        "numerator": 26000,
+        "denominator": 68000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 28,
+    "name": "新用户D1/D7/D30留存",
+    "page": "B",
+    "entity": "用户Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "D1/D7/D30留存率＝同一批新用户中在第1/7/30天仍复合活跃的用户÷该批进入完整观察期的用户。",
+    "source": "用户注册、设备激活Owner映射、活跃事件",
+    "rateComponents": [
+      {
+        "name": "value/D1",
+        "numerator": 1900,
+        "denominator": 2500
+      },
+      {
+        "name": "value/D7",
+        "numerator": 1500,
+        "denominator": 2500
+      },
+      {
+        "name": "value/D30",
+        "numerator": 1100,
+        "denominator": 2500
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 29,
+    "name": "季节阈值未使用用户与回流",
+    "page": "B",
+    "entity": "Owner用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType",
+      "season"
+    ],
+    "numerator": 4200,
+    "denominator": 82400,
+    "formula": "未使用率＝连续N天（迁徙季21天/淡季30天）无复合活跃的主账号÷可观察主账号；回流率＝未使用用户中重新复合活跃的用户÷可观察未使用用户。",
+    "source": "Owner关系表、活跃事件、CRM触达记录（若有）",
+    "rateComponents": [
+      {
+        "name": "季节阈值未使用用户与回流",
+        "numerator": 4200,
+        "denominator": 82400
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 30,
+    "name": "复合活跃构成",
+    "page": "B",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "各类渗透率＝周期内命中该类活跃的去重用户÷复合活跃用户；展示三类交集/并集结构。",
+    "source": "App事件、设备内容日志、推送送达/点击日志",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 31,
+    "name": "推送送达率与点击率（用户侧）",
+    "page": "B",
+    "entity": "推送",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "appPlatform",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "送达率＝送达数÷发送数；点击率＝点击数÷送达数；按推送类型（告警/召回/营销）拆分。",
+    "source": "Push服务回执、App点击埋点",
+    "rateComponents": [
+      {
+        "name": "value/delivery",
+        "numerator": 90000,
+        "denominator": 100000
+      },
+      {
+        "name": "value/click",
+        "numerator": 13500,
+        "denominator": 90000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 32,
+    "name": "套餐升级与降级",
+    "page": "D",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "升级率＝发生低档→高档套餐变更用户÷可升级付费用户（非最高档）；降级率＝发生高档→低档变更用户÷高档付费用户；观鸟线含降级至Free。",
+    "source": "订阅状态历史、套餐主数据",
+    "rateComponents": [
+      {
+        "name": "value/upgrade",
+        "numerator": 90,
+        "denominator": 8000
+      },
+      {
+        "name": "value/downgrade",
+        "numerator": 60,
+        "denominator": 8000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 33,
+    "name": "订阅恢复率与订阅时长",
+    "page": "D",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "订阅恢复率＝取消/过期用户中重新恢复订阅用户÷可召回用户（取消/过期且未卸载且推送通道仍开）；订阅时长展示中位数/P90及分布。",
+    "source": "订阅状态历史、恢复订阅交易",
+    "rateComponents": [
+      {
+        "name": "value/recovery",
+        "numerator": 90,
+        "denominator": 900
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 34,
+    "name": "付费用户与权益结构",
+    "page": "E",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "付费用户＝拥有有效订阅或有效增值Pack（按月订阅且当期有效）的去重主账号；按仅订阅/仅增值/两者都有分类，增值侧细分Pack类型。",
+    "source": "订阅权益、增值Pack订阅记录、Owner资格表",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 35,
+    "name": "月度订阅付费用户与人均收入",
+    "page": "E",
+    "entity": "用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "月度订阅付费用户＝当月至少成功支付1次订阅费用的去重用户；人均收入（ARPPU）＝当月订阅净收入÷月度付费用户。",
+    "source": "订阅支付交易、渠道销售模块App订阅净收入",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 36,
+    "name": "增值包渗透率",
+    "page": "E",
+    "entity": "用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "某Pack渗透率＝当期有效订阅该Pack的主账号÷付费用户；按Pack类型分别计算。",
+    "source": "增值Pack订阅记录",
+    "rateComponents": [
+      {
+        "name": "value/anyPack",
+        "numerator": 3150,
+        "denominator": 12550
+      },
+      {
+        "name": "value/byPack/Extra Memory Pack",
+        "numerator": 1200,
+        "denominator": 12550
+      },
+      {
+        "name": "value/byPack/Device Pack",
+        "numerator": 1000,
+        "denominator": 12550
+      },
+      {
+        "name": "value/byPack/观鸟 AI Agent Pack",
+        "numerator": 800,
+        "denominator": 12550
+      },
+      {
+        "name": "value/byPack/HD Pack",
+        "numerator": 600,
+        "denominator": 12550
+      },
+      {
+        "name": "value/byPack/狩猎 AI Agent Pack",
+        "numerator": 450,
+        "denominator": 12550
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 37,
+    "name": "增值服务首次购买与复购用户",
+    "page": "E",
+    "entity": "用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "userType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "首次购买用户＝历史第一次增值Pack订阅发生在本期的用户；复购用户＝续订月数≥2或到期后再次订阅的用户。",
+    "source": "App增值服务交易历史",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 38,
+    "name": "用户与设备结构",
+    "page": "E",
+    "entity": "月",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "分别计算各国家用户占比、各App平台用户占比和各设备型号设备占比；三个视图使用各自正确分母。",
+    "source": "用户主数据、App平台、设备主数据、活跃/激活状态",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 39,
+    "name": "不同设备型号的订阅表现",
+    "page": "E",
+    "entity": "月",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "productLine",
+      "deviceModel"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "按设备型号统一展示主账号数、30天活跃率、主账号订阅率和多设备用户占比。",
+    "source": "设备型号、Owner关系、活跃事件、订阅状态",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 40,
+    "name": "不同销售渠道的用户质量",
+    "page": "E",
+    "entity": "销售渠道",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "salesChannel"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "按申报购买渠道统一比较注册后7/30天激活率、激活后30天活跃率、订阅率和人均订阅收入。",
+    "source": "用户申报渠道、设备激活、用户活跃、订阅状态、订阅交易",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 41,
+    "name": "设备活跃率",
+    "page": "C",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "firmware"
+    ],
+    "numerator": 85278,
+    "denominator": 139800,
+    "formula": "设备活跃率＝统计期至少发生1次有效设备行为的设备÷可观察的有效激活设备。",
+    "source": "设备心跳、事件上传、直播/同步日志、设备主数据",
+    "rateComponents": [
+      {
+        "name": "设备活跃率",
+        "numerator": 85278,
+        "denominator": 139800
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 42,
+    "name": "空触发率",
+    "page": "C",
+    "entity": "设备",
+    "window": "最近完整周及最近12周趋势",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "season",
+      "firmware",
+      "week"
+    ],
+    "numerator": 5800,
+    "denominator": 10000,
+    "formula": "空触发率＝周期内触发但未识别出鸟种的内容数÷全部触发内容数。",
+    "source": "设备内容日志、AI识别结果",
+    "rateComponents": [
+      {
+        "name": "空触发率",
+        "numerator": 5800,
+        "denominator": 10000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。仅观鸟线有当前口径，狩猎线不适用。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 43,
+    "name": "新设备D7/D30留存",
+    "page": "C",
+    "entity": "设备Cohort",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "salesChannel"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "D7/D30设备留存率＝新激活设备中第7/30天仍有有效行为的设备÷进入完整观察期的新激活设备。",
+    "source": "设备激活（首图）、有效设备行为日志",
+    "rateComponents": [
+      {
+        "name": "value/D7",
+        "numerator": 1600,
+        "denominator": 2000
+      },
+      {
+        "name": "value/D30",
+        "numerator": 1450,
+        "denominator": 2000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 44,
+    "name": "长期未使用设备与重新活跃",
+    "page": "C",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "season"
+    ],
+    "numerator": 12000,
+    "denominator": 139800,
+    "formula": "未使用设备率＝连续N天（迁徙季21天/淡季30天）无有效设备行为的设备÷可观察有效设备；重新活跃率＝未使用设备中恢复有效行为的设备÷可观察未使用设备。",
+    "source": "设备行为日志、设备主数据",
+    "rateComponents": [
+      {
+        "name": "长期未使用设备与重新活跃",
+        "numerator": 12000,
+        "denominator": 139800
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 45,
+    "name": "设备在线与联网情况",
+    "page": "C",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "firmware"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "联网成功率＝成功联网次数÷有效联网尝试次数；在线状态以\"距最近一次上报时长\"分布展示（<24h/24-72h/72h+），离线判定阈值按固件心跳策略设定。",
+    "source": "设备心跳/联网日志、固件版本",
+    "rateComponents": [
+      {
+        "name": "value/networkSuccess",
+        "numerator": 9500,
+        "denominator": 10000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 46,
+    "name": "关键功能成功率",
+    "page": "C",
+    "entity": "请求/事件",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "firmware",
+      "functionType"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "分别计算事件上传成功率、直播连接成功率和通知推送成功率。",
+    "source": "设备事件上传日志、直播服务日志、Push服务状态",
+    "rateComponents": [
+      {
+        "name": "value/upload",
+        "numerator": 9900,
+        "denominator": 10000
+      },
+      {
+        "name": "value/live",
+        "numerator": 9700,
+        "denominator": 10000
+      },
+      {
+        "name": "value/push",
+        "numerator": 9850,
+        "denominator": 10000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 47,
+    "name": "固件版本与升级覆盖",
+    "page": "C",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "firmware"
+    ],
+    "numerator": 100660,
+    "denominator": 143800,
+    "formula": "某版本占比＝运行该版本的有效设备÷可升级有效设备；最新版本覆盖率＝运行最新版本设备÷可升级设备。",
+    "source": "设备版本上报、OTA目标版本配置、设备主数据",
+    "rateComponents": [
+      {
+        "name": "固件版本与升级覆盖",
+        "numerator": 100660,
+        "denominator": 143800
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 48,
+    "name": "主账号设备数",
+    "page": "F",
+    "entity": "Owner用户",
+    "window": "最近完整月或指标定义中的月窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "deviceModel",
+      "deviceStatus",
+      "userType"
+    ],
+    "numerator": 18128,
+    "denominator": 82400,
+    "formula": "平均设备数＝主账号绑定设备数÷绑定主账号数；多设备用户占比＝绑定2台及以上设备的主账号÷全部绑定主账号。",
+    "source": "用户-设备Owner关系表",
+    "rateComponents": [
+      {
+        "name": "主账号设备数",
+        "numerator": 18128,
+        "denominator": 82400
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 49,
+    "name": "设备共享情况",
+    "page": "F",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "deviceStatus"
+    ],
+    "numerator": 25884,
+    "denominator": 143800,
+    "formula": "设备共享率＝至少有1个共享用户的主账号设备÷主账号绑定设备；共享用户数＝通过共享关系获得访问权限的去重用户。",
+    "source": "用户-设备Share关系表",
+    "rateComponents": [
+      {
+        "name": "设备共享情况",
+        "numerator": 25884,
+        "denominator": 143800
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 50,
+    "name": "设备绑定状态",
+    "page": "F",
+    "entity": "设备",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "deviceStatus"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "按设备当前有效关系与内容产出互斥统计：①主账号绑定且有首图②主账号绑定但无首图③有首图但无主账号绑定；共享作为①的子维度。",
+    "source": "设备主数据、用户-设备Owner/Share关系表",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 51,
+    "name": "解绑与重新绑定情况",
+    "page": "F",
+    "entity": "解绑事件",
+    "window": "完整观察窗内的指定批次",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "deviceStatus"
+    ],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "解绑率＝周期内解绑设备÷期初主账号绑定设备；重新绑定率＝解绑设备中在规定时间内重新绑定的设备÷可观察解绑设备。",
+    "source": "用户-设备关系事件、App埋点（解绑原因枚举）、客服备注",
+    "rateComponents": [
+      {
+        "name": "value/unboundDeviceRate",
+        "numerator": 250,
+        "denominator": 142000
+      },
+      {
+        "name": "value/reboundWithin7d",
+        "numerator": 120,
+        "denominator": 250
+      },
+      {
+        "name": "value/reboundWithin30d",
+        "numerator": 180,
+        "denominator": 250
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 52,
+    "name": "流失高危用户数",
+    "page": "D",
+    "entity": "用户",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "userType",
+      "subscriptionPlatform",
+      "plan"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "流失高危＝意图层 ∪（行为层 ∩（设备层 ∪ 触达层 ∪ 态度层））；同一主账号去重。演示原型仅展示模拟名单，不触达真实用户。",
+    "source": "订阅状态历史、复合活跃事件、设备在线日志、推送设置、告警响应记录",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 53,
+    "name": "异常情况总览",
+    "page": "G",
+    "entity": "小时/日",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [
+      "country",
+      "appPlatform",
+      "productLine",
+      "deviceModel",
+      "deviceStatus",
+      "season",
+      "firmware",
+      "anomalyType"
+    ],
+    "numerator": "去重计数或金额",
+    "denominator": "不适用",
+    "formula": "重点监控DAU、首次订阅、取消/流失、设备离线、绑定失败等业务异常，以及埋点丢失率、ID-Mapping覆盖率等数据质量异常；与近4周同星期/同时间段基线比较。",
+    "source": "活跃事件、订阅状态、设备在线、绑定错误日志、埋点采集日志、ID-Mapping表、监控规则",
+    "rateComponents": [],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  },
+  {
+    "id": 54,
+    "name": "数据质量监控",
+    "page": "G",
+    "entity": "事件",
+    "window": "2026-09-24 快照或指标定义中的日窗口",
+    "dimensions": [],
+    "numerator": "各子项独立，见原指标计算方法",
+    "denominator": "各子项独立，见原指标计算方法",
+    "formula": "事件丢失率＝1−实际入库事件数/预期事件数；ID-Mapping覆盖率＝uuid↔device_id成功关联记录÷总记录。仅在预期事件数可可靠估计时计算丢失率；否则标为待核验。",
+    "source": "埋点采集日志、ID-Mapping表",
+    "rateComponents": [
+      {
+        "name": "value/eventLoss",
+        "numerator": 220,
+        "denominator": 10000
+      },
+      {
+        "name": "value/idMapping",
+        "numerator": 9650,
+        "denominator": 10000
+      }
+    ],
+    "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
+    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+  }
+]

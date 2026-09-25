@@ -1,0 +1,66 @@
+{
+  "asOf": "2026-09-24",
+  "latestCompleteWeek": "2026-09-13",
+  "season": "迁徙季",
+  "unusedThresholdDays": 21,
+  "registeredCumulative": 128600,
+  "boundOwnerAccounts": 82400,
+  "activatedDevicesCumulative": 176200,
+  "boundDevicesCurrent": 143800,
+  "subscribersOpening": 12020,
+  "firstPaidFromTrial": 530,
+  "firstPaidDirect": 120,
+  "subscriptionRecovered": 90,
+  "subscriptionLost": 360,
+  "effectiveSubscribers": 12400,
+  "subscriptionNetAdd": 380,
+  "baseMRR": 52000,
+  "packMRR": 4000,
+  "totalMRR": 56000,
+  "compositeMAU": 68000,
+  "appMAU": 46800,
+  "paidUsersIncludingPackOnly": 12550,
+  "packOnlyUsers": 150,
+  "birdOwners": 57680,
+  "huntingOwners": 24720,
+  "subscriptionStatuses": {
+    "bird": {
+      "free": 47880,
+      "trialEarly": 1000,
+      "trialNearExpiry": 500,
+      "paidCurrent": 7400,
+      "cancelledButEntitled": 600,
+      "paymentFailed": 300
+    },
+    "hunting": {
+      "noEntitlement": 18120,
+      "trialEarly": 1000,
+      "trialNearExpiry": 500,
+      "paidCurrent": 4000,
+      "cancelledButEntitled": 400,
+      "paymentFailed": 300,
+      "expired": 400
+    }
+  },
+  "effectiveActivatedDevices": 139800,
+  "activeDevices": 85278,
+  "multiDeviceOwners": 18128,
+  "sharedBoundDevices": 25884,
+  "alerts": {
+    "boundNotActivated3d": 128,
+    "highChurnRisk": 168,
+    "seasonalUnusedOwners": 4200,
+    "freeRightsExhausted": 312
+  },
+  "quality": {
+    "eventLossNumerator": 220,
+    "eventExpected": 10000,
+    "mappedRecords": 9650,
+    "mappingRecords": 10000,
+    "thresholds": {
+      "eventLossMax": 0.03,
+      "idMappingMin": 0.95
+    },
+    "status": "正常"
+  }
+}

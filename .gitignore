@@ -1,0 +1,8 @@
+.DS_Store
+.netlify/
+dist/
+scripts/__pycache__/
+*.pyc
+/heatmap-preview.png
+/round*.png
+/.playwright-cli/

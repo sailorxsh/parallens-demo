@@ -1,0 +1,164 @@
+{
+  "country": {
+    "US": {
+      "denominatorShare": 0.65,
+      "numeratorShare": 0.65610634
+    },
+    "UK": {
+      "denominatorShare": 0.18,
+      "numeratorShare": 0.17629422
+    },
+    "DE": {
+      "denominatorShare": 0.1,
+      "numeratorShare": 0.10393764
+    },
+    "Other": {
+      "denominatorShare": 0.07,
+      "numeratorShare": 0.0636618
+    }
+  },
+  "appPlatform": {
+    "iOS": {
+      "denominatorShare": 0.45,
+      "numeratorShare": 0.47226387
+    },
+    "Android": {
+      "denominatorShare": 0.55,
+      "numeratorShare": 0.52773613
+    }
+  },
+  "productLine": {
+    "Bird": {
+      "denominatorShare": 0.7,
+      "numeratorShare": 0.721
+    },
+    "Hunting": {
+      "denominatorShare": 0.3,
+      "numeratorShare": 0.279
+    }
+  },
+  "deviceModel": {
+    "K6": {
+      "denominatorShare": 0.1113,
+      "numeratorShare": 0.09938387
+    },
+    "Bird Lite": {
+      "denominatorShare": 0.3477,
+      "numeratorShare": 0.34187041
+    },
+    "Bird Pro": {
+      "denominatorShare": 0.3129,
+      "numeratorShare": 0.33904713
+    },
+    "Hunt Pro": {
+      "denominatorShare": 0.2281,
+      "numeratorShare": 0.21969859
+    }
+  },
+  "deviceStatus": {
+    "Effective": {
+      "denominatorShare": 0.9,
+      "numeratorShare": 0.936
+    },
+    "Inactive": {
+      "denominatorShare": 0.1,
+      "numeratorShare": 0.064
+    }
+  },
+  "userType": {
+    "Formal": {
+      "denominatorShare": 0.94,
+      "numeratorShare": 0.9682
+    },
+    "Trial": {
+      "denominatorShare": 0.06,
+      "numeratorShare": 0.0318
+    }
+  },
+  "season": {
+    "Migration": {
+      "denominatorShare": 0.7,
+      "numeratorShare": 0.72727273
+    },
+    "Other": {
+      "denominatorShare": 0.3,
+      "numeratorShare": 0.27272727
+    }
+  },
+  "salesChannel": {
+    "Amazon": {
+      "denominatorShare": 0.6,
+      "numeratorShare": 0.588
+    },
+    "Shopify": {
+      "denominatorShare": 0.4,
+      "numeratorShare": 0.412
+    }
+  },
+  "subscriptionPlatform": {
+    "App Store": {
+      "denominatorShare": 0.44,
+      "numeratorShare": 0.45741703
+    },
+    "Google Play": {
+      "denominatorShare": 0.36,
+      "numeratorShare": 0.33466613
+    },
+    "Web": {
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.20791683
+    }
+  },
+  "plan": {
+    "Free": {
+      "denominatorShare": 0.58,
+      "numeratorShare": 0.53790323
+    },
+    "Plus": {
+      "denominatorShare": 0.3,
+      "numeratorShare": 0.3266129
+    },
+    "Pro": {
+      "denominatorShare": 0.12,
+      "numeratorShare": 0.13548387
+    }
+  },
+  "firmware": {
+    "2.8": {
+      "denominatorShare": 0.24,
+      "numeratorShare": 0.19632881
+    },
+    "Other": {
+      "denominatorShare": 0.76,
+      "numeratorShare": 0.80367119
+    }
+  },
+  "functionType": {
+    "Upload": {
+      "denominatorShare": 0.46,
+      "numeratorShare": 0.46976372
+    },
+    "Recognition": {
+      "denominatorShare": 0.34,
+      "numeratorShare": 0.31998398
+    },
+    "Push": {
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.2102523
+    }
+  },
+  "anomalyType": {
+    "Business": {
+      "denominatorShare": 0.57,
+      "numeratorShare": 0.61870145
+    },
+    "Device": {
+      "denominatorShare": 0.29,
+      "numeratorShare": 0.30322645
+    },
+    "Quality": {
+      "denominatorShare": 0.14,
+      "numeratorShare": 0.0780721
+    }
+  }
+}

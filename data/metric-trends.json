@@ -1,0 +1,622 @@
+{
+  "m02": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "人",
+    "kind": "count",
+    "points": [
+      {
+        "kind": "count",
+        "value": 11850
+      },
+      {
+        "kind": "count",
+        "value": 11900
+      },
+      {
+        "kind": "count",
+        "value": 11950
+      },
+      {
+        "kind": "count",
+        "value": 12000
+      },
+      {
+        "kind": "count",
+        "value": 12050
+      },
+      {
+        "kind": "count",
+        "value": 12100
+      },
+      {
+        "kind": "count",
+        "value": 12150
+      },
+      {
+        "kind": "count",
+        "value": 12200
+      },
+      {
+        "kind": "count",
+        "value": 12250
+      },
+      {
+        "kind": "count",
+        "value": 12300
+      },
+      {
+        "kind": "count",
+        "value": 12350
+      },
+      {
+        "kind": "count",
+        "value": 12400
+      }
+    ],
+    "note": "有效订阅周末快照：以周度付费权益人数扣除150位仅持有Pack的演示用户；历史为构造数据。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m03": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "美元",
+    "kind": "usd",
+    "points": [
+      {
+        "kind": "usd",
+        "value": 52713
+      },
+      {
+        "kind": "usd",
+        "value": 53009
+      },
+      {
+        "kind": "usd",
+        "value": 53305
+      },
+      {
+        "kind": "usd",
+        "value": 53602
+      },
+      {
+        "kind": "usd",
+        "value": 53900
+      },
+      {
+        "kind": "usd",
+        "value": 54198
+      },
+      {
+        "kind": "usd",
+        "value": 54497
+      },
+      {
+        "kind": "usd",
+        "value": 54796
+      },
+      {
+        "kind": "usd",
+        "value": 55096
+      },
+      {
+        "kind": "usd",
+        "value": 55397
+      },
+      {
+        "kind": "usd",
+        "value": 55698
+      },
+      {
+        "kind": "usd",
+        "value": 56000
+      }
+    ],
+    "note": "MRR周末快照演示序列；最新点锚定底表$56,000，早期点为构造值。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m04": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "人",
+    "kind": "count",
+    "points": [
+      {
+        "kind": "count",
+        "value": 64400
+      },
+      {
+        "kind": "count",
+        "value": 64720
+      },
+      {
+        "kind": "count",
+        "value": 65040
+      },
+      {
+        "kind": "count",
+        "value": 65360
+      },
+      {
+        "kind": "count",
+        "value": 65680
+      },
+      {
+        "kind": "count",
+        "value": 66000
+      },
+      {
+        "kind": "count",
+        "value": 66320
+      },
+      {
+        "kind": "count",
+        "value": 66640
+      },
+      {
+        "kind": "count",
+        "value": 67040
+      },
+      {
+        "kind": "count",
+        "value": 67360
+      },
+      {
+        "kind": "count",
+        "value": 67680
+      },
+      {
+        "kind": "count",
+        "value": 68000
+      }
+    ],
+    "note": "每个周末向前30天去重主账号，滚动窗口互有重叠。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m24": {
+    "labels": [
+      "7月",
+      "8月"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 25200,
+        "denominator": 35000,
+        "value": 0.72
+      },
+      {
+        "kind": "rate",
+        "numerator": 27000,
+        "denominator": 35000,
+        "value": 0.7714285714285715
+      }
+    ],
+    "note": "按完整月成熟留存批次计算；仅有两个演示月份，不外推12周。",
+    "source": "diagnostic-summary"
+  },
+  "m41": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 82000,
+        "denominator": 135400,
+        "value": 0.6056129985228951
+      },
+      {
+        "kind": "rate",
+        "numerator": 82500,
+        "denominator": 135800,
+        "value": 0.6075110456553755
+      },
+      {
+        "kind": "rate",
+        "numerator": 83000,
+        "denominator": 136200,
+        "value": 0.6093979441997063
+      },
+      {
+        "kind": "rate",
+        "numerator": 83500,
+        "denominator": 136600,
+        "value": 0.6112737920937042
+      },
+      {
+        "kind": "rate",
+        "numerator": 84000,
+        "denominator": 137000,
+        "value": 0.6131386861313869
+      },
+      {
+        "kind": "rate",
+        "numerator": 84500,
+        "denominator": 137400,
+        "value": 0.6149927219796215
+      },
+      {
+        "kind": "rate",
+        "numerator": 85000,
+        "denominator": 137800,
+        "value": 0.6168359941944848
+      },
+      {
+        "kind": "rate",
+        "numerator": 85500,
+        "denominator": 138200,
+        "value": 0.6186685962373372
+      },
+      {
+        "kind": "rate",
+        "numerator": 83778,
+        "denominator": 138600,
+        "value": 0.6044588744588745
+      },
+      {
+        "kind": "rate",
+        "numerator": 84278,
+        "denominator": 139000,
+        "value": 0.60631654676259
+      },
+      {
+        "kind": "rate",
+        "numerator": 84778,
+        "denominator": 139400,
+        "value": 0.6081635581061693
+      },
+      {
+        "kind": "rate",
+        "numerator": 85278,
+        "denominator": 139800,
+        "value": 0.61
+      }
+    ],
+    "note": "活跃设备来自周度演示汇总；有效且已激活设备分母按快照构造，最新点为85,278/139,800。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m48": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 16344,
+        "denominator": 80750,
+        "value": 0.20240247678018575
+      },
+      {
+        "kind": "rate",
+        "numerator": 16504,
+        "denominator": 80900,
+        "value": 0.20400494437577255
+      },
+      {
+        "kind": "rate",
+        "numerator": 16664,
+        "denominator": 81050,
+        "value": 0.2056014805675509
+      },
+      {
+        "kind": "rate",
+        "numerator": 16825,
+        "denominator": 81200,
+        "value": 0.20720443349753695
+      },
+      {
+        "kind": "rate",
+        "numerator": 16986,
+        "denominator": 81350,
+        "value": 0.20880147510755992
+      },
+      {
+        "kind": "rate",
+        "numerator": 17148,
+        "denominator": 81500,
+        "value": 0.21040490797546013
+      },
+      {
+        "kind": "rate",
+        "numerator": 17310,
+        "denominator": 81650,
+        "value": 0.2120024494794856
+      },
+      {
+        "kind": "rate",
+        "numerator": 17472,
+        "denominator": 81800,
+        "value": 0.21359413202933986
+      },
+      {
+        "kind": "rate",
+        "numerator": 17636,
+        "denominator": 81950,
+        "value": 0.21520439292251373
+      },
+      {
+        "kind": "rate",
+        "numerator": 17799,
+        "denominator": 82100,
+        "value": 0.21679658952496955
+      },
+      {
+        "kind": "rate",
+        "numerator": 17963,
+        "denominator": 82250,
+        "value": 0.2183951367781155
+      },
+      {
+        "kind": "rate",
+        "numerator": 18128,
+        "denominator": 82400,
+        "value": 0.22
+      }
+    ],
+    "note": "多设备主账号/已绑定主账号；历史周末值为构造快照，最新点为18,128/82,400。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m49": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 22226,
+        "denominator": 137200,
+        "value": 0.16199708454810496
+      },
+      {
+        "kind": "rate",
+        "numerator": 22549,
+        "denominator": 137800,
+        "value": 0.16363570391872279
+      },
+      {
+        "kind": "rate",
+        "numerator": 22874,
+        "denominator": 138400,
+        "value": 0.16527456647398844
+      },
+      {
+        "kind": "rate",
+        "numerator": 23200,
+        "denominator": 139000,
+        "value": 0.1669064748201439
+      },
+      {
+        "kind": "rate",
+        "numerator": 23529,
+        "denominator": 139600,
+        "value": 0.1685458452722063
+      },
+      {
+        "kind": "rate",
+        "numerator": 23859,
+        "denominator": 140200,
+        "value": 0.17017831669044223
+      },
+      {
+        "kind": "rate",
+        "numerator": 24192,
+        "denominator": 140800,
+        "value": 0.17181818181818181
+      },
+      {
+        "kind": "rate",
+        "numerator": 24526,
+        "denominator": 141400,
+        "value": 0.17345120226308344
+      },
+      {
+        "kind": "rate",
+        "numerator": 24863,
+        "denominator": 142000,
+        "value": 0.17509154929577464
+      },
+      {
+        "kind": "rate",
+        "numerator": 25201,
+        "denominator": 142600,
+        "value": 0.17672510518934081
+      },
+      {
+        "kind": "rate",
+        "numerator": 25542,
+        "denominator": 143200,
+        "value": 0.1783659217877095
+      },
+      {
+        "kind": "rate",
+        "numerator": 25884,
+        "denominator": 143800,
+        "value": 0.18
+      }
+    ],
+    "note": "开启共享的绑定设备/当前绑定设备；历史周末值为构造快照，最新点为25,884/143,800。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m53": {
+    "labels": [
+      "9/18",
+      "9/19",
+      "9/20",
+      "9/21",
+      "9/22",
+      "9/23",
+      "9/24"
+    ],
+    "unit": "条",
+    "kind": "count",
+    "points": [
+      {
+        "kind": "count",
+        "value": 3
+      },
+      {
+        "kind": "count",
+        "value": 2
+      },
+      {
+        "kind": "count",
+        "value": 1
+      },
+      {
+        "kind": "count",
+        "value": 4
+      },
+      {
+        "kind": "count",
+        "value": 2
+      },
+      {
+        "kind": "count",
+        "value": 5
+      },
+      {
+        "kind": "count",
+        "value": 7
+      }
+    ],
+    "note": "每日模拟异常事件数；最新7条与快照及类别归属闭合，历史6日为新增演示。",
+    "source": "constructed-daily-simulation"
+  },
+  "m54": {
+    "labels": [
+      "9/18",
+      "9/19",
+      "9/20",
+      "9/21",
+      "9/22",
+      "9/23",
+      "9/24"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 180,
+        "denominator": 10000,
+        "value": 0.018
+      },
+      {
+        "kind": "rate",
+        "numerator": 190,
+        "denominator": 10000,
+        "value": 0.019
+      },
+      {
+        "kind": "rate",
+        "numerator": 210,
+        "denominator": 10000,
+        "value": 0.021
+      },
+      {
+        "kind": "rate",
+        "numerator": 200,
+        "denominator": 10000,
+        "value": 0.02
+      },
+      {
+        "kind": "rate",
+        "numerator": 220,
+        "denominator": 10000,
+        "value": 0.022
+      },
+      {
+        "kind": "rate",
+        "numerator": 210,
+        "denominator": 10000,
+        "value": 0.021
+      },
+      {
+        "kind": "rate",
+        "numerator": 220,
+        "denominator": 10000,
+        "value": 0.022
+      }
+    ],
+    "note": "日埋点丢失率；每日期望事件10,000，最新220/10,000与质量快照一致。",
+    "source": "diagnostic-summary"
+  }
+}

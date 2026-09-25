@@ -1,0 +1,52 @@
+{
+  "A": {
+    "question": "试用转正率为何下降？",
+    "periods": {
+      "baselineWeeks": "W1–W9",
+      "issueWeeks": "W10–W12"
+    },
+    "baseline": {
+      "trialCompleted": 1000,
+      "converted": 450,
+      "segmentAttempts": 200,
+      "segmentFailed": 6,
+      "segmentConverted": 194,
+      "othersConverted": 256
+    },
+    "issue": {
+      "trialCompleted": 1000,
+      "converted": 434,
+      "segmentAttempts": 200,
+      "segmentFailed": 22,
+      "segmentConverted": 178,
+      "othersConverted": 256
+    },
+    "segment": "Plus · 月付 · Android",
+    "interpretation": "支付失败增加16人，解释总转正率下降1.6个百分点。"
+  },
+  "B": {
+    "question": "价值激活下滑时，设备内容质量有何异常？",
+    "periods": {
+      "baselineWeeks": "W1–W8",
+      "issueWeeks": "W9–W12"
+    },
+    "baseline": {
+      "allTriggers": 10000,
+      "allEmpty": 4200,
+      "k6Firmware28Triggers": 4000,
+      "k6Firmware28Empty": 1680,
+      "otherTriggers": 6000,
+      "otherEmpty": 2520
+    },
+    "issue": {
+      "allTriggers": 10000,
+      "allEmpty": 5800,
+      "k6Firmware28Triggers": 4000,
+      "k6Firmware28Empty": 3280,
+      "otherTriggers": 6000,
+      "otherEmpty": 2520
+    },
+    "segment": "K6 · 固件 2.8",
+    "interpretation": "设备侧出现集中异常；与用户价值激活下滑同期，仍需排查因果。"
+  }
+}

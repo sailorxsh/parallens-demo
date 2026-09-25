@@ -1,0 +1,166 @@
+{
+  "passed": 32,
+  "total": 32,
+  "checks": [
+    {
+      "rule": "catalog",
+      "passed": true,
+      "detail": "54条记录、53条指标、七个诊断页归属"
+    },
+    {
+      "rule": "catalog-pages",
+      "passed": true,
+      "detail": "分页引用与指标目录一致"
+    },
+    {
+      "rule": "F1-filter-contract",
+      "passed": true,
+      "detail": "53项指标均有对象、窗口、公式、适用维度及不适用规则"
+    },
+    {
+      "rule": "F2-synthetic-slices",
+      "passed": true,
+      "detail": "各模拟维度的分母与分子分片独立闭合为100%"
+    },
+    {
+      "rule": "F3-incomparable-rates",
+      "passed": true,
+      "detail": "总体转正率与支付失败率分图、分母分别标注"
+    },
+    {
+      "rule": "F4-rate-allocation",
+      "passed": true,
+      "detail": "单维模拟整数分片闭合到原分子/分母，率的分子不超过分母"
+    },
+    {
+      "rule": "R1",
+      "passed": true,
+      "detail": "仅核对同批次真实子集；不对六节点强制单调"
+    },
+    {
+      "rule": "R2",
+      "passed": true,
+      "detail": "全部率可回算；首页关键率与最新完整周一致"
+    },
+    {
+      "rule": "R3",
+      "passed": true,
+      "detail": "观鸟57,680、狩猎24,720，各互斥状态闭合到82,400"
+    },
+    {
+      "rule": "R4",
+      "passed": true,
+      "detail": "复合MAU不小于App MAU；设备活跃仅以有效且已激活设备为分母"
+    },
+    {
+      "rule": "R5",
+      "passed": true,
+      "detail": "首页指标统一取快照或最新周；主要值有对应分页记录"
+    },
+    {
+      "rule": "R6",
+      "passed": true,
+      "detail": "非故事新增用户周波动≤15%；互斥国家构成100%"
+    },
+    {
+      "rule": "R7",
+      "passed": true,
+      "detail": "Free不计入有效付费；观鸟Free占比约83%"
+    },
+    {
+      "rule": "R8",
+      "passed": true,
+      "detail": "订阅、MRR与设备状态交叉核对"
+    },
+    {
+      "rule": "R9-A",
+      "passed": true,
+      "detail": "支付失败多16人，解释总体转正率45.0%→43.4%"
+    },
+    {
+      "rule": "R9-B",
+      "passed": true,
+      "detail": "分组加权汇总得到空触发42.0%→58.0%"
+    },
+    {
+      "rule": "D1-page-coverage",
+      "passed": true,
+      "detail": "七页均有时间、关键指标、证据、跨页路径和模拟行动"
+    },
+    {
+      "rule": "D2-chart-contract",
+      "passed": true,
+      "detail": "七页图表序列齐整，故事A/B最后一周与首页一致"
+    },
+    {
+      "rule": "D3-story-A-drill",
+      "passed": true,
+      "detail": "订阅诊断分组贡献和期末库存与总览闭合"
+    },
+    {
+      "rule": "D4-story-B-drill",
+      "passed": true,
+      "detail": "设备分组解释总体空触发，价值激活同期变化独立展示"
+    },
+    {
+      "rule": "D5-business-reconciliation",
+      "passed": true,
+      "detail": "活跃、付费、设备、异常下钻与首页指标一致"
+    },
+    {
+      "rule": "D7-arppu",
+      "passed": true,
+      "detail": "付费人数与ARPPU使用相同完整月份轴，收入可回算，不使用双Y轴"
+    },
+    {
+      "rule": "D9-activation-cohorts",
+      "passed": true,
+      "detail": "A页7日与30日激活使用各自已成熟的注册批次"
+    },
+    {
+      "rule": "D10-activity-overlap",
+      "passed": true,
+      "detail": "B页七个互斥活跃单元闭合到三来源与复合并集"
+    },
+    {
+      "rule": "D11-conversion-groups",
+      "passed": true,
+      "detail": "D页触点合计和Free权益并集可回算"
+    },
+    {
+      "rule": "D12-value-structure",
+      "passed": true,
+      "detail": "E页权益三分区、Pack总数、三类构成和100%结构图闭合"
+    },
+    {
+      "rule": "D16-visualization-map",
+      "passed": true,
+      "detail": "A页箱线分位与P50/P90一致；E页型号热力矩阵回到指标39"
+    },
+    {
+      "rule": "D15-channel-denominators",
+      "passed": true,
+      "detail": "E页型号和自报渠道的比例有整数人数分子，渠道ARPPU可回算"
+    },
+    {
+      "rule": "D13-device-structure",
+      "passed": true,
+      "detail": "F页设备分层、共享子集和回绑率去重分母正确"
+    },
+    {
+      "rule": "D14-quality-trend",
+      "passed": true,
+      "detail": "G页质量趋势末值与快照一致，演示正常阈值成立，异常事件不混入人群池"
+    },
+    {
+      "rule": "D8-observation-window",
+      "passed": true,
+      "detail": "最新注册周有完整7日观察窗，快照未写到未来"
+    },
+    {
+      "rule": "D6-actions",
+      "passed": true,
+      "detail": "模拟行动ID唯一，对象、触发、状态、更新时间齐全"
+    }
+  ]
+}

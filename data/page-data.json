@@ -1,0 +1,778 @@
+{
+  "A": [
+    {
+      "metricId": 7,
+      "value": {
+        "kind": "group",
+        "value": {
+          "registered": 128600,
+          "boundOwners": 82400
+        }
+      }
+    },
+    {
+      "metricId": 9,
+      "value": {
+        "kind": "count",
+        "value": 2750
+      }
+    },
+    {
+      "metricId": 10,
+      "value": {
+        "kind": "rate",
+        "numerator": 2002,
+        "denominator": 2750,
+        "value": 0.728
+      }
+    },
+    {
+      "metricId": 11,
+      "value": {
+        "kind": "rate",
+        "numerator": 1800,
+        "denominator": 2000,
+        "value": 0.9
+      }
+    },
+    {
+      "metricId": 12,
+      "value": {
+        "kind": "group",
+        "value": {
+          "D7": {
+            "kind": "rate",
+            "numerator": 1760,
+            "denominator": 2750,
+            "value": 0.64
+          },
+          "D30": {
+            "kind": "rate",
+            "numerator": 2140,
+            "denominator": 2670,
+            "value": 0.801498
+          },
+          "D30Cohort": "W7"
+        }
+      }
+    },
+    {
+      "metricId": 13,
+      "value": {
+        "kind": "rate",
+        "numerator": 924,
+        "denominator": 1925,
+        "value": 0.48
+      }
+    },
+    {
+      "metricId": 14,
+      "value": {
+        "kind": "group",
+        "value": {
+          "p50Minutes": 170,
+          "p90Minutes": 1440
+        }
+      }
+    },
+    {
+      "metricId": 15,
+      "value": {
+        "kind": "count",
+        "value": 128
+      }
+    },
+    {
+      "metricId": 16,
+      "value": {
+        "kind": "count",
+        "value": 2450
+      }
+    }
+  ],
+  "B": [
+    {
+      "metricId": 4,
+      "value": {
+        "kind": "count",
+        "value": 68000
+      }
+    },
+    {
+      "metricId": 24,
+      "value": {
+        "kind": "rate",
+        "numerator": 27000,
+        "denominator": 35000,
+        "value": 0.771429
+      }
+    },
+    {
+      "metricId": 25,
+      "value": {
+        "kind": "group",
+        "value": {
+          "DAU": 12600,
+          "WAU": 29800,
+          "MAU": 68000,
+          "appMAU": 46800
+        }
+      }
+    },
+    {
+      "metricId": 26,
+      "value": {
+        "kind": "group",
+        "value": {
+          "sessionsPerUser": 2.1,
+          "durationP50Minutes": 4.5,
+          "durationP90Minutes": 26
+        }
+      }
+    },
+    {
+      "metricId": 27,
+      "value": {
+        "kind": "rate",
+        "numerator": 26000,
+        "denominator": 68000,
+        "value": 0.382353
+      }
+    },
+    {
+      "metricId": 28,
+      "value": {
+        "kind": "group",
+        "value": {
+          "D1": {
+            "kind": "rate",
+            "numerator": 1900,
+            "denominator": 2500,
+            "value": 0.76
+          },
+          "D7": {
+            "kind": "rate",
+            "numerator": 1500,
+            "denominator": 2500,
+            "value": 0.6
+          },
+          "D30": {
+            "kind": "rate",
+            "numerator": 1100,
+            "denominator": 2500,
+            "value": 0.44
+          }
+        }
+      }
+    },
+    {
+      "metricId": 29,
+      "value": {
+        "kind": "rate",
+        "numerator": 4200,
+        "denominator": 82400,
+        "value": 0.050971
+      }
+    },
+    {
+      "metricId": 30,
+      "value": {
+        "kind": "group",
+        "value": {
+          "composite": 68000,
+          "app": 46800,
+          "content": 40000,
+          "pushClicked": 10000,
+          "exclusiveCells": {
+            "appOnly": 23800,
+            "contentOnly": 19200,
+            "pushOnly": 200,
+            "appContentOnly": 15000,
+            "appPushOnly": 4000,
+            "contentPushOnly": 1800,
+            "allThree": 4000
+          },
+          "overlapAllowed": true
+        }
+      }
+    },
+    {
+      "metricId": 31,
+      "value": {
+        "kind": "group",
+        "value": {
+          "delivery": {
+            "kind": "rate",
+            "numerator": 90000,
+            "denominator": 100000,
+            "value": 0.9
+          },
+          "click": {
+            "kind": "rate",
+            "numerator": 13500,
+            "denominator": 90000,
+            "value": 0.15
+          }
+        }
+      }
+    }
+  ],
+  "C": [
+    {
+      "metricId": 8,
+      "value": {
+        "kind": "group",
+        "value": {
+          "activatedCumulative": 176200,
+          "boundCurrent": 143800
+        }
+      }
+    },
+    {
+      "metricId": 41,
+      "value": {
+        "kind": "rate",
+        "numerator": 85278,
+        "denominator": 139800,
+        "value": 0.61
+      }
+    },
+    {
+      "metricId": 42,
+      "value": {
+        "kind": "rate",
+        "numerator": 5800,
+        "denominator": 10000,
+        "value": 0.58
+      }
+    },
+    {
+      "metricId": 43,
+      "value": {
+        "kind": "group",
+        "value": {
+          "D7": {
+            "kind": "rate",
+            "numerator": 1600,
+            "denominator": 2000,
+            "value": 0.8
+          },
+          "D30": {
+            "kind": "rate",
+            "numerator": 1450,
+            "denominator": 2000,
+            "value": 0.725
+          }
+        }
+      }
+    },
+    {
+      "metricId": 44,
+      "value": {
+        "kind": "rate",
+        "numerator": 12000,
+        "denominator": 139800,
+        "value": 0.085837
+      }
+    },
+    {
+      "metricId": 45,
+      "value": {
+        "kind": "group",
+        "value": {
+          "networkSuccess": {
+            "kind": "rate",
+            "numerator": 9500,
+            "denominator": 10000,
+            "value": 0.95
+          },
+          "reportedWithin24h": 120000
+        }
+      }
+    },
+    {
+      "metricId": 46,
+      "value": {
+        "kind": "group",
+        "value": {
+          "upload": {
+            "kind": "rate",
+            "numerator": 9900,
+            "denominator": 10000,
+            "value": 0.99
+          },
+          "live": {
+            "kind": "rate",
+            "numerator": 9700,
+            "denominator": 10000,
+            "value": 0.97
+          },
+          "push": {
+            "kind": "rate",
+            "numerator": 9850,
+            "denominator": 10000,
+            "value": 0.985
+          }
+        }
+      }
+    },
+    {
+      "metricId": 47,
+      "value": {
+        "kind": "rate",
+        "numerator": 100660,
+        "denominator": 143800,
+        "value": 0.7
+      }
+    }
+  ],
+  "D": [
+    {
+      "metricId": 2,
+      "value": {
+        "kind": "count",
+        "value": 12400
+      }
+    },
+    {
+      "metricId": 3,
+      "value": {
+        "kind": "usd",
+        "value": 56000
+      }
+    },
+    {
+      "metricId": 5,
+      "value": {
+        "kind": "group",
+        "value": {
+          "bird": {
+            "free": 47880,
+            "trialEarly": 1000,
+            "trialNearExpiry": 500,
+            "paidCurrent": 7400,
+            "cancelledButEntitled": 600,
+            "paymentFailed": 300
+          },
+          "hunting": {
+            "noEntitlement": 18120,
+            "trialEarly": 1000,
+            "trialNearExpiry": 500,
+            "paidCurrent": 4000,
+            "cancelledButEntitled": 400,
+            "paymentFailed": 300,
+            "expired": 400
+          }
+        }
+      }
+    },
+    {
+      "metricId": 6,
+      "value": {
+        "kind": "rate",
+        "numerator": 12400,
+        "denominator": 82400,
+        "value": 0.150485
+      }
+    },
+    {
+      "metricId": 17,
+      "value": {
+        "kind": "rate",
+        "numerator": 1292,
+        "denominator": 2750,
+        "value": 0.469818
+      }
+    },
+    {
+      "metricId": 18,
+      "value": {
+        "kind": "rate",
+        "numerator": 434,
+        "denominator": 1000,
+        "value": 0.434
+      }
+    },
+    {
+      "metricId": 19,
+      "value": {
+        "kind": "rate",
+        "numerator": 650,
+        "denominator": 2500,
+        "value": 0.26
+      }
+    },
+    {
+      "metricId": 20,
+      "value": {
+        "kind": "group",
+        "value": {
+          "combined": {
+            "kind": "rate",
+            "numerator": 120,
+            "denominator": 1400,
+            "value": 0.085714
+          },
+          "subscriptionPage": {
+            "kind": "rate",
+            "numerator": 90,
+            "denominator": 900,
+            "value": 0.1
+          },
+          "popup": {
+            "kind": "rate",
+            "numerator": 30,
+            "denominator": 500,
+            "value": 0.06
+          }
+        }
+      }
+    },
+    {
+      "metricId": 21,
+      "value": {
+        "kind": "group",
+        "value": {
+          "opening": 12020,
+          "trialPaid": 530,
+          "directPaid": 120,
+          "recovered": 90,
+          "lost": 360,
+          "closing": 12400
+        }
+      }
+    },
+    {
+      "metricId": 22,
+      "value": {
+        "kind": "group",
+        "value": {
+          "anyExhausted": {
+            "kind": "rate",
+            "numerator": 312,
+            "denominator": 47880,
+            "value": 0.006516
+          },
+          "aiExhausted": {
+            "kind": "rate",
+            "numerator": 220,
+            "denominator": 47880,
+            "value": 0.004595
+          },
+          "storageExhausted": {
+            "kind": "rate",
+            "numerator": 160,
+            "denominator": 47880,
+            "value": 0.003342
+          },
+          "transferExhausted": {
+            "kind": "rate",
+            "numerator": 140,
+            "denominator": 47880,
+            "value": 0.002924
+          }
+        }
+      }
+    },
+    {
+      "metricId": 23,
+      "value": {
+        "kind": "rate",
+        "numerator": 430,
+        "denominator": 500,
+        "value": 0.86
+      }
+    },
+    {
+      "metricId": 32,
+      "value": {
+        "kind": "group",
+        "value": {
+          "upgrade": {
+            "kind": "rate",
+            "numerator": 90,
+            "denominator": 8000,
+            "value": 0.01125
+          },
+          "downgrade": {
+            "kind": "rate",
+            "numerator": 60,
+            "denominator": 8000,
+            "value": 0.0075
+          }
+        }
+      }
+    },
+    {
+      "metricId": 33,
+      "value": {
+        "kind": "group",
+        "value": {
+          "recovery": {
+            "kind": "rate",
+            "numerator": 90,
+            "denominator": 900,
+            "value": 0.1
+          },
+          "durationP50Months": 8,
+          "durationP90Months": 24
+        }
+      }
+    },
+    {
+      "metricId": 52,
+      "value": {
+        "kind": "count",
+        "value": 168
+      }
+    }
+  ],
+  "E": [
+    {
+      "metricId": 34,
+      "value": {
+        "kind": "count",
+        "value": 12550
+      }
+    },
+    {
+      "metricId": 35,
+      "value": {
+        "kind": "group",
+        "value": {
+          "monthlySubscriptionPayers": 10000,
+          "subscriptionNetIncome": 52000,
+          "ARPPU": 5.2
+        }
+      }
+    },
+    {
+      "metricId": 36,
+      "value": {
+        "kind": "group",
+        "value": {
+          "anyPack": {
+            "kind": "rate",
+            "numerator": 3150,
+            "denominator": 12550,
+            "value": 0.250996
+          },
+          "byPack": {
+            "Extra Memory Pack": {
+              "kind": "rate",
+              "numerator": 1200,
+              "denominator": 12550,
+              "value": 0.095618
+            },
+            "Device Pack": {
+              "kind": "rate",
+              "numerator": 1000,
+              "denominator": 12550,
+              "value": 0.079681
+            },
+            "观鸟 AI Agent Pack": {
+              "kind": "rate",
+              "numerator": 800,
+              "denominator": 12550,
+              "value": 0.063745
+            },
+            "HD Pack": {
+              "kind": "rate",
+              "numerator": 600,
+              "denominator": 12550,
+              "value": 0.047809
+            },
+            "狩猎 AI Agent Pack": {
+              "kind": "rate",
+              "numerator": 450,
+              "denominator": 12550,
+              "value": 0.035857
+            }
+          }
+        }
+      }
+    },
+    {
+      "metricId": 37,
+      "value": {
+        "kind": "group",
+        "value": {
+          "firstPurchase": 400,
+          "repeatOrRenewal": 2750
+        }
+      }
+    },
+    {
+      "metricId": 38,
+      "value": {
+        "kind": "group",
+        "value": {
+          "countryShare": {
+            "US": 0.65,
+            "UK": 0.18,
+            "DE": 0.1,
+            "Other": 0.07
+          },
+          "appPlatformShare": {
+            "iOS": 0.45,
+            "Android": 0.55
+          },
+          "deviceModelShare": {
+            "K6": 0.11126564673157163,
+            "Bird Lite": 0.3477051460361613,
+            "Bird Pro": 0.3129346314325452,
+            "Hunt Pro": 0.22809457579972184
+          }
+        }
+      }
+    },
+    {
+      "metricId": 39,
+      "value": {
+        "kind": "group",
+        "value": {
+          "K6": {
+            "owners": 9000,
+            "activeRate": 0.62,
+            "subscriptionRate": 0.17
+          },
+          "Bird Lite": {
+            "owners": 24000,
+            "activeRate": 0.68,
+            "subscriptionRate": 0.14
+          },
+          "Bird Pro": {
+            "owners": 18000,
+            "activeRate": 0.75,
+            "subscriptionRate": 0.2
+          },
+          "Hunt Pro": {
+            "owners": 15000,
+            "activeRate": 0.6,
+            "subscriptionRate": 0.13
+          }
+        }
+      }
+    },
+    {
+      "metricId": 40,
+      "value": {
+        "kind": "group",
+        "value": {
+          "Amazon": {
+            "declarationOnly": true,
+            "owners": 12000,
+            "activation7dRate": 0.64,
+            "activeRate": 0.7,
+            "subscriptionRate": 0.14,
+            "monthlyPayers": 1000,
+            "subscriptionNetIncome": 5100,
+            "ARPPU": 5.1
+          },
+          "Shopify": {
+            "declarationOnly": true,
+            "owners": 8000,
+            "activation7dRate": 0.7,
+            "activeRate": 0.75,
+            "subscriptionRate": 0.19,
+            "monthlyPayers": 800,
+            "subscriptionNetIncome": 4320,
+            "ARPPU": 5.4
+          }
+        }
+      }
+    }
+  ],
+  "F": [
+    {
+      "metricId": 48,
+      "value": {
+        "kind": "rate",
+        "numerator": 18128,
+        "denominator": 82400,
+        "value": 0.22
+      }
+    },
+    {
+      "metricId": 49,
+      "value": {
+        "kind": "rate",
+        "numerator": 25884,
+        "denominator": 143800,
+        "value": 0.18
+      }
+    },
+    {
+      "metricId": 50,
+      "value": {
+        "kind": "group",
+        "value": {
+          "boundActivated": 139800,
+          "boundNotActivated": 4000,
+          "activatedUnbound": 36400,
+          "sharedBoundActivated": 25000,
+          "sharedBoundNotActivated": 884
+        }
+      }
+    },
+    {
+      "metricId": 51,
+      "value": {
+        "kind": "group",
+        "value": {
+          "cohort": "2026-07",
+          "unboundEvents": 300,
+          "observedUnboundDevices": 250,
+          "unboundDeviceRate": {
+            "kind": "rate",
+            "numerator": 250,
+            "denominator": 142000,
+            "value": 0.001761
+          },
+          "reboundWithin7d": {
+            "kind": "rate",
+            "numerator": 120,
+            "denominator": 250,
+            "value": 0.48
+          },
+          "reboundWithin30d": {
+            "kind": "rate",
+            "numerator": 180,
+            "denominator": 250,
+            "value": 0.72
+          }
+        }
+      }
+    }
+  ],
+  "G": [
+    {
+      "metricId": 53,
+      "value": {
+        "kind": "count",
+        "value": 7
+      }
+    },
+    {
+      "metricId": 54,
+      "value": {
+        "kind": "group",
+        "value": {
+          "eventLoss": {
+            "kind": "rate",
+            "numerator": 220,
+            "denominator": 10000,
+            "value": 0.022
+          },
+          "idMapping": {
+            "kind": "rate",
+            "numerator": 9650,
+            "denominator": 10000,
+            "value": 0.965
+          },
+          "status": "正常"
+        }
+      }
+    }
+  ]
+}
