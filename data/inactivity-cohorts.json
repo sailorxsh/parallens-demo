@@ -1,0 +1,9 @@
+{
+  "asOf": "2026-09-24",
+  "eligibleOwners": 82400,
+  "lastActiveDays": {"0to20": 78200, "21to29": 2400, "30plus": 1800},
+  "historicalReturnCohort": {"21days": 4200, "30days": 1800},
+  "returnsAfterThreshold": {"21days": 240, "30days": 90},
+  "returnWindow": "入组后7天",
+  "note": "按最近一次复合活跃距截至日天数分层的合成聚合事实；回流为历史入组群体随后7天再次活跃，不能当作当前沉睡池的子集。"
+}

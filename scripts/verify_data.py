@@ -19,6 +19,10 @@ contract = load("filter-contract.json")
 slices = load("filter-slices.json")
 entity_samples = load("entity-samples.json")
 metric_trends = load("metric-trends.json")
+function_usage = load("function-usage.json")
+inactivity = load("inactivity-cohorts.json")
+technical = load("technical-facts.json")
+subscription_flow = load("subscription-flow.json")
 checks = []
 
 
@@ -45,6 +49,34 @@ check("F2-synthetic-slices", all(
       all(0 < option["denominatorShare"] <= 1 and 0 < option["numeratorShare"] <= 1
           for option in values.values()) for values in slices.values()),
       "各模拟维度的分母与分子分片独立闭合为100%")
+check("F5-function-denominator", function_usage["denominator"] == metrics["m27"]["denominator"] and
+      function_usage["functions"]["Live"]["users"] == metrics["m27"]["numerator"] and
+      all(0 < item["users"] <= function_usage["denominator"] for item in function_usage["functions"].values()),
+      "功能选择保持同一活跃主账号分母；功能人数不可相加")
+check("F6-season-threshold", sum(inactivity["lastActiveDays"].values()) == inactivity["eligibleOwners"] == metrics["m29"]["denominator"] and
+      inactivity["lastActiveDays"]["21to29"]+inactivity["lastActiveDays"]["30plus"] == metrics["m29"]["numerator"] and
+      all(inactivity["returnsAfterThreshold"][key] <= inactivity["historicalReturnCohort"][key]
+          for key in ("21days","30days")),
+      "21/30天未使用人数由最近活跃间隔分层求和；回流有独立历史分母")
+attempts=sum(row["attempts"] for row in technical["records"])
+check("F7-technical-facts", attempts == 10000 and
+      attempts-sum(row["networkFailures"] for row in technical["records"]) == metrics["m45"]["value"]["networkSuccess"]["numerator"] and
+      all(attempts-sum(row[f"{field}Failures"] for row in technical["records"]) ==
+          metrics["m46"]["value"][field]["numerator"] for field in ("upload","live","push")) and
+      all(0 <= row[field] <= row["attempts"] for row in technical["records"]
+          for field in ("networkFailures","uploadFailures","liveFailures","pushFailures")),
+      "型号×固件的联网和三条技术链路成功/失败合计回到原底表")
+flow_lines = subscription_flow["byProductLine"]
+flow_total = metrics["m21"]["value"]
+check("F8-subscription-flow", all(
+      line["opening"] + line["trialPaid"] + line["directPaid"] + line["recovered"] - line["lost"] == line["closing"]
+      for line in flow_lines.values()) and
+      all(sum(line[key] for line in flow_lines.values()) == flow_total[key] for key in flow_total) and
+      all(flow_lines[product]["closing"] ==
+          snapshot["subscriptionStatuses"][status]["paidCurrent"] +
+          snapshot["subscriptionStatuses"][status]["cancelledButEntitled"]
+          for product,status in (("Bird","bird"),("Hunting","hunting"))),
+      "分产品线订阅流转各自闭合，合计回总体与互斥订阅状态")
 check("F3-incomparable-rates", len(diagnostics["D"]["chart"]["series"]) == 1 and
       len(diagnostics["D"]["extraCharts"]) >= 1 and
       len(diagnostics["D"]["extraCharts"][0]["series"]) == 1 and
@@ -328,14 +360,16 @@ check("D17-entity-samples", len(device_samples) == 4 and len(incident_samples) =
       "C页设备和G页事件样本可追溯、时间有效，并与总体计算隔离")
 check("D18-key-metric-trends", all(
       len(metric_trends[f"m{identifier:02d}"]["points"]) == len(weekly) and
-      metric_trends[f"m{identifier:02d}"]["labels"] == [f'W{row["week"]}' for row in weekly] and
+      metric_trends[f"m{identifier:02d}"]["labels"] == [
+          (date.fromisoformat(snapshot["asOf"])-timedelta(days=7*(len(weekly)-1-i))).strftime("%-m/%-d")
+          for i in range(len(weekly))] and
       metric_trends[f"m{identifier:02d}"]["points"][-1]["kind"] == metrics[f"m{identifier:02d}"]["kind"] and
       (metric_trends[f"m{identifier:02d}"]["points"][-1]["value"] == metrics[f"m{identifier:02d}"]["value"]
-       if identifier in (15, 52) else
+       if identifier in (15, 34, 52) else
        metric_trends[f"m{identifier:02d}"]["points"][-1]["numerator"] == metrics[f"m{identifier:02d}"]["numerator"] and
        metric_trends[f"m{identifier:02d}"]["points"][-1]["denominator"] == metrics[f"m{identifier:02d}"]["denominator"])
-      for identifier in (15, 27, 52)),
-      "三项新增关键趋势有12期，末点与底表当前值及分子分母一致")
+      for identifier in (15, 27, 34, 52)),
+      "四项新增关键趋势有12期，末点与底表当前值及分子分母一致")
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

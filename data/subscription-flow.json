@@ -1,0 +1,10 @@
+{
+  "window": "2026-09-01 至 2026-09-24",
+  "asOf": "2026-09-24",
+  "unit": "主账号人数",
+  "byProductLine": {
+    "Bird": {"opening": 7750, "trialPaid": 350, "directPaid": 80, "recovered": 60, "lost": 240, "closing": 8000},
+    "Hunting": {"opening": 4270, "trialPaid": 180, "directPaid": 40, "recovered": 30, "lost": 120, "closing": 4400}
+  },
+  "note": "合成演示流水；各产品线期末与互斥订阅状态中的有效订阅人数闭合，各列合计回总体。"
+}

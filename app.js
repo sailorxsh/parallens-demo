@@ -9,7 +9,9 @@ const pages = {
 };
 const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
-const findingRuleVersion='demo-2026-09-25-v1';
+const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
+const findingRuleVersion='demo-2026-09-26-v2';
+const findingSource=id=>({18:'合成试用明细交集重算',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 let dataset;
 let sourceData;
@@ -27,6 +29,14 @@ window.addEventListener('resize',()=>{
 },{passive:true});
 const number = value => Number(value).toLocaleString('zh-CN');
 const percent = value => `${(value * 100).toFixed(1)}%`;
+function periodLabel(label) {
+  const week=sourceData?.weekly?.find(item=>`W${item.week}`===label);
+  if(!week)return label;
+  const end=new Date(`${week.weekEnd}T00:00:00Z`),start=new Date(end);
+  start.setUTCDate(start.getUTCDate()-6);
+  const short=date=>`${date.getUTCMonth()+1}/${date.getUTCDate()}`;
+  return `${label} · ${short(start)}–${short(end)}`;
+}
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -41,10 +51,19 @@ const filterLabels={
 const optionLabels={
   US:'美国',UK:'英国',DE:'德国',Other:'其他',Bird:'观鸟',Hunting:'狩猎',Effective:'有效设备',Inactive:'非有效设备',
   Formal:'正式用户',Trial:'试用用户',Migration:'迁徙季',Amazon:'Amazon',Shopify:'Shopify',
-  Upload:'上传',Recognition:'识别',Push:'推送',Business:'业务异常',Device:'设备异常',Quality:'数据质量',
+  Upload:'上传',Live:'直播',Playback:'事件回看',Recognition:'AI识别查看',Push:'推送',Business:'业务异常',Device:'设备异常',Quality:'数据质量',
 };
-const globalDimensions=['week','country','appPlatform','productLine','deviceModel','deviceStatus','userType','season'];
-const moduleDimensions={A:['salesChannel'],B:['functionType'],C:['firmware','salesChannel','functionType'],D:['subscriptionPlatform','plan'],E:['subscriptionPlatform','plan','salesChannel'],F:[],G:['anomalyType','firmware']};
+const optionLabel=(key,value)=>key==='season'&&value==='Other'?'淡季':optionLabels[value]??value;
+const globalDimensions=['country','appPlatform','productLine'];
+const moduleDimensions={
+  A:['week','deviceModel','deviceStatus','userType','salesChannel'],
+  B:['deviceModel','userType','season','functionType'],
+  C:['week','deviceModel','deviceStatus','firmware','salesChannel','functionType'],
+  D:['week','deviceModel','userType','subscriptionPlatform','plan'],
+  E:['deviceModel','userType','subscriptionPlatform','plan','salesChannel'],
+  F:['deviceModel','deviceStatus','userType'],
+  G:['deviceModel','deviceStatus','userType','season','anomalyType','firmware'],
+};
 const paidPlanMetricIds=new Set([2,3,6,17,18,19,21,23,32,33,34,35,52]);
 const trialFactDimensions=new Set(['week','country','appPlatform','productLine','plan']);
 function trialRows(state=filterState,period) {
@@ -89,21 +108,20 @@ function readRoute() {
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
   filterState={};
-  for (const key of Object.keys(filterLabels)) if(params.has(key)) filterState[key]=params.get(key);
+  for (const key of relevantFilters(pages[page]?page:'')) if(params.has(key)) filterState[key]=params.get(key);
   return {page:pages[page]?page:'',metricId:Number(params.get('metric'))||null};
 }
 function activeFilterDescription() {
-  return selectedFilters().map(([key,value])=>`${filterLabels[key]}：${key==='week'?`W${value}`:(optionLabels[value]??value)}`).join(' · ');
+  return selectedFilters().map(([key,value])=>`${filterLabels[key]}：${key==='week'?`W${value}`:optionLabel(key,value)}`).join(' · ');
 }
 function filterBar(page='') {
-  const bar=element(page?'details':'section','filter-bar');bar.setAttribute('aria-label','数据筛选');
-  if(page) {
-    bar.open=selectedFilters().length>0;
-    bar.append(element('summary','filter-summary',selectedFilters().length?`筛选已生效 · ${activeFilterDescription()} · 点击调整`:`筛选数据范围 · ${relevantFilters(page).length} 个维度（点击展开）`));
-  }
+  const bar=element('details','filter-bar');bar.setAttribute('aria-label','数据筛选');
+  bar.open=false;
+  bar.append(element('summary','filter-summary',selectedFilters().length?`筛选已生效 · ${activeFilterDescription()} · 点击调整`:`筛选数据范围 · ${relevantFilters(page).length} 个维度（点击展开）`));
   const content=element('div','filter-content');
   const header=element('div','filter-bar-head');
-  header.append(element('strong','','筛选数据范围'),element('span','','试用转正按模拟明细交集重算；其他指标仍用模拟分片'));
+  header.append(element('strong','','筛选数据范围'),element('span','',relevantFilters(page).includes('week')?
+    '统计周仅改变可按周核对的成熟批次；快照仍显示自己的截至日':'仅适用指标随筛选重算；估算分组会明确标注'));
   const reset=element('button','filter-reset','重置全部');reset.type='button';
   reset.addEventListener('click',()=>changeFilter(page,null,null));header.append(reset);content.append(header);
   const fields=element('div','filter-fields');
@@ -112,7 +130,8 @@ function filterBar(page='') {
     const select=element('select','');select.name=key;select.setAttribute('aria-label',filterLabels[key]);
     const all=element('option','',key==='deviceStatus'?'底表默认：有效设备':key==='userType'?'底表默认：正式用户':'全部');all.value='All';select.append(all);
     const options=key==='week'?Object.fromEntries(sourceData.weekly.slice(-4).reverse().map(w=>[String(w.week),`W${w.week} · ${w.weekEnd}`])):
-      Object.fromEntries(Object.keys(sourceData.slices[key]??{}).filter(v=>!(key==='deviceStatus'&&v==='Effective')&&!(key==='userType'&&v==='Formal')).map(v=>[v,optionLabels[v]??v]));
+      key==='functionType'?Object.fromEntries((page==='C'?['Upload','Live','Push']:['Live','Playback','Recognition']).map(v=>[v,optionLabel(key,v)])):
+      Object.fromEntries(Object.keys(sourceData.slices[key]??{}).filter(v=>!(key==='deviceStatus'&&v==='Effective')&&!(key==='userType'&&v==='Formal')).map(v=>[v,optionLabel(key,v)]));
     for (const [value,text] of Object.entries(options)) {const option=element('option','',text);option.value=value;select.append(option);}
     select.value=filterState[key]??'All';select.addEventListener('change',()=>changeFilter(page,key,select.value));
     label.append(select);fields.append(label);
@@ -200,10 +219,37 @@ function projectGroup(value,shares,filters,metricId) {
   if(value&&typeof value==='object') return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,projectGroup(item,shares,filters,metricId)]));
   return value;
 }
+function technicalMetric(id,state,filters) {
+  const records=sourceData.technicalFacts.records.filter(row=>
+    (!state.productLine||(row.model==='Hunt Pro'?'Hunting':'Bird')===state.productLine)&&
+    (!state.deviceModel||row.model===state.deviceModel)&&(!state.firmware||row.firmware===state.firmware));
+  if(!records.length)return na('该型号与固件组合没有合成请求样本');
+  const other=filters.filter(([key])=>!['productLine','deviceModel','firmware','functionType','week'].includes(key));
+  const shares=sharesFor(other,id);
+  const total=records.reduce((sum,row)=>sum+row.attempts,0);
+  const denominator=allocatedCount(total,other,id,'denominator',shares);
+  if(denominator<30)return na('筛选后请求样本少于30');
+  const rateFor=field=>{
+    const failures=records.reduce((sum,row)=>sum+row[field],0);
+    const projected=Math.min(denominator,allocatedCount(failures,other,id,'numerator',shares));
+    return {kind:'rate',numerator:denominator-projected,denominator,value:(denominator-projected)/denominator};
+  };
+  if(id===45) {
+    const heartbeats=sourceData.metrics.m45.value.reportedWithin24h;
+    const all=filters.filter(([key])=>key!=='week');
+    return {kind:'group',value:{networkSuccess:rateFor('networkFailures'),
+      reportedWithin24h:allocatedCount(heartbeats,all,id,'denominator',sharesFor(all,id))}};
+  }
+  const field={Upload:'upload',Live:'live',Push:'push'}[state.functionType];
+  const names=field?[field]:['upload','live','push'];
+  const failures={upload:'uploadFailures',live:'liveFailures',push:'pushFailures'};
+  return {kind:'group',value:Object.fromEntries(names.map(name=>[name,rateFor(failures[name])]))};
+}
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const filters=Object.entries(state).filter(([,value])=>value&&value!=='All');
   for(const [key,value] of filters) {
+    if(key==='week'&&!contract.dimensions.includes(key))continue;
     if(!contract.dimensions.includes(key)) return na(`${filterLabels[key]}不适用于该指标`);
     if(key!=='week'&&!sourceData.slices[key]?.[value]) return na('未定义的筛选值');
   }
@@ -211,32 +257,63 @@ function projectMetric(id,state=filterState) {
   if(product&&model&&product!=='All'&&model!=='All'&&((product==='Hunting')!==(model==='Hunt Pro')))
     return na('产品线与设备型号组合无样本');
   if(product==='Hunting'&&[13,22,42].includes(id))return na('本指标只定义观鸟线，狩猎线口径待定义');
-  if(product&&id===21)return na('底表没有分产品线的期初、进入和退出状态流转明细');
   if(state.plan==='Free'&&paidPlanMetricIds.has(id))
     return na('Free不是付费试用、订阅或续费套餐，不构成该指标的分母');
   if(id===22&&state.plan&&state.plan!=='Free')return na('本项只统计观鸟Free权益');
   if(state.plan&&id===5) return na('底表没有按套餐拆分的互斥订阅状态人数');
+  if(id===27&&state.functionType) {
+    const usage=sourceData.functionUsage.functions[state.functionType];
+    if(!usage)return na('该功能不属于活跃用户的业务功能使用口径');
+    const applicable=filters.filter(([key])=>key!=='functionType');
+    const shares=sharesFor(applicable,id);
+    const d=allocatedCount(sourceData.functionUsage.denominator,applicable,id,'denominator',shares);
+    const n=Math.min(d,allocatedCount(usage.users,applicable,id,'numerator',shares));
+    return d>=30?{kind:'rate',numerator:n,denominator:d,value:n/d}:na('筛选后活跃主账号少于30');
+  }
+  if(id===46&&state.functionType&&!['Upload','Live','Push'].includes(state.functionType))
+    return na('该功能不属于技术链路成功率口径');
+  if(id===45||id===46)return technicalMetric(id,state,filters);
+  if(id===29) {
+    const age=sourceData.inactivityCohorts;
+    const threshold=state.season==='Other'?30:21;
+    const applicable=filters.filter(([key])=>key!=='season');
+    const shares=sharesFor(applicable,id);
+    const d=allocatedCount(age.eligibleOwners,applicable,id,'denominator',shares);
+    const eligible=threshold===21?age.lastActiveDays['21to29']+age.lastActiveDays['30plus']:age.lastActiveDays['30plus'];
+    const n=Math.min(d,allocatedCount(eligible,applicable,id,'numerator',shares));
+    return d>=30?{kind:'rate',numerator:n,denominator:d,value:n/d,thresholdDays:threshold}:na('可观察主账号少于30');
+  }
   if(id===18)return trialMetric(state);
   let raw=sourceData.metrics[`m${String(id).padStart(2,'0')}`];
-  if(state.week) {
+  if(state.week&&contract.dimensions.includes('week')) {
     const weekly=sourceData.weekly.find(w=>String(w.week)===state.week);
     if(!weekly) return na('指定周不存在');
     raw=weeklyMetric(id,weekly);
   }
   if(raw.kind==='na') return raw;
-  if(filters.length&&[14,26,33,38].includes(id)) return na('本项只有汇总分布或分位数，缺少可重算的维度明细');
-  if(filters.length&&id===39) {
-    if(filters.some(([key])=>!['productLine','deviceModel'].includes(key))) return na('型号表现只提供产品线和型号级模拟样本');
+  const effectiveFilters=filters.filter(([key])=>key!=='week'||contract.dimensions.includes('week'));
+  if(effectiveFilters.length&&[14,26,33,38].includes(id)) return na('本项只有汇总分布或分位数，缺少可重算的维度明细');
+  if(effectiveFilters.length&&id===39) {
+    if(effectiveFilters.some(([key])=>!['productLine','deviceModel'].includes(key))) return na('型号表现只提供产品线和型号级模拟样本');
     const entries=Object.entries(raw.value).filter(([name])=>(!state.productLine||state.productLine==='Hunting'===(name==='Hunt Pro'))&&(!state.deviceModel||state.deviceModel===name));
     return entries.length?{kind:'group',value:Object.fromEntries(entries)}:na('该产品线与型号组合无样本');
   }
-  if(filters.length&&id===40) return {kind:'group',value:{[state.salesChannel]:raw.value[state.salesChannel]}};
+  if(effectiveFilters.length&&id===40) return {kind:'group',value:{[state.salesChannel]:raw.value[state.salesChannel]}};
   if(id===5&&state.productLine) {
     const key=state.productLine==='Bird'?'bird':'hunting';
     const applicable=filters.filter(([dimension])=>dimension!=='week'&&dimension!=='productLine');
     const shares=sharesFor(applicable,id);
     const value=projectGroup({[key]:raw.value[key]},shares,applicable,id);
     return Object.values(value[key]).reduce((a,b)=>a+b,0)>=30?{kind:'group',value}:na('筛选后订阅状态样本不足30');
+  }
+  if(id===21&&state.productLine) {
+    const line=sourceData.subscriptionFlow.byProductLine[state.productLine];
+    if(!line)return na('该产品线没有订阅状态流水');
+    const applicable=filters.filter(([dimension])=>dimension!=='productLine'&&dimension!=='week');
+    const shares=sharesFor(applicable,id);
+    const value=projectGroup(line,shares,applicable,id);
+    value.closing=value.opening+value.trialPaid+value.directPaid+value.recovered-value.lost;
+    return {kind:'group',value};
   }
   const applicable=filters.filter(([key])=>key!=='week'&&!(id===22&&key==='plan')&&
     !(state.productLine==='Bird'&&[13,22,42].includes(id)&&key==='productLine'));
@@ -259,10 +336,18 @@ function projectMetric(id,state=filterState) {
 }
 function projectDataset() {
   dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>[`m${String(c.id).padStart(2,'0')}`,projectMetric(c.id)]))};
-  const statuses=dataset.metrics.m05,subscribers=dataset.metrics.m02,flow=dataset.metrics.m21;
+  const statuses=dataset.metrics.m05,subscribers=dataset.metrics.m02,subscriptionRate=dataset.metrics.m06,flow=dataset.metrics.m21;
   if(statuses.kind==='group'&&subscribers.kind==='count') {
     const total=Object.values(statuses.value).reduce((sum,line)=>sum+line.paidCurrent+line.cancelledButEntitled,0);
     subscribers.value=total;
+  }
+  if(subscriptionRate.kind==='rate') {
+    if(statuses.kind==='group'&&subscribers.kind==='count') {
+      const eligible=Object.values(statuses.value).reduce((sum,line)=>sum+Object.values(line).reduce((a,b)=>a+b,0),0);
+      Object.assign(subscriptionRate,{numerator:subscribers.value,denominator:eligible,value:subscribers.value/eligible});
+    } else {
+      dataset.metrics.m06=na('此筛选缺少同范围的互斥订阅状态人数，无法重算订阅率');
+    }
   }
   if(flow.kind==='group'&&subscribers.kind==='count') {
     const v=flow.value;v.closing=subscribers.value;
@@ -356,6 +441,7 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   return article;
 }
 function trendValues(id) {
+  if(id===27&&filterState.functionType)return null;
   if(id===18) {
     const values=sourceData.weekly.map(w=>{
       const result=trialRows({...filterState,week:String(w.week)});
@@ -372,15 +458,11 @@ function trendValues(id) {
     const applicable=selectedFilters().filter(([key])=>key!=='week');
     const shares=sharesFor(applicable,id);
     const values=history.points.map(raw=>{
+      if(id===2&&metric(2).kind==='count')
+        return Math.round(raw.value*metric(2).value/sourceData.metrics.m02.value);
       const value=projectValue(raw,shares,applicable,id);
       return value.kind==='na'?null:value.kind==='rate'?value.value*100:value.value;
     });
-    const current=metric(id);
-    if(current.kind!=='na'&&!filterState.week) {
-      const latest=id===54?current.value.eventLoss:current;
-      if(latest?.kind==='rate')values[values.length-1]=latest.value*100;
-      else if(['count','usd'].includes(latest?.kind))values[values.length-1]=latest.value;
-    }
     return values.some(value=>value!==null)?values:null;
   }
   if(filterState.productLine==='Hunting'&&[13,42].includes(id))return null;
@@ -418,8 +500,16 @@ function metricHistory(id) {
   const labels=history?.labels??sourceData.weekly.map(w=>`W${w.week}`);
   const values=trendValues(id);
   if(!values||!values.some(value=>value!==null&&Number.isFinite(value)))return null;
-  const estimated=selectedFilters().length&&id!==18?'当前筛选的历史点按模拟分片估算；底表最新点说明仅适用于未筛选范围。':'';
-  return {labels,values,unit:history?.unit??([9,34].includes(id)?'人':'%'),
+  const details=id===18?sourceData.weekly.map(w=>{
+    const result=trialRows({...filterState,week:String(w.week)});
+    return result.rows?trialAggregate(result.rows):null;
+  }):history?.kind==='rate'?history.points.map(raw=>{
+    const applicable=selectedFilters().filter(([key])=>key!=='week');
+    const value=projectValue(raw,sharesFor(applicable,id),applicable,id);
+    return value.kind==='rate'?value:null;
+  }):null;
+  const estimated=selectedFilters().length&&id!==18?'当前筛选的整条历史序列采用同一模拟分片方法，不能用于真实经营判断。':'';
+  return {labels,values,details,unit:history?.unit??([9,34].includes(id)?'人':'%'),
     title:id===54?'事件丢失率':catalogItem(id).name,
     note:`${history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
 }
@@ -433,6 +523,122 @@ function paidPayersHistory() {
   return {labels:['6月','7月','8月'],values,unit:'人',title:'月内订阅付款主账号',
     note:`完整自然月去重付款人数；与期末有效订阅人数不同。${filters.length?'筛后历史按模拟分片估算。':''}`};
 }
+function trialFailureHistory() {
+  const values=sourceData.weekly.map(w=>{
+    const result=trialRows({...filterState,week:String(w.week)});
+    if(!result.rows)return null;
+    const summary=trialAggregate(result.rows);
+    return summary.attempts>=30?summary.failed/summary.attempts*100:null;
+  });
+  return values.some(Number.isFinite)?{labels:sourceData.weekly.map(w=>`W${w.week}`),values,unit:'%',
+    title:'支付失败率',note:'同一筛选下逐周按支付失败人数÷支付尝试人数计算；与成熟试用转正率分母不同。'}:null;
+}
+function filteredBreakdown(page) {
+  const id=page==='B'&&filterState.functionType?27:primaryTrendMetric[page];
+  const contract=contractFor(id);
+  const selected=selectedFilters().find(([key])=>key!=='week'&&key!=='season'&&contract.dimensions.includes(key));
+  if(!selected)return null;
+  const [dimension]=selected;
+  const options=dimension==='functionType'?(page==='C'?['Upload','Live','Push']:['Live','Playback','Recognition']):
+    Object.keys(sourceData.slices[dimension]??{});
+  const rows=options.map(option=>{
+    const state={...filterState,[dimension]:option};
+    const value=projectMetric(id,state);
+    return {label:optionLabels[option]??option,value};
+  }).filter(row=>row.value.kind==='rate'||row.value.kind==='count'||row.value.kind==='usd');
+  if(rows.length<2)return null;
+  const unit=rows[0].value.kind==='rate'?'%':rows[0].value.kind==='usd'?'美元':'人';
+  const values=rows.map(row=>row.value.kind==='rate'?row.value.value*100:row.value.value);
+  const spec={title:`${filterLabels[dimension]} · ${catalogItem(id).name}分组对照`,unit,
+    labels:rows.map(row=>row.label),series:[{name:catalogItem(id).name,values}],
+    note:`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前模拟分组用于定位差异，不能证明原因。`};
+  const table={title:`${filterLabels[dimension]} · 组规模与指标`,
+    columns:['分组',unit==='%'?'分子':'当前值',unit==='%'?'分母':'统计对象', '指标值'],
+    rows:rows.map(row=>row.value.kind==='rate'?[row.label,row.value.numerator,row.value.denominator,percent(row.value.value)]:
+      [row.label,row.value.value,contract.entity,unit==='美元'?`$${number(row.value.value)}`:`${number(row.value.value)}${unit}`]),
+    note:spec.note};
+  return {spec,table};
+}
+function subscriptionBridgeSpec() {
+  const flow=metric(21);
+  if(flow.kind!=='group')return null;
+  const v=flow.value;
+  if(Object.values(v).some(x=>!Number.isFinite(x)||x<0))return null;
+  const labels=['期初','试用转正','直接首付','恢复订阅','失去权益','期末'];
+  const steps=[v.opening,v.trialPaid,v.directPaid,v.recovered,-v.lost,v.closing];
+  return {kind:'waterfall',title:'有效订阅人数流转 · 9/1–9/24',unit:'人',labels,
+    series:[{name:'人数变化',values:steps}],flow:v,
+    note:`期初 + 试用转正 + 直接首付 + 恢复 − 失去权益 = 期末（${number(v.closing)}人）。纵轴局部放大；筛选后各项为模拟分片流转估算。`};
+}
+function trialContributionBreakdown() {
+  if(filterState.week)return null;
+  const previous=trialRows({...filterState,week:undefined},'previous');
+  const current=trialRows({...filterState,week:undefined},'current');
+  if(!previous.rows||!current.rows)return null;
+  const beforeAll=trialAggregate(previous.rows),nowAll=trialAggregate(current.rows);
+  if(beforeAll.denominator<30||nowAll.denominator<30)return null;
+  const keys=[['app_platform','App平台'],['plan','套餐'],['country','国家/市场'],['product_line','产品线']];
+  const [field,label]=keys.find(([name])=>!({app_platform:filterState.appPlatform,plan:filterState.plan,
+    country:filterState.country,product_line:filterState.productLine})[name])??[];
+  if(!field)return null;
+  const options=[...new Set([...previous.rows,...current.rows].map(row=>row[field]))];
+  const rows=options.map(option=>{
+    const before=trialAggregate(previous.rows.filter(row=>row[field]===option));
+    const now=trialAggregate(current.rows.filter(row=>row[field]===option));
+    const contribution=(now.numerator/nowAll.denominator-before.numerator/beforeAll.denominator)*100;
+    return {name:optionLabel(field==='product_line'?'productLine':field==='app_platform'?'appPlatform':field,option),before,now,contribution};
+  }).filter(row=>row.before.denominator>=30&&row.now.denominator>=30)
+    .sort((a,b)=>a.contribution-b.contribution);
+  if(rows.length<2)return null;
+  return {title:`${label} · 转正率变化贡献排序`,
+    columns:['分组','前9周转正率','近3周转正率','近3周成熟试用','对总体变化的贡献'],
+    rows:rows.map(row=>[row.name,percent(row.before.value),percent(row.now.value),row.now.denominator,
+      `${row.contribution>=0?'+':''}${row.contribution.toFixed(2)} 个百分点`]),
+    note:`各组按同周期总体成熟试用人数加权；${rows.length===options.length?`贡献相加约为总体 ${((nowAll.value-beforeAll.value)*100).toFixed(2)} 个百分点`:'仅展示两个周期样本均不少于30的分组，不能合计到总体'}。包含分组构成与组内转正变化，只定位差异，不证明原因。`};
+}
+function seasonComparisonSpec() {
+  const values=['Migration','Other'].map(season=>projectMetric(29,{...filterState,season}));
+  if(values.some(value=>value.kind!=='rate'))return null;
+  return {title:'未使用人数对照 · 21天 / 30天',unit:'人',
+    labels:['迁徙季 · 21天','淡季 · 30天'],details:values,
+    series:[{name:'未使用主账号',values:values.map(value=>value.numerator)}],
+    note:'同一可观察主账号范围，按最近一次复合活跃距今的天数分层重算；30天人群包含于21天人群。'};
+}
+function technicalBreakdown() {
+  const dimension=filterState.deviceModel||filterState.productLine==='Hunting'?'firmware':'deviceModel';
+  const options=dimension==='firmware'?['2.8','Other']:['K6','Bird Lite','Bird Pro','Hunt Pro'];
+  const rows=options.map(option=>({label:optionLabels[option]??option,
+    value:projectMetric(46,{...filterState,[dimension]:option})}))
+    .filter(row=>row.value.kind==='group');
+  if(rows.length<2)return null;
+  const keys=filterState.functionType?[{Upload:'upload',Live:'live',Push:'push'}[filterState.functionType]]:['upload','live','push'];
+  const labels={upload:'上传',live:'直播',push:'推送'};
+  const series=keys.map(key=>({name:`${labels[key]}失败率`,values:rows.map(row=>(1-row.value.value[key].value)*100)}));
+  const highest=Math.max(...series.flatMap(line=>line.values));
+  const maxY=Math.min(100,Math.max(5,Math.ceil(highest/5)*5));
+  const spec={title:`${filterLabels[dimension]} · 技术链路失败请求率`,unit:'%',maxY,labels:rows.map(row=>row.label),series,
+    note:`每条链路失败次数÷请求次数；纵轴从0至${maxY}%，按局部刻度观察，跨页不直接比较柱高。型号×固件使用同一组合成请求事实，仍需核对真实错误码与影响设备数。`};
+  const table={title:`${filterLabels[dimension]} · 请求样本与失败次数`,
+    columns:['分组','尝试次数',...keys.map(key=>`${labels[key]}失败`)],
+    rows:rows.map(row=>{
+      const rates=row.value.value;
+      return [row.label,rates[keys[0]].denominator,...keys.map(key=>rates[key].denominator-rates[key].numerator)];
+    }),note:spec.note};
+  return {spec,table};
+}
+function modelSubscriptionRanking() {
+  const value=metric(39);
+  if(value.kind!=='group')return null;
+  const rows=Object.entries(value.value).sort((a,b)=>b[1].subscriptionRate-a[1].subscriptionRate);
+  if(rows.length<2)return null;
+  const spec={title:'设备型号订阅率排序 · 合成主账号样本',unit:'%',labels:rows.map(([name])=>name),
+    series:[{name:'订阅率',values:rows.map(([,part])=>part.subscriptionRate*100)}],
+    note:'按订阅率排序；分母为各型号主账号。型号经营表现为相关性，不能直接解释订阅差异的原因。'};
+  const table={title:'型号规模与订阅人数核对',columns:['型号','主账号','有效订阅估算','订阅率'],
+    rows:rows.map(([name,part])=>[name,part.owners,Math.round(part.owners*part.subscriptionRate),percent(part.subscriptionRate)]),
+    note:'订阅人数由合成主账号数×展示率回算，真实上线应使用去重主账号事实表。'};
+  return {spec,table};
+}
 function headlineTrend(id) {
   const history=metricHistory(id);
   if(!history)return null;
@@ -444,6 +650,7 @@ function headlineTrend(id) {
     `${delta>0?'+':''}$${delta.toFixed(2)}（较上期）`:
     `${delta>0?'+':''}${number(Math.round(delta))}${history.unit}（较上期）`;
   const wrap=element('div','headline-trend');
+  if(delta!==null)wrap.dataset.delta=String(delta);
   wrap.append(element('span','headline-trend-label',`${history.labels[index]} · ${deltaText}`));
   const box=element('div','node-sparkline headline-sparkline');box.dataset.metricId=String(id);
   box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':`${Number(current).toFixed(history.unit==='%'||history.unit==='美元/人'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
@@ -465,28 +672,37 @@ function metricValueRow(id,valueNode,trend) {
   const row=element('div','metric-value-row');row.append(valueNode);
   if(trend) {
     const label=trend.querySelector('.headline-trend-label');
-    if(label){label.className='metric-delta';row.append(label);}
+    if(label){
+      const delta=Number(trend.dataset.delta);
+      const adverseWhenHigh=new Set([15,29,42,52,53,54]);
+      const favorableWhenHigh=new Set([2,3,4,9,10,11,13,17,18,23,24,27,34,41,48,49]);
+      const direction=adverseWhenHigh.has(id)?-1:favorableWhenHigh.has(id)?1:0;
+      label.className=`metric-delta${direction&&Math.abs(delta)>.05?delta*direction>0?' improving':' adverse':''}`;
+      row.append(label);
+    }
   } else if(id===21&&metric(21).kind==='group') {
     const {opening,closing}=metric(21).value;
     if(opening>0&&Number.isFinite(closing))
-      row.append(element('span','metric-delta',`${closing-opening>=0?'+':''}${((closing-opening)/opening*100).toFixed(1)}% · 较期初`));
+      row.append(element('span','metric-delta',`存量较期初 ${closing-opening>=0?'+':''}${((closing-opening)/opening*100).toFixed(1)}%`));
   }
   return row;
 }
 function nodeTrendDetails(id) {
   const series=trendValues(id);
   if(!series) return element('p','node-change','当前维度无可用周趋势');
+  const snapshotHistory=Boolean(sourceData.metricTrends?.[`m${String(id).padStart(2,'0')}`]);
   const position=filterState.week?Number(filterState.week)-1:series.length-1;
   const current=series[position], previous=series[position-1];
   const isRate=![9,34].includes(id);
   const delta=previous==null||current==null?null:isRate?current-previous:(current/previous-1)*100;
-  const change=delta==null?'缺少可比周':Math.abs(delta)<.05?'与上周持平':`${delta>0?'+':''}${delta.toFixed(1)}${isRate?'个百分点':'%'}（较上周）`;
+  const compare=snapshotHistory?'上期':'上周';
+  const change=delta==null?'缺少可比期':Math.abs(delta)<.05?`与${compare}持平`:`${delta>0?'+':''}${delta.toFixed(1)}${isRate?'个百分点':'%'}（较${compare}）`;
   const details=element('div','node-extra');
-  details.append(element('span','node-extra-label',filterState.week?`近12周趋势 · 当前选W${filterState.week}`:'近12周趋势'),element('p','node-change',change));
+  details.append(element('span','node-extra-label',snapshotHistory?'近12期模拟快照':filterState.week?`近12周趋势 · 当前选W${filterState.week}`:'近12周趋势'),element('p','node-change',change));
   const box=element('div','node-sparkline');
   box.dataset.metricId=String(id);
   box.setAttribute('role','img');
-  box.setAttribute('aria-label',`最近12周趋势；${filterState.week?`所选W${filterState.week}`:'最新周'}值${current==null?'不适用':id===9||id===34?number(current):percent(current/100)}，${change}`);
+  box.setAttribute('aria-label',`${snapshotHistory?'最近12期模拟快照':'最近12周趋势'}；${snapshotHistory?'最新期':filterState.week?`所选W${filterState.week}`:'最新周'}值${current==null?'不适用':id===9||id===34?number(current):percent(current/100)}，${change}`);
   details.append(box);
   return details;
 }
@@ -501,7 +717,7 @@ function drawSparkline(box,values,id,labels=dataset.weekly.map(w=>`W${w.week}`),
     animation:false,grid:{left:2,right:2,top:5,bottom:5},
     xAxis:{type:'category',show:false,data:labels},
     yAxis:{type:'value',show:false,scale:true},
-    tooltip:{trigger:'axis',formatter:params=>`${labels[params[0].dataIndex]}：${params[0].value==null?'无值':unit==='%'||unit==='美元/人'?`${Number(params[0].value).toFixed(1)}${unit}`:`${number(params[0].value)}${unit}`}`},
+    tooltip:{trigger:'axis',formatter:params=>`${periodLabel(labels[params[0].dataIndex])}：${params[0].value==null?'无值':unit==='%'||unit==='美元/人'?`${Number(params[0].value).toFixed(1)}${unit}`:`${number(params[0].value)}${unit}`}`},
     series:[{type:'line',data:values,symbol:'circle',symbolSize:(_,params)=>filterState.week&&labels[params.dataIndex]===`W${filterState.week}`?6:0,
       smooth:.2,lineStyle:{width:2,color:'#bf762b'},areaStyle:{color:'rgba(232,150,60,.13)'}}]
   });
@@ -583,6 +799,31 @@ function intro() {
   header.append(text,tags);
   return header;
 }
+function homePriorityObservation() {
+  const candidates=[];
+  const activation=metric(13),series=trendValues(13);
+  if(activation.kind==='rate'&&series?.length===12&&series.every(Number.isFinite)) {
+    const before=series.slice(0,8).reduce((a,b)=>a+b,0)/8;
+    const after=series.slice(8).reduce((a,b)=>a+b,0)/4;
+    const gap=before-after;
+    if(gap>0.05)candidates.push({page:'A',id:13,impact:Math.round(gap/100*activation.denominator),
+      title:`7日价值激活率较前期低 ${gap.toFixed(1)} 个百分点`,
+      text:`按当前合格批次 ${number(activation.denominator)} 人和前8周均值估算，约少 ${number(Math.round(gap/100*activation.denominator))} 人达到7日价值激活。`});
+  }
+  const current=trialRows({...filterState,week:undefined},'current');
+  const previous=trialRows({...filterState,week:undefined},'previous');
+  if(current.rows&&previous.rows) {
+    const now=trialAggregate(current.rows),before=trialAggregate(previous.rows);
+    if(now.denominator>=30&&before.denominator>=30) {
+      const gap=(before.value-now.value)*100;
+      if(gap>0.05)candidates.push({page:'D',id:18,impact:Math.round(gap/100*now.denominator/3),
+        title:`试用转正率较前期低 ${gap.toFixed(1)} 个百分点`,
+        text:`按近3周平均每周 ${number(Math.round(now.denominator/3))} 名成熟试用用户估算，约少 ${number(Math.round(gap/100*now.denominator/3))} 人/周转正。`});
+    }
+  }
+  candidates.sort((a,b)=>b.impact-a.impact);
+  return candidates[0]??null;
+}
 function renderHome() {
   disposeCharts();
   const s=dataset.snapshot;
@@ -592,7 +833,7 @@ function renderHome() {
   const snap=element('div','snapshot-grid');
   [
     {id:2,label:'有效订阅用户',value:displayValue(2),page:'D',status:'当前有效付费权益'},
-    {id:21,label:'本月净增',value:metric(21).kind==='na'?'不适用':`${metric(21).value.closing-metric(21).value.opening>=0?'+':''}${number(metric(21).value.closing-metric(21).value.opening)}`,page:'D',status:'期末减期初'},
+    {id:21,label:'9月截至24日净增',value:metric(21).kind==='na'?'不适用':`${metric(21).value.closing-metric(21).value.opening>=0?'+':''}${number(metric(21).value.closing-metric(21).value.opening)}`,page:'D',status:'9/1期初 → 9/24期末'},
     {id:3,label:'MRR',value:displayValue(3),page:'D',status:'基础订阅 + 增值Pack'},
     {id:4,label:'复合活跃主账号',value:displayValue(4),page:'B',status:'最近30天去重'},
   ].forEach(item=>snap.append(card(item)));
@@ -619,18 +860,15 @@ function renderHome() {
   trend.append(chartBox);
   trend.append(createTrendTable());
   const insight=element('aside','insight-panel');
-  let insightMetric=18;
-  if(selectedFilters().length) {
-    const relevant=metric(18);
-    const observation=filteredFinding('D');
-    insightMetric=observation?.id??18;
-    const title=insightMetric!==18?`${catalogItem(insightMetric).name} · ${displayValue(insightMetric)}`:
-      relevant.kind==='rate'?`试用转正率 ${percent(relevant.value)}`:'当前筛选下试用转正率不适用';
-    insight.append(element('span','insight-tag','筛后观察'),element('h3','',title),
-      element('p','',observation?.text??`${relevant.reason??'当前组合没有可比样本'}。`));
-  } else insight.append(element('span','insight-tag','本周需要看'),element('h3','','试用转正率下降 1.6 个百分点'),
-                 element('p','',filteredFinding('D')?.text??'成熟试用批次数据暂不可用。'));
-  const storyLink=element('a','insight-link','查看订阅诊断与证据 ↗'); storyLink.href=routeHref('D',insightMetric); insight.append(storyLink);
+  const priority=homePriorityObservation();
+  insight.append(element('span','insight-tag','优先观察 · 演示排序'));
+  if(priority) {
+    insight.append(element('h3','',priority.title),element('p','',priority.text),
+      element('p','panel-sub','按每周少达成人数估算排序；不同经营阶段的影响不可相加。'));
+    const link=element('a','insight-link',`查看${pages[priority.page].title}证据 ↗`);
+    link.href=routeHref(priority.page,priority.id);insight.append(link);
+  } else insight.append(element('h3','','当前范围无可比较的下降信号'),
+    element('p','','请查看各专题中的可用指标与分组证据；当前模拟数据不支持进一步排序。'));
   story.append(trend,insight); dash.append(story,journeyTitle,rail);
 
   const lower=element('div','lower-grid');
@@ -649,7 +887,7 @@ function renderHome() {
   [
     {id:15,label:'绑定未激活设备',page:'A',value:displayValue(15),note:'已绑定超过3天，仍无首图',alert:true,critical:true},
     {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),note:'去重风险信号命中',alert:true,critical:true},
-    {id:29,label:'季节阈值未使用',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',note:'迁徙季连续21天',alert:true},
+    {id:29,label:'季节阈值未使用',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',note:`连续${metric(29).thresholdDays??21}天`,alert:true},
     {id:22,label:'Free权益用满',page:'D',value:metric(22).kind==='group'?number(metric(22).value.anyExhausted.numerator):'不适用',note:'观鸟线 · 升级机会',alert:true},
   ].forEach(item=>alertCards.append(miniCard({...item,note:selectedFilters().length?'按当前筛选模拟分片':item.note})));
   alert.append(alertCards);dash.append(alert);
@@ -674,8 +912,8 @@ function createTrendTable() {
   const activation=trendValues(13),conversion=trendValues(18);
   dataset.weekly.forEach((w,index)=>{
     const r=element('tr','');
-    r.append(element('td','',`W${w.week}`),
-             element('td','',activation?`${activation[index].toFixed(1)}%`:'不适用'),
+    r.append(element('td','',periodLabel(`W${w.week}`)),
+             element('td','',Number.isFinite(activation?.[index])?`${activation[index].toFixed(1)}%`:'不适用'),
              element('td','',conversion?.[index]!=null?`${conversion[index].toFixed(1)}%`:'不适用'));
     body.append(r);
   });
@@ -698,13 +936,13 @@ function drawTrend() {
     color:['#d0832b','#356d51'],
     animationDuration:450,
     textStyle:{fontFamily:'DM Sans, Noto Sans SC, sans-serif'},
-    tooltip:{trigger:'axis',valueFormatter:value=>`${Number(value).toFixed(1)}%`},
+    tooltip:{trigger:'axis',formatter:params=>`${periodLabel(`W${weeks[params[0].dataIndex].week}`)}<br>${params.map(item=>`${item.marker}${item.seriesName}：${item.value==null?'无值':`${Number(item.value).toFixed(1)}%`}`).join('<br>')}`},
     legend:{bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
     grid:{left:42,right:12,top:20,bottom:48},
     xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},axisLabel:{color:'#6b7f70'}},
-    yAxis:{type:'value',scale:true,axisLabel:{formatter:'{value}%',color:'#6b7f70'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
+    yAxis:{type:'value',min:0,max:100,axisLabel:{formatter:'{value}%',color:'#6b7f70'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
     series:[
-      ...(activation?[{name:'7日价值激活率（观鸟）',type:'line',smooth:.2,symbolSize:5,lineStyle:{width:2.5},data:activation.map(v=>Number(v.toFixed(1)))}]:[]),
+      ...(activation?[{name:'7日价值激活率（观鸟）',type:'line',smooth:.2,symbolSize:5,lineStyle:{width:2.5},data:activation.map(v=>Number.isFinite(v)?Number(v.toFixed(1)):null)}]:[]),
       ...(conversion?[{name:'试用→转正率',type:'line',smooth:.2,symbolSize:5,lineStyle:{width:2.5},data:conversion.map(v=>v==null?null:Number(v.toFixed(1)))}]:[]),
     ],
   });
@@ -724,20 +962,20 @@ const groupSummary={
   25:v=>`DAU ${number(v.DAU)}`,
   26:v=>`${number(v.sessionsPerUser)}次 / 人`,
   28:v=>`D7 ${percent(v.D7.value)}`,
-  30:()=> '3类活跃来源',
+  30:v=>`App ${number(v.app)} / 复合 ${number(v.composite)}`,
   31:v=>`送达 ${percent(v.delivery.value)}`,
   32:v=>`升级 ${percent(v.upgrade.value)}`,
   33:v=>`恢复 ${percent(v.recovery.value)}`,
   35:v=>`$${Number(v.ARPPU).toFixed(2)}`,
   36:v=>`任一Pack ${percent(v.anyPack.value)}`,
   37:v=>`${number(v.firstPurchase)} / ${number(v.repeatOrRenewal)}`,
-  38:v=>`${Object.keys(v).length}类构成`,
-  39:v=>{if(Object.keys(v).length>1)return `${Object.keys(v).length}个演示型号`;const [name,item]=Object.entries(v)[0];return `${name} · ${percent(item.subscriptionRate)}`;},
+  38:v=>`美国 ${percent(v.countryShare.US)}`,
+  39:v=>{const [name,item]=Object.entries(v).sort((a,b)=>b[1].subscriptionRate-a[1].subscriptionRate)[0];return `${name} · ${percent(item.subscriptionRate)}`;},
   40:v=>{const names=Object.keys(v);return names.length===1?`${names[0]} ${number(v[names[0]].owners)}人`:`${names.length}个自报渠道样本`;},
   43:v=>`D7 ${percent(v.D7.value)}`,
   45:v=>`联网 ${percent(v.networkSuccess.value)}`,
-  46:v=>`上传 ${percent(v.upload.value)}`,
-  50:()=> '3类状态',
+  46:v=>{const [name,part]=Object.entries(v)[0];return `${groupLabels[name]??name} ${percent(part.value)}`;},
+  50:v=>`绑定未激活 ${number(v.boundNotActivated)}台`,
   51:v=>`30日回绑 ${percent(v.reboundWithin30d.value)}`,
   54:v=>`${percent(v.eventLoss.value)} / ${percent(v.idMapping.value)}`,
 };
@@ -779,7 +1017,7 @@ function dataTable(spec, extraClass='') {
   return wrap;
 }
 function chartTable(spec) {
-  const rows=spec.labels.map((label,index)=>[label,...spec.series.map(line=>{
+  const rows=spec.labels.map((label,index)=>[periodLabel(label),...spec.series.map(line=>{
     const value=line.values[index];
     if(value===null||value===undefined||!Number.isFinite(Number(value)))return '不适用';
     return spec.unit==='%'?`${Number(value).toFixed(1)}%`:spec.unit==='美元/人'?`$${Number(value).toFixed(2)}`:number(value);
@@ -793,9 +1031,21 @@ function chartTable(spec) {
     }));
   }
   if (spec.kind==='heatmap') {
-    columns=['型号',...spec.dimensions];
+    columns=spec.sampleSizes?['型号','主账号','活跃主账号','订阅主账号',...spec.dimensions]:['型号',...spec.dimensions];
     rows.splice(0,rows.length,...spec.labels.map((label,index)=>
-      [label,...spec.series[0].values[index].map(value=>`${Number(value).toFixed(1)}%`)]));
+      [label,...(spec.sampleSizes?[spec.sampleSizes[index],
+        Math.round(spec.sampleSizes[index]*spec.series[0].values[index][0]/100),
+        Math.round(spec.sampleSizes[index]*spec.series[0].values[index][1]/100)]:[]),
+        ...spec.series[0].values[index].map(value=>`${Number(value).toFixed(1)}%`)]));
+  }
+  if(spec.kind==='waterfall') {
+    columns=['流转环节','人数变化','累计有效订阅'];
+    let running=0;
+    rows.splice(0,rows.length,...spec.labels.map((label,index)=>{
+      const step=spec.series[0].values[index];
+      if(index===0||index===spec.labels.length-1)running=step;else running+=step;
+      return [label,index===0||index===spec.labels.length-1?number(step):`${step>=0?'+':''}${number(step)}`,number(running)];
+    }));
   }
   const details=element('details','chart-data');
   details.append(element('summary','','查看图表完整数据表'),dataTable({title:spec.title,columns,rows}));
@@ -877,6 +1127,27 @@ function drawDetailChart(box,spec) {
   detailCharts.push(instance);
   const isTimeline=spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label));
   const colors=['#bf762b','#356d51','#7593a0'];
+  if(spec.kind==='waterfall') {
+    const v=spec.flow;
+    const lower=Math.max(0,Math.floor((Math.min(v.opening,v.closing)-800)/250)*250);
+    instance.setOption({animationDuration:350,
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+        const index=params[0]?.dataIndex;
+        return index===undefined?'':`${spec.labels[index]}：${index===0||index===5?number(spec.series[0].values[index]):
+          `${spec.series[0].values[index]>=0?'+':''}${number(spec.series[0].values[index])}`} 人`;
+      }},
+      grid:{left:65,right:22,top:24,bottom:44},
+      xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455',interval:0},axisTick:{show:false}},
+      yAxis:{type:'value',min:lower,axisLabel:{color:'#687d6e',formatter:value=>number(value)},splitLine:{lineStyle:{color:'#e7ede6'}}},
+      series:[
+        {type:'bar',stack:'flow',silent:true,itemStyle:{color:'transparent'},data:[0,v.opening,v.opening+v.trialPaid,v.opening+v.trialPaid+v.directPaid,v.closing,0]},
+        {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#356d51'},data:[
+          {value:v.opening,itemStyle:{color:'#234f37'}},v.trialPaid,v.directPaid,v.recovered,0,{value:v.closing,itemStyle:{color:'#234f37'}}]},
+        {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#c16952'},data:[0,0,0,0,v.lost,0]},
+      ],
+    });
+    return instance;
+  }
   if (spec.kind==='boxplot') {
     instance.setOption({
       animationDuration:350,
@@ -901,7 +1172,10 @@ function drawDetailChart(box,spec) {
     })));
     instance.setOption({
       animationDuration:350,
-      tooltip:{formatter:params=>`${spec.labels[params.value[1]]} · ${spec.dimensions[params.value[0]]}：${Number(params.value[2]).toFixed(1)}%`},
+      tooltip:{formatter:params=>{
+        const index=params.value[1],owners=spec.sampleSizes?.[index];
+        return `${spec.labels[index]} · ${spec.dimensions[params.value[0]]}：${Number(params.value[2]).toFixed(1)}%${owners?`<br>主账号 ${number(owners)} · 对应约 ${number(Math.round(owners*params.value[2]/100))} 人`:''}`;
+      }},
       grid:{left:86,right:38,top:26,bottom:88},
       xAxis:{type:'category',data:spec.dimensions,axisLabel:{color:'#506455'},axisTick:{show:false}},
       yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
@@ -938,11 +1212,19 @@ function drawDetailChart(box,spec) {
     animationDuration:350,
     color:colors,
     textStyle:{fontFamily:'DM Sans, Noto Sans SC, sans-serif'},
-    tooltip:{trigger:'axis',valueFormatter:value=>spec.unit==='%'?`${Number(value).toFixed(1)}%`:spec.unit==='美元/人'?`$${Number(value).toFixed(2)}`:number(value)},
+    tooltip:{trigger:'axis',formatter:params=>{
+      const index=params[0]?.dataIndex;
+      if(index===undefined)return '';
+      const lines=[periodLabel(spec.labels[index]),...params.map(item=>`${item.marker}${item.seriesName}：${item.value==null?'无值':
+        spec.unit==='%'?`${Number(item.value).toFixed(1)}%`:spec.unit==='美元/人'?`$${Number(item.value).toFixed(2)}`:number(item.value)}`)];
+      const detail=spec.details?.[index];
+      if(detail?.denominator)lines.push(`分子 / 分母：${number(detail.numerator)} / ${number(detail.denominator)}`);
+      return lines.join('<br>');
+    }},
     legend:spec.series.length>1?{bottom:0,itemWidth:13,textStyle:{fontSize:11,color:'#506455'}}:{show:false},
     grid:{left:spec.unit==='人'||spec.unit==='台'?62:46,right:18,top:28,bottom:isTimeline?(spec.series.length>1?55:32):76},
     xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#687d6e',interval:0,hideOverlap:true,rotate:isTimeline?0:18,fontSize:11},axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
-    yAxis:{type:'value',min:isTimeline?'dataMin':0,scale:isTimeline,
+    yAxis:{type:'value',min:0,max:spec.maxY??(spec.unit==='%'?100:undefined),scale:false,
       axisLabel:{color:'#687d6e',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
     series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',data:line.values,smooth:isTimeline ? 0.18 : false,symbolSize:5,barMaxWidth:52,lineStyle:{width:2.5},itemStyle:{color:line.color??colors[index%colors.length]}})),
   });
@@ -971,9 +1253,9 @@ function metricEvidence(id,page) {
   const history=metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&id!==primaryId&&(id!==18||selectedFilters().length)) {
-    const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,
+    const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:history.details,
       series:[{name:history.title,values:history.values}],
-      note:`${history.note}趋势图纵轴按当前序列缩放，请结合数值表判断变化幅度。`};
+      note:`${history.note}${history.unit==='%'?'纵轴固定为0–100%。':'纵轴从0开始；请结合数值表判断变化幅度。'}`};
     const box=element('div','detail-chart');box.setAttribute('role','img');
     box.setAttribute('aria-label',`${spec.title}；${spec.note}；完整数值见下方数据表`);
     panel.append(box,element('p','table-note',history.note));specs.push([box,spec]);
@@ -1015,6 +1297,27 @@ function metricEvidence(id,page) {
         note:'前9周与近3周分别聚合，人数不能直接比较；上方观察使用周均变化。同一筛选条件下重算，同步变化不构成因果证明。'});
       panelTable.id='trial-contribution';panel.append(panelTable);
     }
+  } else if(id===29&&value.kind==='rate') {
+    const age=sourceData.inactivityCohorts;
+    const threshold=value.thresholdDays;
+    const returns=threshold===21?age.returnsAfterThreshold['21days']:age.returnsAfterThreshold['30days'];
+    const applicable=selectedFilters().filter(([key])=>key!=='season');
+    const shares=sharesFor(applicable,id);
+    const cohort=allocatedCount(age.historicalReturnCohort[`${threshold}days`],applicable,id,'numerator',shares);
+    const returning=Math.min(cohort,allocatedCount(returns,applicable,id,'numerator',shares));
+    panel.append(dataTable({title:`${threshold}天未使用与7天回流 · 同一合成规则`,
+      columns:['观察项','人数','分母','率'],rows:[
+        [`连续${threshold}天未使用`,value.numerator,value.denominator,percent(value.value)],
+        ['历史入组后7天回流',returning,cohort,percent(returning/cohort)]],
+      note:`迁徙季按21天、淡季按30天识别；回流属于历史入组群体，不与当前沉睡池直接相减。${age.note}`}));
+  } else if(id===27&&value.kind==='rate') {
+    const options=['Live','Playback','Recognition'];
+    panel.append(dataTable({title:'业务功能渗透 · 同一活跃人群',columns:['功能','使用主账号','活跃主账号','使用率'],
+      rows:options.map(option=>{
+        const part=projectMetric(27,{...filterState,functionType:option});
+        return [optionLabels[option],part.kind==='rate'?part.numerator:'不适用',part.kind==='rate'?part.denominator:'—',
+          part.kind==='rate'?percent(part.value):'—'];
+      }),note:sourceData.functionUsage.note}));
   } else if(id===25&&value.kind==='group') {
     const spec={title:'日 / 周 / 月活跃主账号（不同时间窗）',unit:'人',labels:['DAU','WAU','MAU'],series:[{name:'去重主账号',values:[value.value.DAU,value.value.WAU,value.value.MAU]}],note:'三个时间窗的去重人数不可相加；App MAU另列于下表。'};
     const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
@@ -1040,7 +1343,7 @@ function metricEvidence(id,page) {
     }
   } else if(id===39&&value.kind==='group') {
     const entries=Object.entries(value.value);
-    const spec={title:'设备型号经营表现 · 当前筛选',kind:'heatmap',unit:'%',labels:entries.map(([name])=>name),
+    const spec={title:'设备型号经营表现 · 当前筛选',kind:'heatmap',unit:'%',labels:entries.map(([name])=>name),sampleSizes:entries.map(([,part])=>part.owners),
       dimensions:['30天活跃率','主账号订阅率'],series:[{name:'比率',values:entries.map(([,part])=>[part.activeRate*100,part.subscriptionRate*100])}],
       note:'统一0–100%色阶；两列分别以各型号主账号为分母。'};
     const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
@@ -1087,29 +1390,74 @@ function metricInventory(page) {
   table.append(body);wrap.append(table);section.append(wrap);
   return section;
 }
+function trialSamplesPanel() {
+  const week=filterState.week??String(sourceData.weekly.at(-1).week);
+  const result=trialRows({...filterState,week});
+  if(!result.rows)return null;
+  const failed=result.rows.filter(row=>row.payment_status==='failed');
+  const panel=element('section','entity-workspace trial-samples');
+  panel.append(element('h3','','成熟试用记录 · 支付失败样本'),
+    element('p','table-note',`W${week} 当前范围支付失败 ${number(failed.length)} 条；下列最多5条真实参与本页合成试用聚合，只作逐条核对入口。`));
+  if(!failed.length) {panel.append(element('p','na-note','该范围无支付失败演示记录；不能据此推断真实业务没有失败。'));return panel;}
+  const list=element('div','trial-sample-list');
+  failed.slice(0,5).forEach(row=>{
+    const button=element('button','trial-sample-item');button.type='button';
+    button.append(element('strong','',row.trial_id),element('span','',
+      `${optionLabel('country',row.country)} · ${row.app_platform} · ${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · 观察至${row.outcome_observed_through}`),
+      element('span','trial-sample-action','关联到下方问题单 ↘'));
+    button.addEventListener('click',()=>{
+      const form=document.querySelector('.action-record');
+      const linked=form?.querySelector('[name="linkedSample"]');
+      if(!linked)return;
+      linked.value=`${row.trial_id} / ${row.user_id}`;
+      const note=form.querySelector('[name="note"]');
+      if(note&&!note.value.trim())note.value=`核对${row.trial_id}的支付失败记录与重试结果`;
+      form.scrollIntoView({block:'center',behavior:'smooth'});linked.focus({preventScroll:true});
+      document.querySelector('#announcement').textContent=`已将${row.trial_id}关联到问题单，保存后生效`;
+    });
+    list.append(button);
+  });
+  panel.append(list);
+  return panel;
+}
 function actionRecord(page,evidenceId) {
   const scope=activeFilterDescription()||'默认演示范围';
   const key=`record:${page}:${scope}:${evidenceId}`;
   const current=simulatedActionState[key]??{};
+  const hash=[...key].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7).toString(36).toUpperCase();
+  const issueId=`DEMO-${page}-${evidenceId}-${hash}`;
+  const baseline=current.baseline??displayValue(evidenceId);
+  const baselineAt=current.baselineAt??(filterState.week?`成熟批次W${filterState.week} · ${sourceData.weekly.find(w=>String(w.week)===filterState.week)?.weekEnd}`:sourceData.snapshot.asOf);
   const form=element('form','action-record');
-  form.append(element('strong','','问题处理记录'),element('p','table-note',`关联范围：${scope} · 复查指标：${catalogItem(evidenceId)?.name??'当前证据'}。记录只保存在此浏览器。`));
+  form.append(element('strong','',`问题单 ${issueId}`),element('p','table-note',
+    `基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}；范围：${scope}。仅保存在此浏览器。`));
   const fields=element('div','action-record-fields');
   const ownerLabel=element('label','','负责人');const owner=element('input','');owner.name='owner';owner.placeholder='填写负责人';owner.value=current.owner??'';ownerLabel.append(owner);
   const statusLabel=element('label','','处理状态');const status=element('select','');status.name='status';
-  [['pending','待处理'],['reviewing','核查中'],['resolved','已处理，待复查']].forEach(([value,label])=>{const option=element('option','',label);option.value=value;status.append(option);});
+  [['pending','待处理'],['reviewing','核查中'],['resolved','已处理，待复查'],['verified','复查通过（人工确认）']].forEach(([value,label])=>{const option=element('option','',label);option.value=value;status.append(option);});
   status.value=current.status??'pending';statusLabel.append(status);
-  const noteLabel=element('label','','处理说明');const note=element('input','');note.name='note';note.placeholder='记录核查结果';note.value=current.note??'';noteLabel.append(note);
+  const dueLabel=element('label','','计划复查日');const due=element('input','');due.type='date';due.name='due';due.value=current.due??'';dueLabel.append(due);
+  const targetLabel=element('label','','验收条件');const target=element('input','');target.name='target';target.placeholder='填写业务确认的目标';target.value=current.target??'';targetLabel.append(target);
+  const noteLabel=element('label','','处理说明');const note=element('input','');note.name='note';note.placeholder='记录核查或处理动作';note.value=current.note??'';noteLabel.append(note);
+  const sampleLabel=element('label','','关联演示记录');const linkedSample=element('input','');linkedSample.name='linkedSample';linkedSample.placeholder='从上方记录关联或手动填写';linkedSample.value=current.linkedSample??'';sampleLabel.append(linkedSample);
+  const reviewLabel=element('label','','复查实测值');const reviewValue=element('input','');reviewValue.name='reviewValue';reviewValue.placeholder='如 45.2% 或 434/1000';reviewValue.value=current.reviewValue??'';reviewLabel.append(reviewValue);
+  const reviewedLabel=element('label','','实际复查日');const reviewedAt=element('input','');reviewedAt.type='date';reviewedAt.name='reviewedAt';reviewedAt.value=current.reviewedAt??'';reviewedLabel.append(reviewedAt);
   const save=element('button','action-toggle','保存本地记录');save.type='submit';
-  fields.append(ownerLabel,statusLabel,noteLabel,save);form.append(fields);
-  const receipt=element('p','action-receipt',current.updatedAt?`已保存：${current.updatedAt}`:'尚未记录');form.append(receipt);
+  fields.append(ownerLabel,statusLabel,dueLabel,targetLabel,noteLabel,sampleLabel,reviewLabel,reviewedLabel,save);form.append(fields);
+  const receipt=element('p','action-receipt',current.updatedAt?`已保存：${current.updatedAt} · ${status.selectedOptions[0].textContent}`:'尚未记录');form.append(receipt);
   const review=element('a','insight-link','复查关联指标 ↗');review.href=routeHref(page,evidenceId);form.append(review);
   form.addEventListener('submit',event=>{
     event.preventDefault();
+    if(status.value==='verified'&&(!target.value.trim()||!reviewValue.value.trim()||!reviewedAt.value)) {
+      receipt.textContent='复查通过需填写验收条件、复查实测值和实际复查日。';
+      return;
+    }
     const updatedAt=new Date().toLocaleString('zh-CN',{hour12:false});
-    simulatedActionState[key]={owner:owner.value.trim()||'待指派',status:status.value,note:note.value.trim(),updatedAt,
-      page,evidenceId,scope,reviewMetric:evidenceId};
+    simulatedActionState[key]={issueId,owner:owner.value.trim()||'待指派',status:status.value,note:note.value.trim(),
+      due:due.value,target:target.value.trim(),linkedSample:linkedSample.value.trim(),reviewValue:reviewValue.value.trim(),reviewedAt:reviewedAt.value,
+      updatedAt,page,evidenceId,scope,filters:{...filterState},baseline,baselineAt,reviewMetric:evidenceId};
     try {localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(simulatedActionState));
-      receipt.textContent=`已保存：${updatedAt}`;document.querySelector('#announcement').textContent='处理记录已保存在此浏览器';}
+      receipt.textContent=`已保存：${updatedAt} · ${status.selectedOptions[0].textContent}`;document.querySelector('#announcement').textContent='处理记录已保存在此浏览器';}
     catch {receipt.textContent='浏览器存储不可用，记录未保存';}
   });
   return form;
@@ -1118,14 +1466,22 @@ function actionQueue(page) {
   const info=dataset.diagnostics[page];
   const section=element('section','detail-section action-section');
   if(selectedFilters().length) {
-    section.append(sectionTitle('05  /  ACTION QUEUE','筛后核对清单','按当前筛选重建；仅建议核对，无自动触达'));
+    section.append(sectionTitle('05  /  ACTION QUEUE','筛后行动与复查','按当前范围记录问题；无自动触达'));
     const firstAvailable=sourceData.catalog.find(item=>item.page===page&&metric(item.id).kind!=='na')?.id;
-    const ids=[...info.heroIds];
+    const findingId=filteredFinding(page)?.id??firstAvailable;
+    const ids=[...new Set([findingId,...primaryHeroIds[page]])].filter(Boolean).slice(0,4);
     if(firstAvailable&&!ids.some(id=>metric(id).kind!=='na'))ids.unshift(firstAvailable);
+    const next={A:'先按成熟注册批次核对分子分母，再查看绑定与首图阻塞设备。',
+      B:'分开核对App主动活跃与复合活跃，并检查未使用阈值下的人群。',
+      C:'按型号和固件比较失败次数及受影响设备，逐条核对样本。',
+      D:'按平台和套餐对照成熟试用、支付尝试与失败人数，再复查转正。',
+      E:'分开核对月内付款人数、净收入和ARPPU，确认收入口径。',
+      F:'按主账号与设备分别比较结构，避免把相关性写成因果。',
+      G:'先核对埋点丢失与ID映射，再研判业务异常事件。'};
     section.append(dataTable({title:'所选范围的核对对象',columns:['指标','筛后信号','建议下一步'],rows:ids.map(id=>[
-      catalogItem(id).name,displayValue(id),metric(id).kind==='na'?metric(id).reason:`核对 ${contractFor(id).entity} 的分子、分母、来源与完整观察窗`]),
-      note:'这里展示指标核对任务，不沿用默认样本的行动对象与阈值。'}));
-    section.append(actionRecord(page,filteredFinding(page)?.id??firstAvailable??info.heroIds[0]));
+      catalogItem(id).name,displayValue(id),metric(id).kind==='na'?metric(id).reason:next[page]]),
+      note:'当前为演示数据；行动建议依据本页业务问题生成，阈值需业务确认。'}));
+    section.append(actionRecord(page,findingId??info.heroIds[0]));
     return section;
   }
   section.append(sectionTitle('05  /  ACTION QUEUE','模拟行动出口','演示样本，处理记录保存在此浏览器；不会触达用户或连接外部系统'));
@@ -1175,15 +1531,17 @@ function filteredFinding(page) {
       `${change.delta>=0?'上升':'下降'} ${Math.abs(change.delta).toFixed(digits)} ${change.unit==='%'?'个百分点':change.unit}`}`;
   if(page==='A'&&m(13).kind==='rate') {
     const t=trend(13,8);
-    if(t)return {id:13,text:`所选范围的观鸟7日价值激活率为 ${percent(m(13).value)}；近4周均值较前8周 ${t.delta>=0?'上升':'下降'} ${Math.abs(t.delta).toFixed(1)} 个百分点。该比较不证明设备问题是原因。`};
+    if(t)return {id:13,text:`所选范围的观鸟7日价值激活率为 ${percent(m(13).value)}；近4周均值较前8周 ${t.delta>=0?'上升':'下降'} ${Math.abs(t.delta).toFixed(1)} 个百分点。按当前合格批次${number(m(13).denominator)}人估算，差额约${number(Math.round(Math.abs(t.delta)/100*m(13).denominator))}人。该比较不证明设备问题是原因。`};
   }
   if(page==='B'&&m(25).kind==='group') {
     const v=m(25).value;
     return {id:25,text:`当前DAU ${number(v.DAU)}、WAU ${number(v.WAU)}、MAU ${number(v.MAU)}${changeText(recentChange(4),0)}；DAU/MAU 为 ${(v.DAU/v.MAU*100).toFixed(1)}%。三个时间窗人数不可相加。`};
   }
+  if(page==='B'&&m(29).kind==='rate')
+    return {id:29,text:`按当前${m(29).thresholdDays}天阈值，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。迁徙季与淡季规则不可当作两个互斥人群相加。`};
   if(page==='C'&&m(42).kind==='rate') {
     const t=trend(42,8);
-    if(t)return {id:42,text:`所选范围空触发率 ${percent(m(42).value)}；近4周均值较前8周 ${t.delta>=0?'上升':'下降'} ${Math.abs(t.delta).toFixed(1)} 个百分点。请核对型号与固件分组。`};
+    if(t)return {id:42,text:`所选范围空触发率 ${percent(m(42).value)}；近4周均值较前8周 ${t.delta>=0?'上升':'下降'} ${Math.abs(t.delta).toFixed(1)} 个百分点。按当前${number(m(42).denominator)}次触发估算，差额约${number(Math.round(Math.abs(t.delta)/100*m(42).denominator))}次。请核对型号与固件分组，尚不能据此认定原因。`};
   }
   if(page==='D'&&filterState.plan==='Free'&&m(22).kind==='group') {
     const part=m(22).value.anyExhausted;
@@ -1320,7 +1678,7 @@ function entitySamplesPanel(page) {
   grid.append(list,detail);panel.append(grid);select(records[0],0);
   return panel;
 }
-function renderDetail(page,selectedMetric) {
+function renderDetail(page,selectedMetric,showSelected=false) {
   disposeCharts();
   const detail=pages[page];
   const info=dataset.diagnostics[page];
@@ -1340,24 +1698,32 @@ function renderDetail(page,selectedMetric) {
   const overviewMain=element('div','signals-main');
   const hero=element('div','detail-kpis');
   const inspector=element('aside','metric-inspector');
+  inspector.hidden=!showSelected;
   inspector.setAttribute('aria-label','选中指标摘要');
   inspector.tabIndex=-1;
   const selectMetric=id=>{
-    inspector.replaceChildren(metricInspector(id,page));
+    const close=element('button','inspector-close','收起详情 ×');close.type='button';
+    close.addEventListener('click',()=>{inspector.hidden=true;overviewGrid.classList.remove('inspector-open');
+      hero.querySelector(`[data-metric-id="${id}"] .detail-select`)?.focus({preventScroll:true});});
+    inspector.replaceChildren(close,metricInspector(id,page));
+    inspector.hidden=false;overviewGrid.classList.add('inspector-open');
     hero.querySelectorAll('.detail-kpi').forEach(card=>{
       const selected=Number(card.dataset.metricId)===id;
       card.classList.toggle('selected',selected);
       card.querySelector('.detail-select')?.setAttribute('aria-pressed',String(selected));
     });
   };
-  info.heroIds.forEach(id=>{
+  const heroIds=[...primaryHeroIds[page].filter(id=>metric(id).kind!=='na')];
+  for(const id of info.heroIds)if(heroIds.length<4&&!heroIds.includes(id)&&metric(id).kind!=='na')heroIds.push(id);
+  if(!heroIds.length)heroIds.push(primaryHeroIds[page][0]);
+  heroIds.forEach(id=>{
     const item=catalogItem(id);
-    const card=element('article',`detail-kpi${id===selectedMetric?' selected':''}`);
+    const card=element('article',`detail-kpi${showSelected&&id===selectedMetric?' selected':''}`);
     card.dataset.metricId=String(id);
     const heading=element('div','metric-heading');heading.append(element('h3','',item.name),definition(id,item.name));
     const select=element('button','detail-select',displayValue(id));select.type='button';
     select.setAttribute('aria-label',`在右侧查看${item.name}摘要`);
-    select.setAttribute('aria-pressed',String(id===selectedMetric));
+    select.setAttribute('aria-pressed',String(showSelected&&id===selectedMetric));
     select.addEventListener('click',()=>{selectMetric(id);inspector.focus({preventScroll:true});});
     const trend=headlineTrend(id);
     const link=element('a','detail-evidence-link','查看对应数据 ↓');link.href=routeHref(page,id);
@@ -1379,21 +1745,26 @@ function renderDetail(page,selectedMetric) {
       `${observation.text} 所选条件：${activeFilterDescription()}。`:
       '当前筛选下，本页关键指标均无适用的模拟事实；请调整筛选条件。'));
     finding.append(element('p','finding-meta',
-      `演示文案规则 ${findingRuleVersion} · 证据指标 #${String(findingMetric).padStart(2,'0')} · ${page==='D'&&findingMetric===18?'合成试用明细交集重算':'底表汇总与模拟分片估算'}`));
+      `演示文案规则 ${findingRuleVersion} · 证据指标 #${String(findingMetric).padStart(2,'0')} · ${findingSource(findingMetric)}`));
   } else {
-    finding.append(element('span','insight-tag','演示发现'),element('p','',page==='D'?filteredFinding('D')?.text??info.finding:info.finding));
+    const observation=filteredFinding(page);
+    findingMetric=observation?.id??findingMetric;
+    finding.append(element('span','insight-tag','规则观察'),element('p','',observation?.text??info.finding),
+      element('p','finding-meta',`演示文案规则 ${findingRuleVersion} · 证据指标 #${String(findingMetric).padStart(2,'0')} · 合成数据，不作因果归因`));
   }
   const cross=element('a','insight-link','查看本条指标证据 ↓');
   cross.href=routeHref(page,findingMetric);finding.append(cross);
-  if(!selectedFilters().length) {
-    const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
-    related.href=routeHref(info.crossLink);finding.append(related);
-  }
+  const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
+  related.href=routeHref(info.crossLink);finding.append(related);
+  if(selectedFilters().some(([key])=>!relevantFilters(info.crossLink).includes(key)))
+    finding.append(element('p','finding-meta','跨页时仅保留目标页支持的筛选条件。'));
   overviewMain.append(hero);overviewGrid.append(overviewMain,inspector);
   overview.append(overviewGrid);body.append(overview);
-  selectMetric(info.heroIds.includes(selectedMetric)?selectedMetric:info.heroIds[0]);
+  if(showSelected)selectMetric(selectedMetric);
   const drawSpecs=[];
   const addChart=(container,spec)=>{
+    if(spec.kind==='heatmap'&&!spec.sampleSizes&&metric(39).kind==='group')
+      spec={...spec,sampleSizes:spec.labels.map(name=>metric(39).value[name]?.owners)};
     const chartPanel=element('div','detail-chart-panel');
     chartPanel.append(element('h3','',spec.title));
     const box=element('div','detail-chart');box.setAttribute('role','img');
@@ -1403,16 +1774,18 @@ function renderDetail(page,selectedMetric) {
     container.append(chartPanel);drawSpecs.push([box,spec]);
   };
   const historySpec=history=>({title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,
-    labels:history.labels,series:[{name:history.title,values:history.values}],
-    note:`${history.note}趋势图纵轴按当前序列缩放，请结合数值表判断变化幅度。`});
+    labels:history.labels,details:history.details,series:[{name:history.title,values:history.values}],
+    note:`${history.note}${history.unit==='%'?'纵轴固定为0–100%。':'纵轴从0开始；请结合数值表判断变化幅度。'}`});
   const filteredHistories=selectedFilters().length?(page==='E'?[paidPayersHistory(),metricHistory(35)]:
-    page==='G'?[metricHistory(54)??metricHistory(53)]:[metricHistory(primaryTrendMetric[page])]).filter(Boolean):[];
+    page==='G'?[metricHistory(54)??metricHistory(53)]:
+      page==='D'?[metricHistory(18),trialFailureHistory()]:[metricHistory(primaryTrendMetric[page])]).filter(Boolean):[];
   const analysis=element('section','detail-section');
   analysis.append(sectionTitle('02  /  TRAJECTORY','主趋势与关键观察'));
   const analysisGrid=element('div','analysis-grid');
   const analysisMain=element('div','analysis-main');
   if(selectedFilters().length) {
     if(filteredHistories.length)addChart(analysisMain,historySpec(filteredHistories[0]));
+    else if(page==='B'&&metric(29).kind==='rate')addChart(analysisMain,seasonComparisonSpec());
     else analysisMain.append(element('p','na-note','当前条件下没有可比较的成熟批次或可用统计对象；请调整筛选条件。'));
   } else addChart(analysisMain,info.chart);
   analysisGrid.append(analysisMain,finding);analysis.append(analysisGrid);body.append(analysis);
@@ -1421,12 +1794,21 @@ function renderDetail(page,selectedMetric) {
   let explorer;
   if(!selectedFilters().length) {
     evidence.append(sectionTitle('03  /  BREAKDOWN','分组与完整数据'));
+    const bridge=page==='D'?subscriptionBridgeSpec():null;
+    if(bridge)addChart(evidence,bridge);
+    const contribution=page==='D'?trialContributionBreakdown():null;
+    if(contribution)evidence.append(dataTable(contribution));
+    const technical=page==='C'?technicalBreakdown():null;
+    if(technical){addChart(evidence,technical.spec);evidence.append(dataTable(technical.table));}
+    const ranking=page==='E'?modelSubscriptionRanking():null;
+    if(ranking){addChart(evidence,ranking.spec);evidence.append(dataTable(ranking.table));}
     const extraCharts=info.extraCharts??[];
     if(extraCharts.length) {
       const chartGrid=element('div','evidence-charts-grid');
       extraCharts.forEach(spec=>addChart(chartGrid,spec));evidence.append(chartGrid);
     }
     const samplePanel=entitySamplesPanel(page);if(samplePanel)evidence.append(samplePanel);
+    const trialSamples=page==='D'?trialSamplesPanel():null;if(trialSamples)evidence.append(trialSamples);
     if(info.structureViews) {
       explorer=structureExplorer(info.structureViews);
       evidence.append(explorer.node);
@@ -1436,12 +1818,26 @@ function renderDetail(page,selectedMetric) {
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));
+    const bridge=page==='D'?subscriptionBridgeSpec():null;
+    if(bridge)addChart(evidence,bridge);
+    const contribution=page==='D'?trialContributionBreakdown():null;
+    if(contribution)evidence.append(dataTable(contribution));
+    const technical=page==='C'?technicalBreakdown():null;
+    if(technical){addChart(evidence,technical.spec);evidence.append(dataTable(technical.table));}
+    const ranking=page==='E'?modelSubscriptionRanking():null;
+    if(ranking){addChart(evidence,ranking.spec);evidence.append(dataTable(ranking.table));}
     if(filteredHistories.length>1) {
       const chartGrid=element('div','evidence-charts-grid');
       filteredHistories.slice(1).forEach(history=>addChart(chartGrid,historySpec(history)));
       evidence.append(chartGrid);
     }
+    const breakdown=filteredBreakdown(page);
+    if(breakdown) {
+      const chartGrid=element('div','evidence-charts-grid');
+      addChart(chartGrid,breakdown.spec);evidence.append(chartGrid,dataTable(breakdown.table));
+    }
     const samplePanel=entitySamplesPanel(page);if(samplePanel)evidence.append(samplePanel);
+    const trialSamples=page==='D'?trialSamplesPanel():null;if(trialSamples)evidence.append(trialSamples);
     if(!evidence.querySelector('.detail-chart-panel,.entity-workspace'))
       evidence.append(element('p','table-note','当前条件下没有额外的可比趋势；完整指标值与适用性见上方数据核对。'));
   }
@@ -1466,9 +1862,11 @@ function renderRoute({preserveScroll=false}={}) {
   projectDataset();
   closeDefinitionPopover();
   if (route && pages[route]) {
-    const selected=dataset.diagnostics[route].heroIds.includes(metricId)||contractFor(metricId)?.page===route?
-      metricId:defaultFindingMetric[route];
-    renderDetail(route,selected); document.title=`${pages[route].title} · Parallens`;
+    const requested=dataset.diagnostics[route].heroIds.includes(metricId)||contractFor(metricId)?.page===route?
+      metricId:null;
+    const observed=selectedFilters().length?filteredFinding(route)?.id:null;
+    const selected=requested??(observed&&metric(observed).kind!=='na'?observed:defaultFindingMetric[route]);
+    renderDetail(route,selected,Boolean(metricId)); document.title=`${pages[route].title} · Parallens`;
   } else {
     renderHome(); document.title='用户与设备经营总览 · Parallens';
   }
@@ -1485,7 +1883,7 @@ function renderRoute({preserveScroll=false}={}) {
 }
 async function start() {
   try {
-    const names=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-slices','trial-facts','metric-trends','entity-samples'];
+    const names=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-slices','trial-facts','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow'];
     const fetchPart=async name=>{
       for(let attempt=0;attempt<2;attempt++) {
         try {
@@ -1501,7 +1899,7 @@ async function start() {
     const parts=[];
     for(let offset=0;offset<names.length;offset+=3)
       parts.push(...await Promise.all(names.slice(offset,offset+3).map(fetchPart)));
-    sourceData=Object.fromEntries(names.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name,parts[index]]));
+    sourceData=Object.fromEntries(names.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name,parts[index]]));
     window.addEventListener('hashchange',()=>renderRoute());
     window.addEventListener('popstate',()=>renderRoute());
     document.addEventListener('keydown',event=>{

@@ -1,11 +1,14 @@
 """Generate bounded synthetic histories for selected headline metrics, anchored to the existing workbook snapshot."""
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 DATA=Path(__file__).resolve().parents[1]/'data'
 weekly=json.loads((DATA/'weekly.json').read_text())
 metrics=json.loads((DATA/'metric-values.json').read_text())
-labels=[f'W{w["week"]}' for w in weekly]
+snapshot=json.loads((DATA/'snapshot.json').read_text())
+as_of=date.fromisoformat(snapshot['asOf'])
+labels=[(as_of-timedelta(days=7*(len(weekly)-1-i))).strftime('%-m/%-d') for i in range(len(weekly))]
 
 def count(values,unit='人',note=''):
     return {'labels':labels,'unit':unit,'kind':'count','points':[{'kind':'count','value':v} for v in values],'note':note,'source':'constructed-weekly-simulation'}
@@ -30,13 +33,14 @@ core_users=[round(w['activity']['compositeMAU']*share) for w,share in zip(weekly
 core_users[-1]=26000
 
 dataset={
- 'm02':count(subscribers,note='有效订阅周末快照：以周度付费权益人数扣除150位仅持有Pack的演示用户；历史为构造数据。'),
- 'm03':money(mrr,note='MRR周末快照演示序列；最新点锚定底表$56,000，早期点为构造值。'),
- 'm04':count([w['activity']['compositeMAU'] for w in weekly],note='每个周末向前30天去重主账号，滚动窗口互有重叠。'),
- 'm15':count(unactivated,note='绑定超3天仍未激活设备的主账号周末快照；历史为演示构造值，最新点锚定底表128人。'),
+ 'm02':count(subscribers,note='每7天一个有效订阅模拟快照，末点为9月24日底表值；其余点为构造数据，不是注册批次W1–W12。'),
+ 'm03':money(mrr,note='每7天一个MRR模拟快照，末点为9月24日底表值；其余点为构造数据。'),
+ 'm04':count([w['activity']['compositeMAU'] for w in weekly],note='每7天一个向前30天去重主账号的模拟滚动快照；末点为9月24日底表值，窗口互有重叠。'),
+ 'm15':count(unactivated,unit='台',note='绑定超3天仍未激活设备的模拟快照；末点为9月24日底表128台。'),
  'm24':{'labels':['7月','8月'],'unit':'%','kind':'rate','points':[{'kind':'rate','numerator':25200,'denominator':35000,'value':.72},{'kind':'rate','numerator':27000,'denominator':35000,'value':27000/35000}],
         'note':'按完整月成熟留存批次计算；仅有两个演示月份，不外推12周。','source':'diagnostic-summary'},
- 'm27':rate(core_users,[w['activity']['compositeMAU'] for w in weekly],note='核心功能使用主账号/同期复合活跃主账号；历史分子为演示构造值，最新点锚定底表26,000/68,000。'),
+ 'm27':rate(core_users,[w['activity']['compositeMAU'] for w in weekly],note='功能使用主账号/同期复合活跃主账号；每7天一个滚动快照，末点为9月24日底表26,000/68,000。'),
+ 'm34':count([value+150 for value in subscribers],note='每7天一个有效订阅或增值Pack付费主账号的模拟快照；末点为9月24日底表12,550人。历史由有效订阅快照加模拟的150名仅增值Pack用户构造，不是W1–W12批次。'),
  'm41':rate(active,effective,note='活跃设备来自周度演示汇总；有效且已激活设备分母按快照构造，最新点为85,278/139,800。'),
  'm48':rate(multi,owners,note='多设备主账号/已绑定主账号；历史周末值为构造快照，最新点为18,128/82,400。'),
  'm49':rate(shared,multidevice,note='开启共享的绑定设备/当前绑定设备；历史周末值为构造快照，最新点为25,884/143,800。'),
@@ -50,6 +54,7 @@ dataset={
 assert subscribers[-1]==metrics['m02']['value']
 assert mrr[-1]==metrics['m03']['value']
 assert dataset['m04']['points'][-1]['value']==metrics['m04']['value']
+assert dataset['m34']['points'][-1]['value']==metrics['m34']['value']
 for id in [15,52]:
     assert dataset[f'm{id:02d}']['points'][-1]['value']==metrics[f'm{id:02d}']['value']
 for id in [24,27,41,48,49]:

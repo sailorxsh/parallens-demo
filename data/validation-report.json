@@ -1,6 +1,6 @@
 {
-  "passed": 34,
-  "total": 34,
+  "passed": 38,
+  "total": 38,
   "checks": [
     {
       "rule": "catalog",
@@ -21,6 +21,26 @@
       "rule": "F2-synthetic-slices",
       "passed": true,
       "detail": "各模拟维度的分母与分子分片独立闭合为100%"
+    },
+    {
+      "rule": "F5-function-denominator",
+      "passed": true,
+      "detail": "功能选择保持同一活跃主账号分母；功能人数不可相加"
+    },
+    {
+      "rule": "F6-season-threshold",
+      "passed": true,
+      "detail": "21/30天未使用人数由最近活跃间隔分层求和；回流有独立历史分母"
+    },
+    {
+      "rule": "F7-technical-facts",
+      "passed": true,
+      "detail": "型号×固件的联网和三条技术链路成功/失败合计回到原底表"
+    },
+    {
+      "rule": "F8-subscription-flow",
+      "passed": true,
+      "detail": "分产品线订阅流转各自闭合，合计回总体与互斥订阅状态"
     },
     {
       "rule": "F3-incomparable-rates",
@@ -170,7 +190,7 @@
     {
       "rule": "D18-key-metric-trends",
       "passed": true,
-      "detail": "三项新增关键趋势有12期，末点与底表当前值及分子分母一致"
+      "detail": "四项新增关键趋势有12期，末点与底表当前值及分子分母一致"
     }
   ]
 }

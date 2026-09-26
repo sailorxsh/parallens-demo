@@ -135,16 +135,24 @@
   },
   "functionType": {
     "Upload": {
-      "denominatorShare": 0.46,
-      "numeratorShare": 0.46976372
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.2
+    },
+    "Live": {
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.2
+    },
+    "Playback": {
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.2
     },
     "Recognition": {
-      "denominatorShare": 0.34,
-      "numeratorShare": 0.31998398
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.2
     },
     "Push": {
       "denominatorShare": 0.2,
-      "numeratorShare": 0.2102523
+      "numeratorShare": 0.2
     }
   },
   "anomalyType": {

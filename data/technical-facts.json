@@ -1,0 +1,15 @@
+{
+  "asOf": "2026-09-24",
+  "window": "最近24小时合成请求样本",
+  "note": "型号×固件的互斥请求样本；每条链路各有10,000次尝试，链路之间不是同一统计对象，不可相加。",
+  "records": [
+    {"model":"K6","firmware":"2.8","attempts":400,"networkFailures":60,"uploadFailures":12,"liveFailures":35,"pushFailures":20},
+    {"model":"K6","firmware":"Other","attempts":713,"networkFailures":30,"uploadFailures":5,"liveFailures":15,"pushFailures":5},
+    {"model":"Bird Lite","firmware":"2.8","attempts":800,"networkFailures":90,"uploadFailures":15,"liveFailures":55,"pushFailures":25},
+    {"model":"Bird Lite","firmware":"Other","attempts":2677,"networkFailures":70,"uploadFailures":15,"liveFailures":35,"pushFailures":25},
+    {"model":"Bird Pro","firmware":"2.8","attempts":700,"networkFailures":70,"uploadFailures":12,"liveFailures":45,"pushFailures":20},
+    {"model":"Bird Pro","firmware":"Other","attempts":2429,"networkFailures":60,"uploadFailures":15,"liveFailures":35,"pushFailures":20},
+    {"model":"Hunt Pro","firmware":"2.8","attempts":500,"networkFailures":60,"uploadFailures":11,"liveFailures":45,"pushFailures":15},
+    {"model":"Hunt Pro","firmware":"Other","attempts":1781,"networkFailures":60,"uploadFailures":15,"liveFailures":35,"pushFailures":20}
+  ]
+}

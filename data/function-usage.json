@@ -1,0 +1,11 @@
+{
+  "asOf": "2026-09-24",
+  "window": "最近30天滚动窗口",
+  "denominator": 68000,
+  "functions": {
+    "Live": {"label": "直播", "users": 26000},
+    "Playback": {"label": "事件回看", "users": 18000},
+    "Recognition": {"label": "AI识别查看", "users": 14000}
+  },
+  "note": "同一活跃主账号可使用多个功能，各功能人数不可相加。均为合成演示数据。"
+}
