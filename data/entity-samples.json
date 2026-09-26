@@ -1,0 +1,58 @@
+{
+  "C": [
+    {
+      "id": "DEV-K6-01",
+      "label": "K6 · 固件 2.8",
+      "signal": "识别触发后未返回结果",
+      "observedAt": "2026-09-13 10:20",
+      "status": "待核验",
+      "dimensions": {"week":"12","country":"US","appPlatform":"Android","productLine":"Bird","deviceModel":"K6","deviceStatus":"Effective","userType":"Formal","season":"Migration","salesChannel":"Amazon","firmware":"2.8","functionType":"Recognition"},
+      "detail": "演示设备样本属于观鸟 K6 固件 2.8 分组；该分组的空触发率需回到总体分子、分母核验。",
+      "review": "核对触发日志、固件版本与结果回传；不要用单台样本推断分组异常率。",
+      "evidence": {"page":"C","metricId":42}
+    },
+    {
+      "id": "DEV-K6-02",
+      "label": "K6 · 固件 2.8",
+      "signal": "连续触发记录待核对",
+      "observedAt": "2026-09-13 14:05",
+      "status": "待核验",
+      "dimensions": {"week":"12","country":"UK","appPlatform":"iOS","productLine":"Bird","deviceModel":"K6","deviceStatus":"Effective","userType":"Formal","season":"Migration","salesChannel":"Shopify","firmware":"2.8","functionType":"Recognition"},
+      "detail": "第二条独立演示设备样本，用于展示同型号同固件的事件级核对入口。",
+      "review": "检查去重后的触发记录和设备上报时间，确认是否重复计数。",
+      "evidence": {"page":"C","metricId":42}
+    },
+    {
+      "id": "DEV-BP-01",
+      "label": "Bird Pro · 其他固件",
+      "signal": "对照设备样本",
+      "observedAt": "2026-09-13 16:30",
+      "status": "演示对照",
+      "dimensions": {"week":"12","country":"US","appPlatform":"iOS","productLine":"Bird","deviceModel":"Bird Pro","deviceStatus":"Effective","userType":"Formal","season":"Other","salesChannel":"Amazon","firmware":"Other","functionType":"Upload"},
+      "detail": "观鸟线非 K6 2.8 的演示对照样本；不代表其所在分组的总体表现。",
+      "review": "对照同一完整周的设备活跃与上报口径。",
+      "evidence": {"page":"C","metricId":41}
+    },
+    {
+      "id": "DEV-HP-01",
+      "label": "Hunt Pro · 其他固件",
+      "signal": "跨产品线对照样本",
+      "observedAt": "2026-09-13 18:10",
+      "status": "演示对照",
+      "dimensions": {"week":"12","country":"DE","appPlatform":"Android","productLine":"Hunting","deviceModel":"Hunt Pro","deviceStatus":"Effective","userType":"Formal","season":"Other","salesChannel":"Shopify","firmware":"Other","functionType":"Push"},
+      "detail": "狩猎线演示设备仅作交互对照；观鸟空触发率口径不适用于它。",
+      "review": "先核对产品线适用性，再查看设备活跃证据。",
+      "evidence": {"page":"C","metricId":41}
+    }
+  ],
+  "G": [
+    {"id":"EX-01","domain":"新客","signal":"7日价值激活下降","status":"待核验","observedAt":"2026-09-24 09:10","scope":"观鸟线完整7日注册批次","review":"核对批次成熟度与产品线分母。","evidence":{"page":"A","metricId":13}},
+    {"id":"EX-02","domain":"新客","signal":"绑定后无首图","status":"待核验","observedAt":"2026-09-24 09:25","scope":"绑定未激活设备演示清单","review":"核对绑定时间、激活事件与首图上传事件。","evidence":{"page":"A","metricId":15}},
+    {"id":"EX-03","domain":"订阅","signal":"试用转正下降","status":"已定位演示贡献","observedAt":"2026-09-24 09:40","scope":"最近成熟试用批次","review":"复查转正分子、分母与 Android Plus 月付组的变化贡献。","evidence":{"page":"D","metricId":18}},
+    {"id":"EX-04","domain":"订阅","signal":"支付失败上升","status":"待核验","observedAt":"2026-09-24 10:05","scope":"Android Plus 月付演示分组","review":"核对支付尝试、失败次数和同期转正变化；不直接推断因果。","evidence":{"page":"D","metricId":18}},
+    {"id":"EX-05","domain":"设备","signal":"K6固件2.8空触发升高","status":"待核验","observedAt":"2026-09-24 10:20","scope":"观鸟 K6 固件 2.8 分组","review":"查看设备样本和分组空触发率的独立证据。","evidence":{"page":"C","metricId":42}},
+    {"id":"EX-06","domain":"设备","signal":"长期未使用","status":"待核验","observedAt":"2026-09-24 10:35","scope":"设备行为演示清单","review":"先核对有效设备分母、最近行为窗口与心跳排除规则。","evidence":{"page":"C","metricId":41}},
+    {"id":"EX-07","domain":"数据质量","signal":"ID映射覆盖待观察","status":"待核验","observedAt":"2026-09-24 10:50","scope":"演示映射记录","review":"核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。","evidence":{"page":"G","metricId":54}}
+  ],
+  "note": "全部为交互演示样本；样本行不参与总体指标计算。"
+}

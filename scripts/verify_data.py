@@ -17,6 +17,8 @@ pages = load("page-data.json")
 diagnostics = load("diagnostics.json")
 contract = load("filter-contract.json")
 slices = load("filter-slices.json")
+entity_samples = load("entity-samples.json")
+metric_trends = load("metric-trends.json")
 checks = []
 
 
@@ -308,6 +310,32 @@ check("D6-actions", len({action["id"] for item in diagnostics.values() for actio
           action["id"] in action["object"] and action["updatedAt"]
           for item in diagnostics.values() for action in item["actions"]),
       "模拟行动ID唯一，对象、触发、状态、更新时间齐全")
+device_samples = entity_samples["C"]
+incident_samples = entity_samples["G"]
+incident_rows = diagnostics["G"]["tables"][0]["rows"]
+all_samples = device_samples + incident_samples
+check("D17-entity-samples", len(device_samples) == 4 and len(incident_samples) == len(incident_rows) == 7 and
+      len({item["id"] for item in all_samples}) == len(all_samples) and
+      all(item["observedAt"][:10] <= snapshot["asOf"] and item["review"] and
+          any(row["id"] == item["evidence"]["metricId"] and row["page"] == item["evidence"]["page"]
+              for row in catalog) for item in all_samples) and
+      all(all(key in slices and value in slices[key] if key != "week" else
+              value in {str(row["week"]) for row in weekly}
+              for key,value in item["dimensions"].items()) for item in device_samples) and
+      all([item[key] for key in ("id","domain","signal","status")] == row
+          for item,row in zip(incident_samples,incident_rows)) and
+      "不参与总体指标计算" in entity_samples["note"],
+      "C页设备和G页事件样本可追溯、时间有效，并与总体计算隔离")
+check("D18-key-metric-trends", all(
+      len(metric_trends[f"m{identifier:02d}"]["points"]) == len(weekly) and
+      metric_trends[f"m{identifier:02d}"]["labels"] == [f'W{row["week"]}' for row in weekly] and
+      metric_trends[f"m{identifier:02d}"]["points"][-1]["kind"] == metrics[f"m{identifier:02d}"]["kind"] and
+      (metric_trends[f"m{identifier:02d}"]["points"][-1]["value"] == metrics[f"m{identifier:02d}"]["value"]
+       if identifier in (15, 52) else
+       metric_trends[f"m{identifier:02d}"]["points"][-1]["numerator"] == metrics[f"m{identifier:02d}"]["numerator"] and
+       metric_trends[f"m{identifier:02d}"]["points"][-1]["denominator"] == metrics[f"m{identifier:02d}"]["denominator"])
+      for identifier in (15, 27, 52)),
+      "三项新增关键趋势有12期，末点与底表当前值及分子分母一致")
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

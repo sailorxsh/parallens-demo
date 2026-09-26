@@ -1,6 +1,6 @@
 {
-  "passed": 32,
-  "total": 32,
+  "passed": 34,
+  "total": 34,
   "checks": [
     {
       "rule": "catalog",
@@ -161,6 +161,16 @@
       "rule": "D6-actions",
       "passed": true,
       "detail": "模拟行动ID唯一，对象、触发、状态、更新时间齐全"
+    },
+    {
+      "rule": "D17-entity-samples",
+      "passed": true,
+      "detail": "C页设备和G页事件样本可追溯、时间有效，并与总体计算隔离"
+    },
+    {
+      "rule": "D18-key-metric-trends",
+      "passed": true,
+      "detail": "三项新增关键趋势有12期，末点与底表当前值及分子分母一致"
     }
   ]
 }

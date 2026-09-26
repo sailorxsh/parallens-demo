@@ -209,6 +209,76 @@
     "note": "每个周末向前30天去重主账号，滚动窗口互有重叠。",
     "source": "constructed-weekly-simulation"
   },
+  "m15": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "人",
+    "kind": "count",
+    "points": [
+      {
+        "kind": "count",
+        "value": 92
+      },
+      {
+        "kind": "count",
+        "value": 96
+      },
+      {
+        "kind": "count",
+        "value": 101
+      },
+      {
+        "kind": "count",
+        "value": 99
+      },
+      {
+        "kind": "count",
+        "value": 105
+      },
+      {
+        "kind": "count",
+        "value": 110
+      },
+      {
+        "kind": "count",
+        "value": 108
+      },
+      {
+        "kind": "count",
+        "value": 116
+      },
+      {
+        "kind": "count",
+        "value": 121
+      },
+      {
+        "kind": "count",
+        "value": 119
+      },
+      {
+        "kind": "count",
+        "value": 125
+      },
+      {
+        "kind": "count",
+        "value": 128
+      }
+    ],
+    "note": "绑定超3天仍未激活设备的主账号周末快照；历史为演示构造值，最新点锚定底表128人。",
+    "source": "constructed-weekly-simulation"
+  },
   "m24": {
     "labels": [
       "7月",
@@ -232,6 +302,100 @@
     ],
     "note": "按完整月成熟留存批次计算；仅有两个演示月份，不外推12周。",
     "source": "diagnostic-summary"
+  },
+  "m27": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 26082,
+        "denominator": 64400,
+        "value": 0.405
+      },
+      {
+        "kind": "rate",
+        "numerator": 26017,
+        "denominator": 64720,
+        "value": 0.40199320148331275
+      },
+      {
+        "kind": "rate",
+        "numerator": 25886,
+        "denominator": 65040,
+        "value": 0.39800123001230014
+      },
+      {
+        "kind": "rate",
+        "numerator": 25948,
+        "denominator": 65360,
+        "value": 0.3970012239902081
+      },
+      {
+        "kind": "rate",
+        "numerator": 25878,
+        "denominator": 65680,
+        "value": 0.3940012180267966
+      },
+      {
+        "kind": "rate",
+        "numerator": 25806,
+        "denominator": 66000,
+        "value": 0.391
+      },
+      {
+        "kind": "rate",
+        "numerator": 25798,
+        "denominator": 66320,
+        "value": 0.3889927623642943
+      },
+      {
+        "kind": "rate",
+        "numerator": 25856,
+        "denominator": 66640,
+        "value": 0.3879951980792317
+      },
+      {
+        "kind": "rate",
+        "numerator": 25877,
+        "denominator": 67040,
+        "value": 0.38599343675417663
+      },
+      {
+        "kind": "rate",
+        "numerator": 25934,
+        "denominator": 67360,
+        "value": 0.3850059382422803
+      },
+      {
+        "kind": "rate",
+        "numerator": 25989,
+        "denominator": 67680,
+        "value": 0.3839982269503546
+      },
+      {
+        "kind": "rate",
+        "numerator": 26000,
+        "denominator": 68000,
+        "value": 0.38235294117647056
+      }
+    ],
+    "note": "核心功能使用主账号/同期复合活跃主账号；历史分子为演示构造值，最新点锚定底表26,000/68,000。",
+    "source": "constructed-weekly-simulation"
   },
   "m41": {
     "labels": [
@@ -513,6 +677,76 @@
       }
     ],
     "note": "开启共享的绑定设备/当前绑定设备；历史周末值为构造快照，最新点为25,884/143,800。",
+    "source": "constructed-weekly-simulation"
+  },
+  "m52": {
+    "labels": [
+      "W1",
+      "W2",
+      "W3",
+      "W4",
+      "W5",
+      "W6",
+      "W7",
+      "W8",
+      "W9",
+      "W10",
+      "W11",
+      "W12"
+    ],
+    "unit": "人",
+    "kind": "count",
+    "points": [
+      {
+        "kind": "count",
+        "value": 112
+      },
+      {
+        "kind": "count",
+        "value": 116
+      },
+      {
+        "kind": "count",
+        "value": 119
+      },
+      {
+        "kind": "count",
+        "value": 125
+      },
+      {
+        "kind": "count",
+        "value": 129
+      },
+      {
+        "kind": "count",
+        "value": 133
+      },
+      {
+        "kind": "count",
+        "value": 140
+      },
+      {
+        "kind": "count",
+        "value": 143
+      },
+      {
+        "kind": "count",
+        "value": 149
+      },
+      {
+        "kind": "count",
+        "value": 155
+      },
+      {
+        "kind": "count",
+        "value": 160
+      },
+      {
+        "kind": "count",
+        "value": 168
+      }
+    ],
+    "note": "需要核对的风险用户周末快照；历史为演示构造值，最新点锚定底表168人。",
     "source": "constructed-weekly-simulation"
   },
   "m53": {

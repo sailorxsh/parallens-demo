@@ -339,7 +339,8 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   const link = element('a',kind==='journey'?'node-link':'card-link');
   link.href = routeHref(page,id);
   link.setAttribute('aria-label',`${label} ${value}，查看${pages[page]?.title??'诊断'}数据`);
-  link.append(element('div','metric-value',value));
+  const trend=kind==='snapshot'?headlineTrend(id):null;
+  link.append(metricValueRow(id,element('div','metric-value',value),trend));
   if (status) {
     const statusLine = element('div',kind==='journey'?'node-status':'card-foot');
     const dot = element('span',`status-dot ${severity}`);
@@ -348,7 +349,10 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   }
   article.append(link);
   if (kind === 'journey') article.append(nodeTrendDetails(id));
-  if (kind === 'snapshot') {const trend=headlineTrend(id);if(trend)article.append(trend);}
+  if (trend) article.append(trend);
+  if (kind==='snapshot'&&id===21) {
+    const flow=netAddComparison();if(flow)article.append(flow);
+  }
   return article;
 }
 function trendValues(id) {
@@ -392,7 +396,7 @@ function trendValues(id) {
     return value.kind==='rate'?value.value*100:value.value;
   });
 }
-const headlineTrendIds=new Set([2,3,4,9,10,11,13,17,18,23,24,34,35,41,42,48,49,53,54]);
+const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,27,34,35,41,42,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===35) {
@@ -445,6 +449,29 @@ function headlineTrend(id) {
   box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':`${Number(current).toFixed(history.unit==='%'||history.unit==='美元/人'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
   wrap.append(box);
   return wrap;
+}
+function netAddComparison() {
+  const value=metric(21);
+  if(value.kind!=='group')return null;
+  const {opening,closing}=value.value;
+  if(!Number.isFinite(opening)||!Number.isFinite(closing))return null;
+  const flow=element('div','net-add-flow');
+  flow.setAttribute('aria-label',`本期有效订阅从${number(opening)}人变为${number(closing)}人，净增${number(closing-opening)}人`);
+  flow.append(element('span','',`期初 ${number(opening)}`),element('span','net-add-arrow','→'),
+    element('span','',`期末 ${number(closing)}`));
+  return flow;
+}
+function metricValueRow(id,valueNode,trend) {
+  const row=element('div','metric-value-row');row.append(valueNode);
+  if(trend) {
+    const label=trend.querySelector('.headline-trend-label');
+    if(label){label.className='metric-delta';row.append(label);}
+  } else if(id===21&&metric(21).kind==='group') {
+    const {opening,closing}=metric(21).value;
+    if(opening>0&&Number.isFinite(closing))
+      row.append(element('span','metric-delta',`${closing-opening>=0?'+':''}${((closing-opening)/opening*100).toFixed(1)}% · 较期初`));
+  }
+  return row;
 }
 function nodeTrendDetails(id) {
   const series=trendValues(id);
@@ -934,7 +961,7 @@ function flattenMeasure(value,path='',rows=[],field='') {
 function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
-  panel.append(sectionTitle('02  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
+  panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
     id===18?'合成试用明细 · 逐条聚合':selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=id===18?[...trialFactDimensions]:contract.dimensions;
   const intro=element('p','evidence-meta',`统计对象：${contract.entity} · 窗口：${contract.window} · 当前数据可筛选维度：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
@@ -1042,7 +1069,7 @@ function metricEvidence(id,page) {
 function metricInventory(page) {
   const section=element('section','detail-section metric-inventory');
   const records=dataset.catalog.filter(item=>item.page===page);
-  section.append(sectionTitle('05  /  METRIC CATALOG',`本页全部指标 · ${records.length} 项`,'点击指标名称查看证据；口径按钮查看定义、公式和来源'));
+  section.append(sectionTitle('06  /  METRIC CATALOG',`本页全部指标 · ${records.length} 项`,'点击指标名称查看证据；口径按钮查看定义、公式和来源'));
   const wrap=element('div','data-table-scroll');
   const table=element('table','diagnostic-table metric-table');
   table.append(element('caption','visually-hidden',`${pages[page].title}全部指标与底表定义`));
@@ -1091,7 +1118,7 @@ function actionQueue(page) {
   const info=dataset.diagnostics[page];
   const section=element('section','detail-section action-section');
   if(selectedFilters().length) {
-    section.append(sectionTitle('04  /  ACTION QUEUE','筛后核对清单','按当前筛选重建；仅建议核对，无自动触达'));
+    section.append(sectionTitle('05  /  ACTION QUEUE','筛后核对清单','按当前筛选重建；仅建议核对，无自动触达'));
     const firstAvailable=sourceData.catalog.find(item=>item.page===page&&metric(item.id).kind!=='na')?.id;
     const ids=[...info.heroIds];
     if(firstAvailable&&!ids.some(id=>metric(id).kind!=='na'))ids.unshift(firstAvailable);
@@ -1101,7 +1128,7 @@ function actionQueue(page) {
     section.append(actionRecord(page,filteredFinding(page)?.id??firstAvailable??info.heroIds[0]));
     return section;
   }
-  section.append(sectionTitle('03  /  ACTION QUEUE','模拟行动出口','演示样本，处理记录保存在此浏览器；不会触达用户或连接外部系统'));
+  section.append(sectionTitle('05  /  ACTION QUEUE','模拟行动出口','演示样本，处理记录保存在此浏览器；不会触达用户或连接外部系统'));
   const wrap=element('div','data-table-scroll');const table=element('table','diagnostic-table action-table');
   table.append(element('caption','visually-hidden',`${pages[page].title}模拟行动清单`));
   const head=element('thead','');const row=element('tr','');
@@ -1218,6 +1245,10 @@ function metricInspector(id,page) {
   fact('时间窗口',contract.window);
   if(value.kind==='rate')fact('本期分子 / 分母',`${number(value.numerator)} / ${number(value.denominator)}`);
   else if(value.kind==='na')fact('当前状态',value.reason);
+  else if(id===21&&value.kind==='group') {
+    fact('期初 / 期末',`${number(value.value.opening)} / ${number(value.value.closing)}`);
+    fact('本期净增',`${value.value.closing-value.value.opening>=0?'+':''}${number(value.value.closing-value.value.opening)} 人`);
+  }
   const history=metricHistory(id);
   if(history) {
     const index=filterState.week&&history.labels[0]?.startsWith('W')?
@@ -1239,6 +1270,56 @@ function metricInspector(id,page) {
   link.href=routeHref(page,id);panel.append(link);
   return panel;
 }
+function entitySamplesPanel(page) {
+  if(!['C','G'].includes(page))return null;
+  const panel=element('section','entity-workspace');
+  const heading=element('div','entity-workspace-head');
+  heading.append(element('h3','',page==='C'?'设备样本 · 逐条核对':'异常事件 · 逐条核对'),
+    element('p','table-note','演示样本不参与总体指标计算；选择一条查看核对线索。'));
+  panel.append(heading);
+  const selected=selectedFor(page);
+  const all=sourceData.entitySamples[page];
+  const records=page==='G'&&selected.length?[]:all.filter(record=>
+    selected.every(([key,value])=>record.dimensions?.[key]===value));
+  if(!records.length) {
+    panel.append(element('p','na-note',page==='G'?
+      '异常事件演示样本没有逐条筛选维度；当前条件下不展示样本，以上指标仍按各自可用维度计算。':
+      '当前条件没有匹配的演示设备样本；这不代表总体设备数为 0，请查看上方分组证据。'));
+    return panel;
+  }
+  const grid=element('div','entity-workspace-grid');
+  const list=element('div','entity-sample-list');list.setAttribute('role','group');
+  list.setAttribute('aria-label',page==='C'?'演示设备列表':'演示异常事件列表');
+  const detail=element('aside','entity-sample-detail');detail.id=`${page}-sample-detail`;
+  detail.setAttribute('aria-label',page==='C'?'选中设备样本':'选中异常事件');
+  const buttons=[];
+  function select(record,index) {
+    buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
+    detail.replaceChildren(element('p','inspector-kicker',`${page==='C'?'设备':'事件'}样本 / ${record.id}`),
+      element('h4','',record.signal),element('p','entity-sample-disclosure','模拟记录 · 不代表分组总体'));
+    const facts=element('dl','inspector-facts');
+    const fact=(label,value)=>{const row=element('div','');row.append(element('dt','',label),element('dd','',value));facts.append(row);};
+    fact('观测时间',record.observedAt);fact('研判状态',record.status);
+    if(page==='C') {
+      for(const key of ['deviceModel','firmware','country','appPlatform','functionType'])
+        fact(filterLabels[key],optionLabels[record.dimensions[key]]??record.dimensions[key]);
+    } else {fact('所属领域',record.domain);fact('关联范围',record.scope);}
+    detail.append(facts,element('p','entity-sample-context',record.detail??'该条是演示异常信号，不能替代原始事件或总体数据。'),
+      element('p','entity-sample-review',`建议核对：${record.review}`));
+    const link=element('a','inspector-link','查看关联指标证据 ↗');
+    link.href=routeHref(record.evidence.page,record.evidence.metricId);detail.append(link);
+  }
+  records.forEach((record,index)=>{
+    const button=element('button','entity-sample-item');button.type='button';
+    button.setAttribute('aria-controls',detail.id);
+    button.append(element('span','entity-sample-id',record.id),element('strong','',record.signal),
+      element('span','entity-sample-meta',`${record.observedAt} · ${record.status}`));
+    button.addEventListener('click',()=>select(record,index));
+    buttons.push(button);list.append(button);
+  });
+  grid.append(list,detail);panel.append(grid);select(records[0],0);
+  return panel;
+}
 function renderDetail(page,selectedMetric) {
   disposeCharts();
   const detail=pages[page];
@@ -1254,7 +1335,7 @@ function renderDetail(page,selectedMetric) {
   const body=element('div','detail-shell');
   body.append(filterBar(page));
   const overview=element('section','detail-section');
-  overview.append(sectionTitle('01  /  SIGNALS','关键观察',period));
+  overview.append(sectionTitle('01  /  SIGNALS','关键指标'));
   const overviewGrid=element('div','signals-layout');
   const overviewMain=element('div','signals-main');
   const hero=element('div','detail-kpis');
@@ -1278,10 +1359,15 @@ function renderDetail(page,selectedMetric) {
     select.setAttribute('aria-label',`在右侧查看${item.name}摘要`);
     select.setAttribute('aria-pressed',String(id===selectedMetric));
     select.addEventListener('click',()=>{selectMetric(id);inspector.focus({preventScroll:true});});
+    const trend=headlineTrend(id);
     const link=element('a','detail-evidence-link','查看对应数据 ↓');link.href=routeHref(page,id);
-    card.append(element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),heading,select,link);
-    const trend=headlineTrend(id);if(trend)card.append(trend);
+    card.append(element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),heading,metricValueRow(id,select,trend),link);
+    if(trend)card.append(trend);
+    if(id===21){const flow=netAddComparison();if(flow)card.append(flow);}
     if(metric(id).kind==='na')card.append(element('p','metric-na-reason',metric(id).reason));
+    else if(!trend&&id!==21)card.append(element('p','metric-compare-unavailable',
+      metric(id).kind==='group'?'当前结构 · 无可比历史':
+        selectedFilters().length?'筛后无可比历史':'当前快照 · 无可比历史'));
     hero.append(card);
   });
   const finding=element('aside','detail-finding');
@@ -1303,50 +1389,63 @@ function renderDetail(page,selectedMetric) {
     const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
     related.href=routeHref(info.crossLink);finding.append(related);
   }
-  overviewMain.append(hero,finding);overviewGrid.append(overviewMain,inspector);
+  overviewMain.append(hero);overviewGrid.append(overviewMain,inspector);
   overview.append(overviewGrid);body.append(overview);
   selectMetric(info.heroIds.includes(selectedMetric)?selectedMetric:info.heroIds[0]);
-  const evidenceFor=metricEvidence(selectedMetric,page);body.append(evidenceFor.node);
-  const evidence=element('section','detail-section');
   const drawSpecs=[];
-  let explorer;
-  if(!selectedFilters().length) {
-  evidence.append(sectionTitle('03  /  EVIDENCE','趋势与分组证据','默认样本的图表与数据表使用同一份模拟数据'));
-  [info.chart,...(info.extraCharts??[])].forEach(spec=>{
+  const addChart=(container,spec)=>{
     const chartPanel=element('div','detail-chart-panel');
     chartPanel.append(element('h3','',spec.title));
-    const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',`${spec.title}；${spec.note}；完整数值见下方数据表`);
-    chartPanel.append(box,element('p','table-note',spec.note),chartTable(spec));evidence.append(chartPanel);
-    drawSpecs.push([box,spec]);
-  });
-  const grids=element('div','evidence-grid');
-  info.tables.forEach(spec=>grids.append(dataTable(spec)));
-  if (info.structureViews) {
-    explorer=structureExplorer(info.structureViews);
-    evidence.append(explorer.node);
-  }
-  evidence.append(grids);body.append(evidence);
+    const box=element('div','detail-chart');box.setAttribute('role','img');
+    box.setAttribute('aria-label',`${spec.title}；${spec.note}；完整数值见下方数据表`);
+    chartPanel.append(box,element('p','table-note',spec.note),chartTable(spec));
+    if(spec.kind==='heatmap'||spec.labels.length>=10)chartPanel.classList.add('chart-wide');
+    container.append(chartPanel);drawSpecs.push([box,spec]);
+  };
+  const historySpec=history=>({title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,
+    labels:history.labels,series:[{name:history.title,values:history.values}],
+    note:`${history.note}趋势图纵轴按当前序列缩放，请结合数值表判断变化幅度。`});
+  const filteredHistories=selectedFilters().length?(page==='E'?[paidPayersHistory(),metricHistory(35)]:
+    page==='G'?[metricHistory(54)??metricHistory(53)]:[metricHistory(primaryTrendMetric[page])]).filter(Boolean):[];
+  const analysis=element('section','detail-section');
+  analysis.append(sectionTitle('02  /  TRAJECTORY','主趋势与关键观察'));
+  const analysisGrid=element('div','analysis-grid');
+  const analysisMain=element('div','analysis-main');
+  if(selectedFilters().length) {
+    if(filteredHistories.length)addChart(analysisMain,historySpec(filteredHistories[0]));
+    else analysisMain.append(element('p','na-note','当前条件下没有可比较的成熟批次或可用统计对象；请调整筛选条件。'));
+  } else addChart(analysisMain,info.chart);
+  analysisGrid.append(analysisMain,finding);analysis.append(analysisGrid);body.append(analysis);
+  const evidenceFor=metricEvidence(selectedMetric,page);
+  const evidence=element('section','detail-section');
+  let explorer;
+  if(!selectedFilters().length) {
+    evidence.append(sectionTitle('03  /  BREAKDOWN','分组与完整数据'));
+    const extraCharts=info.extraCharts??[];
+    if(extraCharts.length) {
+      const chartGrid=element('div','evidence-charts-grid');
+      extraCharts.forEach(spec=>addChart(chartGrid,spec));evidence.append(chartGrid);
+    }
+    const samplePanel=entitySamplesPanel(page);if(samplePanel)evidence.append(samplePanel);
+    if(info.structureViews) {
+      explorer=structureExplorer(info.structureViews);
+      evidence.append(explorer.node);
+    }
+    const grids=element('div','evidence-grid');
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(spec));});
+    evidence.append(grids);
   } else {
-    evidence.append(sectionTitle('03  /  EVIDENCE','当前筛选 · 核心趋势',
-      '当前筛选下保留关键时间趋势；历史模拟分片和明细事实的来源见各图注。'));
-    const histories=page==='E'?[paidPayersHistory(),metricHistory(35)]:
-      page==='G'?[metricHistory(54)??metricHistory(53)]:[metricHistory(primaryTrendMetric[page])];
-    const trendGrid=element('div',`filtered-trends${histories.length>1?' paired':''}`);
-    histories.forEach(history=>{
-      if(!history)return;
-      const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,
-        labels:history.labels,series:[{name:history.title,values:history.values}],
-        note:`${history.note}趋势图纵轴按当前序列缩放，请结合数值表判断变化幅度。`};
-      const chartPanel=element('div','detail-chart-panel');
-      const box=element('div','detail-chart');box.setAttribute('role','img');
-      box.setAttribute('aria-label',`${spec.title}；${spec.note}；完整数值见下方表格`);
-      chartPanel.append(element('h3','',spec.title),box,element('p','table-note',spec.note),chartTable(spec));
-      trendGrid.append(chartPanel);drawSpecs.push([box,spec]);
-    });
-    if(!trendGrid.childElementCount)trendGrid.append(element('p','na-note','当前条件下核心趋势不适用：没有可比较的成熟批次或可用统计对象。请调整筛选条件。'));
-    evidence.append(trendGrid);body.append(evidence);
+    evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));
+    if(filteredHistories.length>1) {
+      const chartGrid=element('div','evidence-charts-grid');
+      filteredHistories.slice(1).forEach(history=>addChart(chartGrid,historySpec(history)));
+      evidence.append(chartGrid);
+    }
+    const samplePanel=entitySamplesPanel(page);if(samplePanel)evidence.append(samplePanel);
+    if(!evidence.querySelector('.detail-chart-panel,.entity-workspace'))
+      evidence.append(element('p','table-note','当前条件下没有额外的可比趋势；完整指标值与适用性见上方数据核对。'));
   }
-  body.append(actionQueue(page),metricInventory(page));
+  body.append(evidence,evidenceFor.node,actionQueue(page),metricInventory(page));
   main.append(top,body);
   document.querySelectorAll('.headline-sparkline').forEach(box=>{
     const id=Number(box.dataset.metricId),history=metricHistory(id);
@@ -1386,7 +1485,7 @@ function renderRoute({preserveScroll=false}={}) {
 }
 async function start() {
   try {
-    const names=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-slices','trial-facts','metric-trends'];
+    const names=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-slices','trial-facts','metric-trends','entity-samples'];
     const fetchPart=async name=>{
       for(let attempt=0;attempt<2;attempt++) {
         try {
@@ -1402,7 +1501,7 @@ async function start() {
     const parts=[];
     for(let offset=0;offset<names.length;offset+=3)
       parts.push(...await Promise.all(names.slice(offset,offset+3).map(fetchPart)));
-    sourceData=Object.fromEntries(names.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='metric-trends'?'metricTrends':name,parts[index]]));
+    sourceData=Object.fromEntries(names.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name,parts[index]]));
     window.addEventListener('hashchange',()=>renderRoute());
     window.addEventListener('popstate',()=>renderRoute());
     document.addEventListener('keydown',event=>{
