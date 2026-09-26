@@ -1,0 +1,41 @@
+name: Publish Parallens to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Verify dashboard data
+        run: |
+          node --check app.js
+          python3 scripts/verify_data.py
+          python3 scripts/verify_trial_facts.py
+      - name: Build static site
+        run: bash scripts/build-site.sh
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload site files
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
