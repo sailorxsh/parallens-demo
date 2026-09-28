@@ -914,8 +914,10 @@ function renderHome() {
   panelHeader.append(element('h3','','过程指标 · 最近12个完整周'),element('p','panel-sub',filterState.week?`已选 W${filterState.week}；折线保留12周背景 · 单位%`:'单位：% / 各指标独立分母'));
   trend.append(panelHeader);
   const chartBox=element('div',''); chartBox.id='trendChart'; chartBox.setAttribute('role','img');
-  chartBox.setAttribute('aria-label','观鸟线7日价值激活率在第9周下降，试用转正率在第10周下降');
+  const trendScale=trendAxisDomain([trendValues(13),trendValues(18)],'%');
+  chartBox.setAttribute('aria-label',`观鸟线7日价值激活率与试用转正率的周趋势；${trendScale?trendAxisNote(trendScale,'%'):''}`);
   trend.append(chartBox);
+  if(trendScale)trend.append(element('p','chart-scale-note',trendAxisNote(trendScale,'%')));
   trend.append(createTrendTable());
   const insight=element('aside','insight-panel');
   const priority=homePriorityObservation();
@@ -977,6 +979,41 @@ function createTrendTable() {
   });
   table.append(body); wrap.append(table); return wrap;
 }
+function isTimelineSpec(spec) {
+  return spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label));
+}
+function trendAxisDomain(series,unit) {
+  const values=series.flatMap(line=>Array.isArray(line)?line:line?.values??[]).filter(Number.isFinite);
+  if(!values.length)return null;
+  const low=Math.min(...values),high=Math.max(...values);
+  const minimumSpan=(unit==='%'||unit==='美元/人') ? .5 : Math.max(1,Math.max(Math.abs(low),Math.abs(high))*.02);
+  const span=Math.max((high-low)*1.5,minimumSpan);
+  let lower=(low+high-span)/2,upper=lower+span;
+  if(low>=0)lower=Math.max(0,lower);
+  if(unit==='%')upper=Math.min(100,upper);
+  const roughStep=(upper-lower)/4;
+  const magnitude=10**Math.floor(Math.log10(roughStep));
+  const relative=roughStep/magnitude;
+  const nice=relative<=1?1:relative<=2?2:relative<=2.5?2.5:relative<=5?5:10;
+  const step=unit==='%'||unit==='美元/人'?nice*magnitude:Math.max(1,nice*magnitude);
+  const rounded=value=>Number(value.toPrecision(12));
+  const min=rounded(Math.floor(lower/step)*step);
+  const max=rounded(unit==='%'?Math.min(100,Math.ceil(upper/step)*step):Math.ceil(upper/step)*step);
+  return {min,max,step};
+}
+function trendAxisNote(axis,unit) {
+  const format=value=>unit==='%'?`${value.toFixed(axis.step<.1?2:1)}%`:
+    unit==='美元/人'?`$${value.toFixed(2)}/人`:
+      unit==='美元'?`$${number(value)}`:`${number(value)}${unit}`;
+  return `纵轴 ${format(axis.min)}–${format(axis.max)}${axis.min>0?'，为观察趋势采用非零起点':''}；精确值见数据表。`;
+}
+function chartScaleNote(spec) {
+  const axis=!spec.kind&&isTimelineSpec(spec)?trendAxisDomain(spec.series,spec.unit):null;
+  return axis?trendAxisNote(axis,spec.unit):'';
+}
+function chartNote(spec) {
+  return [spec.note,chartScaleNote(spec)].filter(Boolean).join(' ');
+}
 function drawTrend() {
   const node=document.querySelector('#trendChart');
   const activation=trendValues(13),conversion=trendValues(18);
@@ -990,6 +1027,7 @@ function drawTrend() {
   if (chart) chart.dispose();
   chart=window.echarts.init(node,null,{renderer:'svg'});
   const weeks=dataset.weekly;
+  const axis=trendAxisDomain([activation,conversion],'%');
   chart.setOption({
     color:['#d0832b','#356d51'],
     animationDuration:450,
@@ -998,7 +1036,7 @@ function drawTrend() {
     legend:{bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
     grid:{left:42,right:12,top:20,bottom:48},
     xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},axisLabel:{color:'#6b7f70'}},
-    yAxis:{type:'value',min:0,max:100,axisLabel:{formatter:'{value}%',color:'#6b7f70'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
+    yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{formatter:value=>`${Number(value).toFixed(axis.step<.1?2:1)}%`,color:'#6b7f70'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
     series:[
       ...(activation?[{name:'7日价值激活率（观鸟）',type:'line',smooth:.2,symbolSize:5,lineStyle:{width:2.5},data:activation.map(v=>Number.isFinite(v)?Number(v.toFixed(1)):null)}]:[]),
       ...(conversion?[{name:'试用→转正率',type:'line',smooth:.2,symbolSize:5,lineStyle:{width:2.5},data:conversion.map(v=>v==null?null:Number(v.toFixed(1)))}]:[]),
@@ -1183,7 +1221,7 @@ function drawDetailChart(box,spec) {
   }
   const instance=window.echarts.init(box,null,{renderer:'svg'});
   detailCharts.push(instance);
-  const isTimeline=spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label));
+  const isTimeline=isTimelineSpec(spec);
   const colors=['#bf762b','#356d51','#7593a0'];
   if(spec.kind==='waterfall') {
     const v=spec.flow;
@@ -1259,6 +1297,7 @@ function drawDetailChart(box,spec) {
   }
   const plotted=spec.series.flatMap(line=>line.values).filter(value=>Number.isFinite(value));
   const span=plotted.length?Math.max(...plotted)-Math.min(...plotted):0;
+  const trendAxis=isTimeline?trendAxisDomain(spec.series,spec.unit):null;
   const axisValue=value=>{
     if(spec.unit==='%')return `${Number(value).toFixed(span<5?1:0)}%`;
     if(spec.unit==='美元/人')return `$${Number(value).toFixed(span<1?2:1)}`;
@@ -1282,7 +1321,8 @@ function drawDetailChart(box,spec) {
     legend:spec.series.length>1?{bottom:0,itemWidth:13,textStyle:{fontSize:11,color:'#506455'}}:{show:false},
     grid:{left:spec.unit==='人'||spec.unit==='台'?62:46,right:18,top:28,bottom:isTimeline?(spec.series.length>1?55:32):76},
     xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#687d6e',interval:0,hideOverlap:true,rotate:isTimeline?0:18,fontSize:11},axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
-    yAxis:{type:'value',min:0,max:spec.maxY??(spec.unit==='%'?100:undefined),scale:false,
+    yAxis:{type:'value',min:trendAxis?.min??0,max:trendAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
+      ...(trendAxis?{interval:trendAxis.step}:{}),
       axisLabel:{color:'#687d6e',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
     series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',data:line.values,smooth:isTimeline ? 0.18 : false,symbolSize:5,barMaxWidth:52,lineStyle:{width:2.5},itemStyle:{color:line.color??colors[index%colors.length]}})),
   });
@@ -1314,11 +1354,10 @@ function metricEvidence(id,page) {
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&id!==primaryId&&(id!==18||selectedFilters().length)) {
     const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:history.details,
-      series:[{name:history.title,values:history.values}],
-      note:`${history.note}${history.unit==='%'?'纵轴固定为0–100%。':'纵轴从0开始；请结合数值表判断变化幅度。'}`};
+      series:[{name:history.title,values:history.values}],note:history.note};
     const box=element('div','detail-chart');box.setAttribute('role','img');
-    box.setAttribute('aria-label',`${spec.title}；${spec.note}；完整数值见下方数据表`);
-    panel.append(box,element('p','table-note',history.note));specs.push([box,spec]);
+    box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
+    panel.append(box,element('p','chart-scale-note',chartScaleNote(spec)),element('p','table-note',spec.note));specs.push([box,spec]);
     panel.append(dataTable({title:`${history.title} · 趋势数据`,columns:['周期','值'],
       rows:history.labels.map((label,index)=>[label,history.values[index]==null?'不适用':
         history.unit==='%'?`${history.values[index].toFixed(1)}%`:history.unit==='美元/人'?`$${history.values[index].toFixed(2)}`:
@@ -1834,14 +1873,17 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     const chartPanel=element('div','detail-chart-panel');
     chartPanel.append(element('h3','',spec.title));
     const box=element('div','detail-chart');box.setAttribute('role','img');
-    box.setAttribute('aria-label',`${spec.title}；${spec.note}；完整数值见下方数据表`);
-    chartPanel.append(box,element('p','table-note',spec.note),chartTable(spec));
+    box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
+    chartPanel.append(box);
+    const scaleNote=chartScaleNote(spec);
+    if(scaleNote)chartPanel.append(element('p','chart-scale-note',scaleNote));
+    chartPanel.append(element('p','table-note',spec.note),chartTable(spec));
     if(spec.kind==='heatmap'||spec.labels.length>=10)chartPanel.classList.add('chart-wide');
     container.append(chartPanel);drawSpecs.push([box,spec]);
   };
   const historySpec=history=>({title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,
     labels:history.labels,details:history.details,series:[{name:history.title,values:history.values}],
-    note:`${history.note}${history.unit==='%'?'纵轴固定为0–100%。':'纵轴从0开始；请结合数值表判断变化幅度。'}`});
+    note:history.note});
   const filteredHistories=hasDataFilters(page)?(page==='E'?[paidPayersHistory(),metricHistory(35)]:
     page==='G'?[metricHistory(54)??metricHistory(53)]:
       page==='D'?[metricHistory(18),trialFailureHistory()]:[metricHistory(primaryTrendMetric[page])]).filter(Boolean):[];
@@ -1854,6 +1896,12 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     else if(page==='E'&&modelSubscriptionHeatmap())addChart(analysisMain,modelSubscriptionHeatmap());
     else if(page==='B'&&metric(29).kind==='rate')addChart(analysisMain,seasonComparisonSpec());
     else analysisMain.append(element('p','na-note','当前条件下没有可比较的成熟批次或可用统计对象；请调整筛选条件。'));
+  } else if(page==='B') {
+    const pair=element('div','split-trends');
+    info.chart.series.forEach((line,index)=>addChart(pair,{...info.chart,
+      title:`${line.name} · 12个滚动快照`,series:[{...line,color:index?'#356d51':'#bf762b'}],
+      note:`${info.chart.note} 两条趋势分别使用自身纵轴；绝对规模请核对数值表。`}));
+    analysisMain.append(pair);
   } else addChart(analysisMain,info.chart);
   analysisGrid.append(analysisMain,finding);analysis.append(analysisGrid);body.append(analysis);
   const evidenceFor=metricEvidence(selectedMetric,page);

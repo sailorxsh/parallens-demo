@@ -101,4 +101,33 @@ assert.equal(evaluate('primaryHeroIds.B.length'),4);
 assert.ok(evaluate('relevantFilters("B").includes("functionType")'));
 assert.equal(evaluate('availableOptions("C","functionType").includes("Recognition")'),false);
 assert.equal(evaluate('routeHref("C").includes("functionType")'),false);
-console.log('PASS business filters, linked model/trial facts, stable hero metrics and existing projections');
+
+project({});
+const timelineAxes=evaluate(`Object.values(sourceData.diagnostics).flatMap(page=>[page.chart,...(page.extraCharts??[])])
+  .filter(spec=>spec&&!spec.kind&&isTimelineSpec(spec)).map(spec=>({
+    title:spec.title,axis:trendAxisDomain(spec.series,spec.unit),
+    values:spec.series.flatMap(line=>line.values).filter(Number.isFinite)}))`);
+assert.ok(timelineAxes.length>=8);
+for(const {title,axis,values} of timelineAxes) {
+  assert.ok(axis&&axis.min<=Math.min(...values)&&axis.max>=Math.max(...values),title);
+  assert.ok(axis.max>axis.min&&axis.step>0,title);
+}
+const lossAxis=evaluate('trendAxisDomain(sourceData.diagnostics.G.extraCharts[0].series,"%")');
+assert.ok(lossAxis.min>0&&lossAxis.min<=1.8&&lossAxis.max>=2.2&&lossAxis.max<5);
+assert.match(evaluate('chartScaleNote(sourceData.diagnostics.G.extraCharts[0])'),/非零起点/);
+const activeAxes=evaluate('sourceData.diagnostics.B.chart.series.map(line=>trendAxisDomain([line],"人"))');
+assert.ok(activeAxes[0].min>60000&&activeAxes[0].max>=68000&&activeAxes[0].max<75000);
+assert.ok(activeAxes[1].min>40000&&activeAxes[1].max>=46800&&activeAxes[1].max<50000);
+const revenueAxis=evaluate('trendAxisDomain(sourceData.diagnostics.E.extraCharts[0].series,"美元\/人")');
+assert.ok(revenueAxis.min>0&&revenueAxis.max<10);
+evaluate('window.echarts={init:()=>({setOption:option=>window.__chartOptions=option})}');
+evaluate('drawDetailChart({},sourceData.diagnostics.G.extraCharts[0])');
+assert.equal(evaluate('window.__chartOptions.yAxis.min'),lossAxis.min);
+assert.equal(evaluate('window.__chartOptions.yAxis.max'),lossAxis.max);
+evaluate('drawDetailChart({},sourceData.diagnostics.E.extraCharts[1])');
+assert.equal(evaluate('window.__chartOptions.xAxis.min'),0);
+assert.equal(evaluate('window.__chartOptions.xAxis.max'),100);
+evaluate('document.querySelector=()=>({});drawTrend()');
+assert.ok(evaluate('window.__chartOptions.yAxis.min')>0);
+assert.ok(evaluate('window.__chartOptions.yAxis.max')<100);
+console.log(`PASS business filters, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

@@ -148,6 +148,7 @@ th:first-child,td:first-child {text-align:left}
 .diagnostic-table tbody th {color:#304738;font-weight:600}
 .diagnostic-table tbody tr:hover {background:#fafbf5}
 .table-note {font-size:.73rem;color:#617266;margin:.55rem 0 0;max-width:70rem;line-height:1.6}
+.chart-scale-note {display:table;margin:.45rem 0 .55rem;padding:.3rem .55rem;border-left:2px solid #73987b;background:#f0f5ec;color:#355b42;font-size:.74rem;font-weight:600;line-height:1.5}
 .action-section .data-table-scroll,.metric-inventory .data-table-scroll {padding:1rem 1.2rem}
 .action-table {min-width:65rem}
 .action-table th:last-child,.action-table td:last-child {min-width:8.5rem}
@@ -344,6 +345,9 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .metric-compare-unavailable {margin:.2rem 0 0;color:#829184;font-size:.61rem;line-height:1.35}
 .analysis-grid {display:grid;grid-template-columns:minmax(0,2fr) minmax(16rem,1fr);gap:.75rem;align-items:stretch}
 .analysis-main,.analysis-main .detail-chart-panel {min-width:0;height:100%}
+.split-trends {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;height:100%}
+.analysis-main .split-trends .detail-chart-panel {height:auto;margin:0}
+@media(max-width:1300px) {.split-trends {grid-template-columns:1fr}}
 .analysis-grid .detail-finding {margin:0;border-left:0;border-top:3px solid var(--orange);border-radius:var(--card-radius);padding:.95rem 1rem;background:#f1f5eb}
 .analysis-grid .detail-finding p {line-height:1.55}
 .analysis-grid .detail-finding .finding-meta {font-size:.65rem}
