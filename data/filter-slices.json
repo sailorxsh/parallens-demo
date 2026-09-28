@@ -65,16 +65,6 @@
       "numeratorShare": 0.064
     }
   },
-  "userType": {
-    "Formal": {
-      "denominatorShare": 0.94,
-      "numeratorShare": 0.9682
-    },
-    "Trial": {
-      "denominatorShare": 0.06,
-      "numeratorShare": 0.0318
-    }
-  },
   "season": {
     "Migration": {
       "denominatorShare": 0.7,
@@ -111,16 +101,30 @@
   },
   "plan": {
     "Free": {
-      "denominatorShare": 0.58,
-      "numeratorShare": 0.53790323
+      "denominatorShare": 0.54,
+      "numeratorShare": 0.49879518
+    },
+    "Starter": {
+      "denominatorShare": 0.04,
+      "numeratorShare": 0.04096386
     },
     "Plus": {
       "denominatorShare": 0.3,
-      "numeratorShare": 0.3266129
+      "numeratorShare": 0.3253012
     },
     "Pro": {
       "denominatorShare": 0.12,
-      "numeratorShare": 0.13548387
+      "numeratorShare": 0.13493976
+    }
+  },
+  "billingCycle": {
+    "monthly": {
+      "denominatorShare": 0.8,
+      "numeratorShare": 0.8
+    },
+    "annual": {
+      "denominatorShare": 0.2,
+      "numeratorShare": 0.2
     }
   },
   "firmware": {
@@ -135,24 +139,16 @@
   },
   "functionType": {
     "Upload": {
-      "denominatorShare": 0.2,
-      "numeratorShare": 0.2
-    },
-    "Live": {
-      "denominatorShare": 0.2,
-      "numeratorShare": 0.2
-    },
-    "Playback": {
-      "denominatorShare": 0.2,
-      "numeratorShare": 0.2
+      "denominatorShare": 0.46,
+      "numeratorShare": 0.46976372
     },
     "Recognition": {
-      "denominatorShare": 0.2,
-      "numeratorShare": 0.2
+      "denominatorShare": 0.34,
+      "numeratorShare": 0.31998398
     },
     "Push": {
       "denominatorShare": 0.2,
-      "numeratorShare": 0.2
+      "numeratorShare": 0.2102523
     }
   },
   "anomalyType": {

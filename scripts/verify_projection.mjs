@@ -7,8 +7,8 @@ const root=path.resolve(import.meta.dirname,'..');
 const file=name=>JSON.parse(fs.readFileSync(path.join(root,'data',`${name}.json`),'utf8'));
 const fixtures={
   catalog:file('metric-catalog'),metrics:file('metric-values'),weekly:file('weekly'),snapshot:file('snapshot'),
-  stories:file('stories'),diagnostics:file('diagnostics'),contract:file('filter-contract'),slices:file('filter-slices'),
-  trialFacts:file('trial-facts'),metricTrends:file('metric-trends'),entitySamples:file('entity-samples'),
+  stories:file('stories'),diagnostics:file('diagnostics'),contract:file('filter-contract'),filterPolicy:file('filter-policy'),slices:file('filter-slices'),
+  trialFacts:file('trial-facts'),modelMarket:file('model-market'),metricTrends:file('metric-trends'),entitySamples:file('entity-samples'),
   functionUsage:file('function-usage'),inactivityCohorts:file('inactivity-cohorts'),technicalFacts:file('technical-facts'),
   subscriptionFlow:file('subscription-flow'),
 };
@@ -54,7 +54,7 @@ result=project({week:'12'});
 assert.equal(result.m02.value,12400);
 assert.equal(result.m18.numerator,434);
 assert.equal(result.m18.denominator,1000);
-assert.equal(evaluate('metricHistory(2)'),null);
+assert.equal(evaluate('metricHistory(2).values.at(-1)'),12400);
 assert.equal(project({}).m34.value,12550);
 assert.equal(evaluate('metricHistory(34).labels.at(-1)'),'9/24');
 
@@ -72,4 +72,33 @@ assert.ok(firmware28.m46.value.live.value<firmwareOther.m46.value.live.value);
 result=project({deviceModel:'K6',firmware:'2.8',functionType:'Live'});
 assert.equal(result.m46.value.live.denominator,400);
 assert.equal(result.m46.value.live.numerator,365);
-console.log('PASS projected subscriptions, comparable trends, scoped weeks, seasonal rules, function denominator, technical groups');
+
+result=project({country:'US',deviceModel:'K6'});
+assert.equal(result.m39.kind,'group');
+assert.ok(result.m39.value.K6.owners>0);
+assert.ok(result.m39.value.K6.subscriptionRate>0);
+const usK6=fixtures.modelMarket.records.find(row=>row.country==='US'&&row.model==='K6');
+assert.equal(result.m39.value.K6.owners,usK6.owners);
+assert.equal(Math.round(result.m39.value.K6.subscriptionRate*usK6.owners),usK6.subscribedOwners);
+
+result=project({subscriptionPlatform:'App Store'});
+const appStore=fixtures.trialFacts.records.filter(row=>row.week===12&&row.subscription_platform==='App Store');
+assert.equal(result.m18.denominator,appStore.length);
+assert.equal(result.m18.numerator,appStore.filter(row=>row.converted).length);
+result=project({productLine:'Hunting',plan:'Starter'});
+assert.equal(result.m18.kind,'rate');
+assert.equal(result.m18.denominator,84);
+assert.equal(result.m18.numerator,30);
+assert.equal(project({productLine:'Bird',plan:'Starter'}).m18.kind,'na');
+
+result=project({functionType:'Recognition'});
+assert.equal(result.m27.numerator,14000);
+assert.equal(result.m04.value,project({}).m04.value);
+assert.equal(result.m24.value,project({}).m24.value);
+assert.equal(result.m25.kind,'group');
+assert.equal(result.m29.kind,'rate');
+assert.equal(evaluate('primaryHeroIds.B.length'),4);
+assert.ok(evaluate('relevantFilters("B").includes("functionType")'));
+assert.equal(evaluate('availableOptions("C","functionType").includes("Recognition")'),false);
+assert.equal(evaluate('routeHref("C").includes("functionType")'),false);
+console.log('PASS business filters, linked model/trial facts, stable hero metrics and existing projections');

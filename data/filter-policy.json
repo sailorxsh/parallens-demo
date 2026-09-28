@@ -1,0 +1,1269 @@
+{
+  "version": "business-2026-09-28-v1",
+  "population": {
+    "registeredAccounts": "正式用户＝非测试注册账号；包含处于试用中的正式账号",
+    "deviceDefault": "设备类指标默认使用有效设备；用户类指标不套用设备状态"
+  },
+  "coverage": {
+    "asOf": "2026-09-24",
+    "firstCompleteWeek": "2026-06-28",
+    "lastCompleteWeek": "2026-09-13"
+  },
+  "controls": {
+    "country": {
+      "label": "国家/市场",
+      "scope": "page",
+      "pages": "ABCDEFG",
+      "options": [
+        "US",
+        "UK",
+        "DE",
+        "Other"
+      ]
+    },
+    "productLine": {
+      "label": "产品线",
+      "scope": "page",
+      "pages": "ABCDEFG",
+      "options": [
+        "Bird",
+        "Hunting"
+      ]
+    },
+    "deviceModel": {
+      "label": "设备型号",
+      "scope": "module",
+      "pages": "ABCDEFG",
+      "options": [
+        "K6",
+        "Bird Lite",
+        "Bird Pro",
+        "Hunt Pro"
+      ]
+    },
+    "appPlatform": {
+      "label": "App平台",
+      "scope": "module",
+      "pages": "ABDEF",
+      "options": [
+        "iOS",
+        "Android"
+      ]
+    },
+    "deviceStatus": {
+      "label": "设备状态",
+      "scope": "module",
+      "pages": "ACFG",
+      "options": [
+        "Effective",
+        "Inactive"
+      ]
+    },
+    "salesChannel": {
+      "label": "自报销售渠道",
+      "scope": "module",
+      "pages": "ACE",
+      "options": [
+        "Amazon",
+        "Shopify"
+      ]
+    },
+    "subscriptionPlatform": {
+      "label": "订阅平台",
+      "scope": "module",
+      "pages": "DE",
+      "options": [
+        "App Store",
+        "Google Play",
+        "Web"
+      ]
+    },
+    "plan": {
+      "label": "套餐",
+      "scope": "module",
+      "pages": "DE",
+      "optionsByProduct": {
+        "Bird": [
+          "Free",
+          "Plus",
+          "Pro"
+        ],
+        "Hunting": [
+          "Starter",
+          "Plus",
+          "Pro"
+        ]
+      }
+    },
+    "billingCycle": {
+      "label": "计费周期",
+      "scope": "module",
+      "pages": "DE",
+      "options": [
+        "monthly",
+        "annual"
+      ]
+    },
+    "firmware": {
+      "label": "固件版本",
+      "scope": "module",
+      "pages": "CG",
+      "options": [
+        "2.8",
+        "Other"
+      ]
+    },
+    "anomalyType": {
+      "label": "异常类型",
+      "scope": "module",
+      "pages": "G",
+      "options": [
+        "Business",
+        "Device",
+        "Quality"
+      ]
+    },
+    "functionType": {
+      "label": "查看功能",
+      "scope": "view",
+      "pages": "BC",
+      "optionsByPage": {
+        "B": [
+          "Live",
+          "Playback",
+          "Recognition"
+        ],
+        "C": [
+          "Upload",
+          "Live",
+          "Push"
+        ]
+      }
+    },
+    "season": {
+      "label": "未使用判定规则",
+      "scope": "rule",
+      "pages": "BC",
+      "options": [
+        "Migration",
+        "Other"
+      ]
+    },
+    "week": {
+      "label": "成熟统计周",
+      "scope": "period",
+      "pages": "ACD",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    }
+  },
+  "metrics": [
+    {
+      "id": 2,
+      "page": "D",
+      "entity": "用户",
+      "window": "2026-09-24 订阅状态快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 3,
+      "page": "D",
+      "entity": "美元/月",
+      "window": "2026-09-24 月化经常性收入快照；不等于9月实际收款",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "billingCycle",
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 4,
+      "page": "B",
+      "entity": "用户",
+      "window": "截至2026-09-24向前30天滚动窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 5,
+      "page": "D",
+      "entity": "用户",
+      "window": "2026-09-24 互斥订阅状态快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "deviceModel",
+        "plan"
+      ]
+    },
+    {
+      "id": 6,
+      "page": "D",
+      "entity": "用户",
+      "window": "2026-09-24 订阅状态快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 7,
+      "page": "A",
+      "entity": "用户",
+      "window": "累计注册截至2026-09-24；当前绑定关系为2026-09-24快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 8,
+      "page": "C",
+      "entity": "设备",
+      "window": "累计首图激活截至2026-09-24；当前绑定关系为2026-09-24快照",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 9,
+      "page": "A",
+      "entity": "用户",
+      "window": "最近完整周及最近12周趋势",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 10,
+      "page": "A",
+      "entity": "用户Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 11,
+      "page": "A",
+      "entity": "绑定尝试",
+      "window": "最近完整周及最近12周趋势",
+      "businessDimensions": [
+        "appPlatform",
+        "deviceModel",
+        "deviceStatus",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "deviceModel",
+        "deviceStatus",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 12,
+      "page": "A",
+      "entity": "用户Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "productLine",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "productLine",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 13,
+      "page": "A",
+      "entity": "用户Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine",
+        "season",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine",
+        "season",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 14,
+      "page": "A",
+      "entity": "设备",
+      "window": "绑定至首图时长演示分布；截至2026-09-24，原始事件起止日未注明",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "demonstrableDimensions": [],
+      "unavailableDimensions": [
+        "country",
+        "deviceModel",
+        "productLine"
+      ]
+    },
+    {
+      "id": 15,
+      "page": "A",
+      "entity": "设备",
+      "window": "2026-09-24 设备状态快照",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 16,
+      "page": "A",
+      "entity": "设备",
+      "window": "新增激活设备演示汇总；截至2026-09-24，原始统计期起止日未注明",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine",
+        "salesChannel"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine",
+        "salesChannel"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 17,
+      "page": "D",
+      "entity": "用户Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 18,
+      "page": "D",
+      "entity": "试用Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 19,
+      "page": "D",
+      "entity": "Eligible用户Cohort",
+      "window": "首次绑定后完整30天成熟观察窗；演示汇总截至2026-09-24",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 20,
+      "page": "D",
+      "entity": "用户",
+      "window": "触点后7天付费归因窗口；演示汇总截至2026-09-24，触点发生期未注明",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "productLine"
+      ],
+      "unavailableDimensions": [
+        "country"
+      ]
+    },
+    {
+      "id": 21,
+      "page": "D",
+      "entity": "用户",
+      "window": "2026-09-01 至 2026-09-24（当月截至日，非完整月）",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "billingCycle",
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 22,
+      "page": "D",
+      "entity": "用户",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "country",
+        "plan",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "plan",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 23,
+      "page": "D",
+      "entity": "用户",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform",
+        "week"
+      ],
+      "unavailableDimensions": [
+        "billingCycle",
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 24,
+      "page": "B",
+      "entity": "用户",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 25,
+      "page": "B",
+      "entity": "用户",
+      "window": "截至2026-09-24的当日、向前7天与向前30天滚动窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 26,
+      "page": "B",
+      "entity": "Session",
+      "window": "使用频次与时长演示汇总；截至2026-09-24，会话观察期未注明",
+      "businessDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "demonstrableDimensions": [],
+      "unavailableDimensions": [
+        "appPlatform",
+        "country"
+      ]
+    },
+    {
+      "id": 27,
+      "page": "B",
+      "entity": "用户",
+      "window": "截至2026-09-24的最近30天滚动窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "functionType",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "functionType",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 28,
+      "page": "B",
+      "entity": "用户Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 29,
+      "page": "B",
+      "entity": "Owner用户",
+      "window": "2026-09-24 最近活跃间隔快照；历史回流观察窗另计",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine",
+        "season"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine",
+        "season"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 30,
+      "page": "B",
+      "entity": "用户",
+      "window": "截至2026-09-24向前30天滚动窗口；三来源去重并集与交集",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 31,
+      "page": "B",
+      "entity": "推送",
+      "window": "推送送达与点击演示汇总；截至2026-09-24，推送发送期未注明",
+      "businessDimensions": [
+        "appPlatform",
+        "country"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform"
+      ],
+      "unavailableDimensions": [
+        "country"
+      ]
+    },
+    {
+      "id": 32,
+      "page": "D",
+      "entity": "用户",
+      "window": "套餐升级与降级演示汇总；截至2026-09-24，变更统计期未注明",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "billingCycle"
+      ]
+    },
+    {
+      "id": 33,
+      "page": "D",
+      "entity": "用户",
+      "window": "订阅恢复演示汇总与连续订阅时长分布；截至2026-09-24，恢复观察期未注明",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [],
+      "unavailableDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ]
+    },
+    {
+      "id": 34,
+      "page": "E",
+      "entity": "用户",
+      "window": "2026-09-24 有效订阅或增值Pack权益主账号快照",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "billingCycle",
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 35,
+      "page": "E",
+      "entity": "用户",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "billingCycle",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": [
+        "billingCycle",
+        "deviceModel"
+      ]
+    },
+    {
+      "id": 36,
+      "page": "E",
+      "entity": "用户",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 37,
+      "page": "E",
+      "entity": "用户",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "country",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 38,
+      "page": "E",
+      "entity": "主账号/设备",
+      "window": "2026-09-24 用户与设备结构快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "demonstrableDimensions": [],
+      "unavailableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ]
+    },
+    {
+      "id": 39,
+      "page": "E",
+      "entity": "型号主账号",
+      "window": "2026-09-24 型号主账号快照；活跃率看向前30天",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 40,
+      "page": "E",
+      "entity": "销售渠道",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "country",
+        "productLine",
+        "salesChannel"
+      ],
+      "demonstrableDimensions": [
+        "salesChannel"
+      ],
+      "unavailableDimensions": [
+        "country",
+        "productLine"
+      ]
+    },
+    {
+      "id": 41,
+      "page": "C",
+      "entity": "设备",
+      "window": "有效激活设备活跃演示汇总；截至2026-09-24，设备行为观察期未注明",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 42,
+      "page": "C",
+      "entity": "设备",
+      "window": "最近完整周及最近12周趋势",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine",
+        "season",
+        "week"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine",
+        "season",
+        "week"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 43,
+      "page": "C",
+      "entity": "设备Cohort",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine",
+        "salesChannel"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine",
+        "salesChannel"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 44,
+      "page": "C",
+      "entity": "设备",
+      "window": "迁徙季连续21天无有效设备行为的2026-09-24演示汇总；淡季30天数据未提供",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine",
+        "season"
+      ],
+      "demonstrableDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "unavailableDimensions": [
+        "season"
+      ]
+    },
+    {
+      "id": 45,
+      "page": "C",
+      "entity": "设备",
+      "window": "联网尝试与最近上报演示汇总；截至2026-09-24，联网尝试统计期未注明",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine"
+      ],
+      "unavailableDimensions": [
+        "country"
+      ]
+    },
+    {
+      "id": 46,
+      "page": "C",
+      "entity": "请求/事件",
+      "window": "上传、直播和推送请求演示汇总；截至2026-09-24，请求统计期未注明",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "functionType",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "functionType",
+        "productLine"
+      ],
+      "unavailableDimensions": [
+        "country"
+      ]
+    },
+    {
+      "id": 47,
+      "page": "C",
+      "entity": "设备",
+      "window": "2026-09-24 有效设备固件版本快照",
+      "businessDimensions": [
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine"
+      ],
+      "unavailableDimensions": [
+        "country"
+      ]
+    },
+    {
+      "id": 48,
+      "page": "F",
+      "entity": "Owner用户",
+      "window": "最近完整月或指标定义中的月窗口",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 49,
+      "page": "F",
+      "entity": "设备",
+      "window": "2026-09-24 主账号绑定设备共享关系快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 50,
+      "page": "F",
+      "entity": "设备",
+      "window": "2026-09-24 设备绑定、激活和共享关系快照",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "productLine"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 51,
+      "page": "F",
+      "entity": "解绑事件",
+      "window": "完整观察窗内的指定批次",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceStatus"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceStatus"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 52,
+      "page": "D",
+      "entity": "用户",
+      "window": "2026-09-24 流失风险信号命中主账号快照；部分规则回看30天",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "demonstrableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "plan",
+        "productLine",
+        "subscriptionPlatform"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 53,
+      "page": "G",
+      "entity": "小时/日",
+      "window": "2026-09-24 当日演示异常事件数；基线为近4周同时间段",
+      "businessDimensions": [
+        "anomalyType",
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine",
+        "season"
+      ],
+      "demonstrableDimensions": [
+        "anomalyType",
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "deviceStatus",
+        "firmware",
+        "productLine",
+        "season"
+      ],
+      "unavailableDimensions": []
+    },
+    {
+      "id": 54,
+      "page": "G",
+      "entity": "事件",
+      "window": "2026-09-24 当日事件丢失率、ID映射覆盖率及数据质量状态",
+      "businessDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ],
+      "demonstrableDimensions": [],
+      "unavailableDimensions": [
+        "appPlatform",
+        "country",
+        "deviceModel",
+        "productLine"
+      ]
+    }
+  ]
+}

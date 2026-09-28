@@ -9,7 +9,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -31,7 +30,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -53,8 +51,7 @@
       "country",
       "appPlatform",
       "productLine",
-      "deviceModel",
-      "userType"
+      "deviceModel"
     ],
     "numerator": "去重计数或金额",
     "denominator": "不适用",
@@ -74,7 +71,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform"
     ],
     "numerator": "各子项独立，见原指标计算方法",
@@ -95,7 +91,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform"
     ],
     "numerator": 12400,
@@ -120,8 +115,7 @@
     "window": "累计注册截至2026-09-24；当前绑定关系为2026-09-24快照",
     "dimensions": [
       "country",
-      "appPlatform",
-      "userType"
+      "appPlatform"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -160,7 +154,6 @@
     "dimensions": [
       "country",
       "appPlatform",
-      "userType",
       "week"
     ],
     "numerator": "去重计数或金额",
@@ -180,7 +173,6 @@
     "dimensions": [
       "country",
       "appPlatform",
-      "userType",
       "week"
     ],
     "numerator": 2002,
@@ -233,7 +225,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "week"
     ],
     "numerator": "各子项独立，见原指标计算方法",
@@ -266,7 +257,6 @@
       "appPlatform",
       "productLine",
       "deviceModel",
-      "userType",
       "season",
       "week"
     ],
@@ -350,7 +340,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan",
       "week"
@@ -379,10 +368,10 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan",
-      "week"
+      "week",
+      "billingCycle"
     ],
     "numerator": 434,
     "denominator": 1000,
@@ -409,7 +398,6 @@
       "appPlatform",
       "productLine",
       "deviceModel",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -435,8 +423,7 @@
     "window": "触点后7天付费归因窗口；演示汇总截至2026-09-24，触点发生期未注明",
     "dimensions": [
       "appPlatform",
-      "productLine",
-      "userType"
+      "productLine"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -472,7 +459,6 @@
       "productLine",
       "country",
       "appPlatform",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -493,7 +479,6 @@
     "dimensions": [
       "country",
       "productLine",
-      "userType",
       "plan"
     ],
     "numerator": "各子项独立，见原指标计算方法",
@@ -535,7 +520,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan",
       "week"
@@ -562,8 +546,7 @@
     "window": "最近完整月或指标定义中的月窗口",
     "dimensions": [
       "country",
-      "appPlatform",
-      "userType"
+      "appPlatform"
     ],
     "numerator": 27000,
     "denominator": 35000,
@@ -589,8 +572,7 @@
       "country",
       "appPlatform",
       "productLine",
-      "deviceModel",
-      "userType"
+      "deviceModel"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -627,7 +609,6 @@
       "productLine",
       "deviceModel",
       "deviceStatus",
-      "userType",
       "functionType"
     ],
     "numerator": 26000,
@@ -652,8 +633,7 @@
     "window": "完整观察窗内的指定批次",
     "dimensions": [
       "country",
-      "appPlatform",
-      "userType"
+      "appPlatform"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -690,7 +670,6 @@
       "appPlatform",
       "productLine",
       "deviceModel",
-      "userType",
       "season"
     ],
     "numerator": 4200,
@@ -716,8 +695,7 @@
     "dimensions": [
       "country",
       "appPlatform",
-      "productLine",
-      "userType"
+      "productLine"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -734,8 +712,7 @@
     "entity": "推送",
     "window": "推送送达与点击演示汇总；截至2026-09-24，推送发送期未注明",
     "dimensions": [
-      "appPlatform",
-      "userType"
+      "appPlatform"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -766,7 +743,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -820,7 +796,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -842,7 +817,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -864,7 +838,6 @@
       "country",
       "appPlatform",
       "productLine",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],
@@ -915,8 +888,7 @@
     "window": "最近完整月或指标定义中的月窗口",
     "dimensions": [
       "country",
-      "productLine",
-      "userType"
+      "productLine"
     ],
     "numerator": "各子项独立，见原指标计算方法",
     "denominator": "各子项独立，见原指标计算方法",
@@ -1190,8 +1162,7 @@
       "country",
       "appPlatform",
       "deviceModel",
-      "deviceStatus",
-      "userType"
+      "deviceStatus"
     ],
     "numerator": 18128,
     "denominator": 82400,
@@ -1301,7 +1272,6 @@
       "appPlatform",
       "productLine",
       "deviceModel",
-      "userType",
       "subscriptionPlatform",
       "plan"
     ],

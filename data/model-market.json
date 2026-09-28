@@ -1,0 +1,137 @@
+{
+  "classification": "entirely_synthetic",
+  "asOf": "2026-09-24",
+  "grain": "one primary-model attribution per observed owner, partitioned by market",
+  "population": "66,000 owners with an attributed primary model; not all 82,400 eligible owners",
+  "note": "Each model closes to the existing model cohort. Subscription rate uses subscribed owners / owners in the same market-model cell.",
+  "records": [
+    {
+      "country": "US",
+      "productLine": "Bird",
+      "model": "K6",
+      "owners": 5220,
+      "activeOwners": 3377,
+      "subscribedOwners": 974
+    },
+    {
+      "country": "UK",
+      "productLine": "Bird",
+      "model": "K6",
+      "owners": 1800,
+      "activeOwners": 1086,
+      "subscribedOwners": 287
+    },
+    {
+      "country": "DE",
+      "productLine": "Bird",
+      "model": "K6",
+      "owners": 1080,
+      "activeOwners": 625,
+      "subscribedOwners": 151
+    },
+    {
+      "country": "Other",
+      "productLine": "Bird",
+      "model": "K6",
+      "owners": 900,
+      "activeOwners": 492,
+      "subscribedOwners": 118
+    },
+    {
+      "country": "US",
+      "productLine": "Bird",
+      "model": "Bird Lite",
+      "owners": 16080,
+      "activeOwners": 11297,
+      "subscribedOwners": 2418
+    },
+    {
+      "country": "UK",
+      "productLine": "Bird",
+      "model": "Bird Lite",
+      "owners": 3840,
+      "activeOwners": 2516,
+      "subscribedOwners": 494
+    },
+    {
+      "country": "DE",
+      "productLine": "Bird",
+      "model": "Bird Lite",
+      "owners": 2400,
+      "activeOwners": 1508,
+      "subscribedOwners": 270
+    },
+    {
+      "country": "Other",
+      "productLine": "Bird",
+      "model": "Bird Lite",
+      "owners": 1680,
+      "activeOwners": 999,
+      "subscribedOwners": 178
+    },
+    {
+      "country": "US",
+      "productLine": "Bird",
+      "model": "Bird Pro",
+      "owners": 11160,
+      "activeOwners": 8689,
+      "subscribedOwners": 2423
+    },
+    {
+      "country": "UK",
+      "productLine": "Bird",
+      "model": "Bird Pro",
+      "owners": 3420,
+      "activeOwners": 2484,
+      "subscribedOwners": 636
+    },
+    {
+      "country": "DE",
+      "productLine": "Bird",
+      "model": "Bird Pro",
+      "owners": 1980,
+      "activeOwners": 1378,
+      "subscribedOwners": 321
+    },
+    {
+      "country": "Other",
+      "productLine": "Bird",
+      "model": "Bird Pro",
+      "owners": 1440,
+      "activeOwners": 949,
+      "subscribedOwners": 220
+    },
+    {
+      "country": "US",
+      "productLine": "Hunting",
+      "model": "Hunt Pro",
+      "owners": 10650,
+      "activeOwners": 6575,
+      "subscribedOwners": 1474
+    },
+    {
+      "country": "UK",
+      "productLine": "Hunting",
+      "model": "Hunt Pro",
+      "owners": 2100,
+      "activeOwners": 1209,
+      "subscribedOwners": 249
+    },
+    {
+      "country": "DE",
+      "productLine": "Hunting",
+      "model": "Hunt Pro",
+      "owners": 1350,
+      "activeOwners": 746,
+      "subscribedOwners": 140
+    },
+    {
+      "country": "Other",
+      "productLine": "Hunting",
+      "model": "Hunt Pro",
+      "owners": 900,
+      "activeOwners": 470,
+      "subscribedOwners": 87
+    }
+  ]
+}

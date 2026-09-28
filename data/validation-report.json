@@ -1,6 +1,6 @@
 {
-  "passed": 38,
-  "total": 38,
+  "passed": 40,
+  "total": 40,
   "checks": [
     {
       "rule": "catalog",
@@ -16,6 +16,16 @@
       "rule": "F1-filter-contract",
       "passed": true,
       "detail": "53项指标均有对象、窗口、公式、适用维度及不适用规则"
+    },
+    {
+      "rule": "F9-business-filter-policy",
+      "passed": true,
+      "detail": "53项业务适用性与演示能力分离；正式账号不是试用状态，Starter仅狩猎线"
+    },
+    {
+      "rule": "F10-model-market-facts",
+      "passed": true,
+      "detail": "型号主账号在四市场互斥闭合，活跃与订阅人数均能回算"
     },
     {
       "rule": "F2-synthetic-slices",

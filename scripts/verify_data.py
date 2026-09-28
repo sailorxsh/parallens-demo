@@ -23,6 +23,8 @@ function_usage = load("function-usage.json")
 inactivity = load("inactivity-cohorts.json")
 technical = load("technical-facts.json")
 subscription_flow = load("subscription-flow.json")
+filter_policy = load("filter-policy.json")
+model_market = load("model-market.json")
 checks = []
 
 
@@ -43,6 +45,27 @@ check("F1-filter-contract", len(contract) == 53 and
           and item["entity"] and item["window"] and item["formula"] and item["source"] and item["unsupported"]
           and set(item["dimensions"]).issubset(set(slices) | {"week"}) for item in contract),
       "53项指标均有对象、窗口、公式、适用维度及不适用规则")
+policy_metrics = {item["id"]: item for item in filter_policy["metrics"]}
+check("F9-business-filter-policy", len(policy_metrics) == 53 and
+      set(policy_metrics) == set(range(2, 55)) and
+      "userType" not in filter_policy["controls"] and
+      all(set(item["demonstrableDimensions"]) <= set(item["businessDimensions"]) and
+          set(item["unavailableDimensions"]) ==
+          set(item["businessDimensions"]) - set(item["demonstrableDimensions"])
+          for item in policy_metrics.values()) and
+      "Starter" in filter_policy["controls"]["plan"]["optionsByProduct"]["Hunting"] and
+      "Starter" not in filter_policy["controls"]["plan"]["optionsByProduct"]["Bird"],
+      "53项业务适用性与演示能力分离；正式账号不是试用状态，Starter仅狩猎线")
+model_rows = model_market["records"]
+check("F10-model-market-facts", len(model_rows) == 16 and
+      len({(row["country"], row["model"]) for row in model_rows}) == 16 and
+      all(0 <= row["subscribedOwners"] <= row["owners"] and
+          0 <= row["activeOwners"] <= row["owners"] for row in model_rows) and
+      all(sum(row["owners"] for row in model_rows if row["model"] == model) == value["owners"] and
+          sum(row["activeOwners"] for row in model_rows if row["model"] == model) == round(value["owners"] * value["activeRate"]) and
+          sum(row["subscribedOwners"] for row in model_rows if row["model"] == model) == round(value["owners"] * value["subscriptionRate"])
+          for model, value in metrics["m39"]["value"].items()),
+      "型号主账号在四市场互斥闭合，活跃与订阅人数均能回算")
 check("F2-synthetic-slices", all(
       abs(sum(option["denominatorShare"] for option in values.values()) - 1) < 1e-7 and
       abs(sum(option["numeratorShare"] for option in values.values()) - 1) < 1e-6 and

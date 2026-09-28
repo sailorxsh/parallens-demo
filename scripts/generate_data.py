@@ -14,7 +14,13 @@ DATA.mkdir(parents=True, exist_ok=True)
 
 
 def write(name: str, value: object) -> None:
-    (DATA / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    target = DATA / name
+    # These files were reconciled with the revised workbook after the base
+    # fixture was first generated. Rebuilding synthetic facts must not erase
+    # their reviewed metric wording, windows or page evidence.
+    if name in {"metric-catalog.json", "filter-contract.json", "diagnostics.json"} and target.exists():
+        return
+    target.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 workbook = load_workbook(BOOK, data_only=True)
@@ -670,11 +676,11 @@ dimension_ids = {
     "productLine": set(range(2, 54)) - {7,9,10,11,14,24,26,28,31,38,48,51,54},
     "deviceModel": {4,6,8,11,13,14,15,16,19,25,27,29,39,40,41,42,43,44,45,46,47,48,49,50,52,53},
     "deviceStatus": {8,11,14,15,16,27,39,41,42,43,44,45,46,47,48,49,50,51,53},
-    "userType": {2,3,4,5,6,7,9,10,12,13,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,40,48,52},
     "season": {13,29,42,44,53},
     "salesChannel": {16,40,43},
     "subscriptionPlatform": {2,3,5,6,17,18,19,21,23,32,33,34,35,36,52},
     "plan": {2,3,5,6,17,18,19,21,22,23,32,33,34,35,36,52},
+    "billingCycle": {18},
     "firmware": {41,42,45,46,47,53},
     "functionType": {27,46},
     "anomalyType": {53},
@@ -757,11 +763,11 @@ slice_weights = {
     "productLine": {"Bird": .70, "Hunting": .30},
     "deviceModel": {"K6": .1113, "Bird Lite": .3477, "Bird Pro": .3129, "Hunt Pro": .2281},
     "deviceStatus": {"Effective": .90, "Inactive": .10},
-    "userType": {"Formal": .94, "Trial": .06},
     "season": {"Migration": .70, "Other": .30},
     "salesChannel": {"Amazon": .60, "Shopify": .40},
     "subscriptionPlatform": {"App Store": .44, "Google Play": .36, "Web": .20},
-    "plan": {"Free": .58, "Plus": .30, "Pro": .12},
+    "plan": {"Free": .54, "Starter": .04, "Plus": .30, "Pro": .12},
+    "billingCycle": {"monthly": .8, "annual": .2},
     "firmware": {"2.8": .24, "Other": .76},
     "functionType": {"Upload": .46, "Recognition": .34, "Push": .20},
     "anomalyType": {"Business": .57, "Device": .29, "Quality": .14},
@@ -774,11 +780,11 @@ slice_skew = {
     "productLine": {"Bird": 1.03, "Hunting": .93},
     "deviceModel": {"K6": .89, "Bird Lite": .98, "Bird Pro": 1.08, "Hunt Pro": .96},
     "deviceStatus": {"Effective": 1.04, "Inactive": .64},
-    "userType": {"Formal": 1.03, "Trial": .53},
     "season": {"Migration": 1.04, "Other": .91},
     "salesChannel": {"Amazon": .98, "Shopify": 1.03},
     "subscriptionPlatform": {"App Store": 1.04, "Google Play": .93, "Web": 1.04},
-    "plan": {"Free": .92, "Plus": 1.08, "Pro": 1.12},
+    "plan": {"Free": .92, "Starter": 1.02, "Plus": 1.08, "Pro": 1.12},
+    "billingCycle": {"monthly": 1.0, "annual": 1.0},
     "firmware": {"2.8": .82, "Other": 1.06},
     "functionType": {"Upload": 1.02, "Recognition": .94, "Push": 1.05},
     "anomalyType": {"Business": 1.09, "Device": 1.05, "Quality": .56},

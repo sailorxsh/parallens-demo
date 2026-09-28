@@ -6,7 +6,7 @@
       "signal": "识别触发后未返回结果",
       "observedAt": "2026-09-13 10:20",
       "status": "待核验",
-      "dimensions": {"week":"12","country":"US","appPlatform":"Android","productLine":"Bird","deviceModel":"K6","deviceStatus":"Effective","userType":"Formal","season":"Migration","salesChannel":"Amazon","firmware":"2.8","functionType":"Recognition"},
+      "dimensions": {"week":"12","country":"US","appPlatform":"Android","productLine":"Bird","deviceModel":"K6","deviceStatus":"Effective","season":"Migration","salesChannel":"Amazon","firmware":"2.8","functionType":"Recognition"},
       "detail": "演示设备样本属于观鸟 K6 固件 2.8 分组；该分组的空触发率需回到总体分子、分母核验。",
       "review": "核对触发日志、固件版本与结果回传；不要用单台样本推断分组异常率。",
       "evidence": {"page":"C","metricId":42}
@@ -17,7 +17,7 @@
       "signal": "连续触发记录待核对",
       "observedAt": "2026-09-13 14:05",
       "status": "待核验",
-      "dimensions": {"week":"12","country":"UK","appPlatform":"iOS","productLine":"Bird","deviceModel":"K6","deviceStatus":"Effective","userType":"Formal","season":"Migration","salesChannel":"Shopify","firmware":"2.8","functionType":"Recognition"},
+      "dimensions": {"week":"12","country":"UK","appPlatform":"iOS","productLine":"Bird","deviceModel":"K6","deviceStatus":"Effective","season":"Migration","salesChannel":"Shopify","firmware":"2.8","functionType":"Recognition"},
       "detail": "第二条独立演示设备样本，用于展示同型号同固件的事件级核对入口。",
       "review": "检查去重后的触发记录和设备上报时间，确认是否重复计数。",
       "evidence": {"page":"C","metricId":42}
@@ -28,7 +28,7 @@
       "signal": "对照设备样本",
       "observedAt": "2026-09-13 16:30",
       "status": "演示对照",
-      "dimensions": {"week":"12","country":"US","appPlatform":"iOS","productLine":"Bird","deviceModel":"Bird Pro","deviceStatus":"Effective","userType":"Formal","season":"Other","salesChannel":"Amazon","firmware":"Other","functionType":"Upload"},
+      "dimensions": {"week":"12","country":"US","appPlatform":"iOS","productLine":"Bird","deviceModel":"Bird Pro","deviceStatus":"Effective","season":"Other","salesChannel":"Amazon","firmware":"Other","functionType":"Upload"},
       "detail": "观鸟线非 K6 2.8 的演示对照样本；不代表其所在分组的总体表现。",
       "review": "对照同一完整周的设备活跃与上报口径。",
       "evidence": {"page":"C","metricId":41}
@@ -39,7 +39,7 @@
       "signal": "跨产品线对照样本",
       "observedAt": "2026-09-13 18:10",
       "status": "演示对照",
-      "dimensions": {"week":"12","country":"DE","appPlatform":"Android","productLine":"Hunting","deviceModel":"Hunt Pro","deviceStatus":"Effective","userType":"Formal","season":"Other","salesChannel":"Shopify","firmware":"Other","functionType":"Push"},
+      "dimensions": {"week":"12","country":"DE","appPlatform":"Android","productLine":"Hunting","deviceModel":"Hunt Pro","deviceStatus":"Effective","season":"Other","salesChannel":"Shopify","firmware":"Other","functionType":"Push"},
       "detail": "狩猎线演示设备仅作交互对照；观鸟空触发率口径不适用于它。",
       "review": "先核对产品线适用性，再查看设备活跃证据。",
       "evidence": {"page":"C","metricId":41}
