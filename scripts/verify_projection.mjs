@@ -103,6 +103,34 @@ assert.equal(evaluate('availableOptions("C","functionType").includes("Recognitio
 assert.equal(evaluate('routeHref("C").includes("functionType")'),false);
 
 project({});
+const comparisons=evaluate('homeComparisons()');
+const activationComparison=comparisons.find(item=>item.id===13);
+for(const [key,weeks] of [['before',fixtures.weekly.slice(0,8)],['after',fixtures.weekly.slice(8)]]) {
+  const numerator=weeks.reduce((sum,week)=>sum+week.registrationCohort.valueActivated7dBird,0);
+  const denominator=weeks.reduce((sum,week)=>sum+week.registrationCohort.birdEligible,0);
+  assert.equal(activationComparison[key].numerator,numerator);
+  assert.equal(activationComparison[key].denominator,denominator);
+  assert.equal(activationComparison[`${key}Rate`],numerator/denominator*100);
+}
+project({week:'2'});
+assert.equal(evaluate('homeComparisons().find(item=>item.id===13).delta'),activationComparison.delta);
+project({productLine:'Hunting'});
+assert.equal(evaluate('homeComparisons().some(item=>item.id===13)'),false);
+project({productLine:'Bird',country:'US',subscriptionPlatform:'App Store'});
+const trialComparison=evaluate('homeComparisons().find(item=>item.id===18)');
+for(const [key,period] of [['before','previous'],['after','current']]) {
+  const rows=fixtures.trialFacts.records.filter(row=>row.product_line==='Bird'&&row.country==='US'&&row.subscription_platform==='App Store'&&row.period===period);
+  assert.equal(trialComparison[key].denominator,rows.length);
+  assert.equal(trialComparison[key].numerator,rows.filter(row=>row.converted).length);
+  assert.equal(trialComparison[`${key}Rate`],rows.filter(row=>row.converted).length/rows.length*100);
+}
+project({productLine:'Bird',plan:'Starter'});
+assert.equal(evaluate('homeComparisons().some(item=>item.id===18)'),false);
+project({country:'UK',productLine:'Bird',subscriptionPlatform:'Web',plan:'Plus',billingCycle:'monthly'});
+assert.equal(evaluate('trialRows({...trialState(),week:undefined},"current").rows.length'),60);
+assert.equal(evaluate('trendValues(18)'),null);
+assert.equal(evaluate('homeComparisons().some(item=>item.id===18)'),false,'A pooled sample must not imply a weekly trend when every week is suppressed');
+project({});
 const timelineAxes=evaluate(`Object.values(sourceData.diagnostics).flatMap(page=>[page.chart,...(page.extraCharts??[])])
   .filter(spec=>spec&&!spec.kind&&isTimelineSpec(spec)).map(spec=>({
     title:spec.title,axis:trendAxisDomain(spec.series,spec.unit),
@@ -130,4 +158,11 @@ assert.equal(evaluate('window.__chartOptions.xAxis.max'),100);
 evaluate('document.querySelector=()=>({});drawTrend()');
 assert.ok(evaluate('window.__chartOptions.yAxis.min')>0);
 assert.ok(evaluate('window.__chartOptions.yAxis.max')<100);
-console.log(`PASS business filters, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+evaluate('chart=null;drawTrend(18)');
+assert.equal(evaluate('window.__chartOptions.series.length'),1);
+assert.equal(evaluate('window.__chartOptions.series[0].data.at(-1)'),43.4);
+assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),45);
+assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
+evaluate('chart=null;drawTrend(null)');
+assert.equal(evaluate('window.__chartOptions.series.length'),2);
+console.log(`PASS business filters, weighted period comparisons, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

@@ -4,6 +4,31 @@ async (page) => {
   const base=new URL('.',page.url()).href;
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
+  await page.goto(base);
+  await page.locator('.home-signal').first().waitFor();
+  const conversionSignal=page.locator('.home-signal[data-metric-id="18"]');
+  await conversionSignal.focus();
+  await page.keyboard.press('Enter');
+  check(await conversionSignal.getAttribute('aria-pressed')==='true','Signal selection did not follow keyboard action');
+  check(await conversionSignal.evaluate(node=>document.activeElement===node),'Signal selection lost keyboard focus');
+  const focused=await page.locator('#trendChart').evaluate(node=>{
+    const option=window.echarts.getInstanceByDom(node).getOption();
+    return {count:option.series.length,last:option.series[0].data.at(-1),baseline:option.series[0].markLine.data[0].yAxis,span:option.yAxis[0].max-option.yAxis[0].min};
+  });
+  check(focused.count===1&&focused.last===43.4&&focused.baseline===45&&focused.span<5,'Conversion story chart is inconsistent or flattened');
+  await page.getByRole('button',{name:'并列对照',exact:true}).click();
+  check(await page.locator('#trendChart').evaluate(node=>window.echarts.getInstanceByDom(node).getOption().series.length)===2,'Overview lost one trend');
+  await conversionSignal.click();
+  await page.locator('.home-comparison-context .insight-link').click();
+  await page.locator('#metric-evidence-18').waitFor();
+  check(page.url().includes('#/D'),'Signal evidence did not open the corresponding topic');
+  await page.goto(`${base}#/?productLine=Hunting`);
+  await page.locator('.home-signal').first().waitFor();
+  check(await page.locator('.home-signal').count()===1,'Unavailable Bird activation remained in Hunting scope');
+  check(await page.locator('.home-signal').getAttribute('data-metric-id')==='18','Available trial story disappeared');
+  await page.locator('.home-comparison-context .insight-link').click();
+  await page.locator('#metric-evidence-18').waitFor();
+  check(page.url().includes('productLine=Hunting'),'Signal evidence dropped supported product filter');
   await page.goto(`${base}#/D`);
   await page.reload();
   await page.getByRole('heading',{name:'订阅转化',exact:true}).waitFor();
@@ -95,5 +120,5 @@ async (page) => {
   } finally {await probe.close();}
   check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
   await page.locator('.nav-link[data-page=""]').click();
-  return {status:'PASS',checks:['continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
+  return {status:'PASS',checks:['weighted story selection and focused scales','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
 }
