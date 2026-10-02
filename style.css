@@ -353,7 +353,17 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .filtered-trends .detail-chart-panel {min-width:0}
 .chart-selection {min-height:1.1rem;margin:.25rem 0;font-size:.7rem;color:#385a41}
 .chart-selected {background:#e6f0dc;outline:2px solid #89ac73;outline-offset:-2px}
-.metric-evidence {padding:.9rem 1rem}
+.metric-evidence {padding:.9rem 1rem;container-type:inline-size}
+.evidence-pair {display:grid;grid-template-columns:minmax(0,1.65fr) minmax(22rem,1fr);gap:.85rem;align-items:stretch;margin:.8rem 0 1rem}
+.evidence-plot {display:flex;flex-direction:column;min-width:0}
+.evidence-plot-title {font-size:.86rem;line-height:1.5;margin:0 0 .3rem;color:#304738}
+.metric-evidence .evidence-plot .detail-chart {height:16rem;min-height:16rem;flex:1}
+.metric-evidence .evidence-pair>.data-table-scroll {margin-top:0;padding:.65rem .75rem;min-width:0}
+.evidence-pair .diagnostic-table {min-width:0;margin:.1rem 0 .35rem}
+.evidence-pair .diagnostic-table caption {font-size:.83rem}
+.evidence-pair .diagnostic-table th,.evidence-pair .diagnostic-table td {padding:.38rem .4rem}
+.evidence-pair .table-note {margin:.4rem 0 0}
+@container (max-width:52rem) {.evidence-pair {grid-template-columns:minmax(0,1fr)}}
 .filter-bar {padding:.65rem .85rem;margin-bottom:.75rem}
 .filter-bar-head {margin-bottom:.4rem}
 .filter-fields {grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem}

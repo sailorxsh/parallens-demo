@@ -920,7 +920,7 @@ function drawStatus(box) {
   const totals=Object.fromEntries(keys.map(key=>[key,Object.values(s[key]).reduce((a,b)=>a+b,0)]));
   const specs=[['Free或无权益','free','noEntitlement','#9eaa9a'],['试用中','trialEarly','trialNearExpiry','#e8b765'],['付费中','paidCurrent',null,'#356d51'],['已取消未到期','cancelledButEntitled',null,'#e8963c'],['支付失败','paymentFailed',null,'#e5484d'],['已过期','expired',null,'#718078']];
   statusChart.setOption({
-    animationDuration:chartAnimationDuration(450),grid:{left:42,right:8,top:12,bottom:62},
+    animationDuration:chartAnimationDuration(450),grid:{left:42,right:26,top:12,bottom:62},
     xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'},splitLine:{lineStyle:{color:'#e4eae2'}}},
     yAxis:{type:'category',data:keys.map(key=>key==='bird'?'观鸟':'狩猎'),axisLine:{show:false},axisTick:{show:false}},
     legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:10,color:'#596b5e'}},
@@ -1521,7 +1521,7 @@ function drawDetailChart(box,spec) {
   const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${chartValue(value,spec.unit)}`;
   const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?11:6.2),0)));
   const leftReserve=spec.unit==='人'||spec.unit==='台'?62:46;
-  const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+14),box.clientWidth*.32)):18;
+  const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+24),box.clientWidth*.32)):18;
   const timelineLabelInterval=index=>{
     const spacing=Math.max(38,...spec.labels.map(label=>String(label).length*7+18));
     const slots=Math.min(spec.labels.length,Math.max(2,Math.floor((box.clientWidth-leftReserve-rightReserve)/spacing)+1));
@@ -1589,19 +1589,27 @@ function metricEvidence(id,page) {
     `待补数据：${value.reason}。该筛选有业务意义，当前原型不能可靠计算。`:
     `不适用：${value.reason}。${contract.unsupported}`));return {node:panel,specs:[]};}
   const specs=[];
+  const appendEvidencePair=(spec,tableSpec)=>{
+    const pair=element('div','evidence-pair');
+    const plot=element('div','evidence-plot');
+    const box=element('div','detail-chart');box.setAttribute('role','img');
+    box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
+    plot.append(element('h3','evidence-plot-title',spec.title),box);
+    const scaleNote=chartScaleNote(spec);
+    if(scaleNote)plot.append(element('p','chart-scale-note',scaleNote));
+    if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
+    pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
+  };
   const history=metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&id!==primaryId&&(id!==18||selectedFilters().length)) {
     const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:history.details,
       series:[{name:history.title,values:history.values}],note:history.note};
-    const box=element('div','detail-chart');box.setAttribute('role','img');
-    box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
-    panel.append(box,element('p','chart-scale-note',chartScaleNote(spec)),element('p','table-note',spec.note));specs.push([box,spec]);
-    panel.append(dataTable({title:`${history.title} · 趋势数据`,columns:['周期','值'],
+    appendEvidencePair(spec,{title:`${history.title} · 趋势数据`,columns:['周期','值'],
       rows:history.labels.map((label,index)=>[label,history.values[index]==null?'不适用':
         history.unit==='%'?`${history.values[index].toFixed(1)}%`:history.unit==='美元/人'?`$${history.values[index].toFixed(2)}`:
           history.unit==='美元'?`$${number(history.values[index])}`:`${number(history.values[index])}${history.unit}`]),
-      note:history.note}));
+      note:history.note});
   }
   if(id===3&&!selectedFilters().length) {
     panel.append(dataTable({title:'MRR组成 · 当前演示快照',columns:['收入组成','MRR'],
@@ -1696,11 +1704,9 @@ function metricEvidence(id,page) {
       const vals=projected.map(part=>part.kind==='na'?null:part.kind==='rate'?part.value*100:part.value);
       const countUnit=/设备|固件/.test(contract.entity)?'台':/事件|异常/.test(contract.entity)?'条':'人';
       const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,series:[{name:item.name,values:vals}],note:'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。'};
-      const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
-      panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
-      panel.append(dataTable({title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
+      appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
         const cells=flattenMeasure(part)[0]??[];return [labels[index],cells[1]??'—',cells[2]??'—',part.kind==='rate'?percent(part.value):part.kind==='na'?'不适用':part.kind==='usd'?`$${number(part.value)}`:number(part.value)];
-      }),note:'不同维度切片为模拟估算，不能作为生产经营结论。'}));
+      }),note:'不同维度切片为模拟估算，不能作为生产经营结论。'});
     }
   }
   panel.append(dataTable({title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果'],rows:flattenMeasure(value.kind==='group'?value.value:value),
