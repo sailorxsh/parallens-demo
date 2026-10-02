@@ -29,6 +29,25 @@ async (page) => {
   await page.locator('.home-comparison-context .insight-link').click();
   await page.locator('#metric-evidence-18').waitFor();
   check(page.url().includes('productLine=Hunting'),'Signal evidence dropped supported product filter');
+  await page.goto(`${base}#/C`);
+  await page.reload();
+  const triggerChart=page.locator('.detail-chart').first();
+  await triggerChart.waitFor();await page.waitForTimeout(600);
+  const triggerPoint=await triggerChart.evaluate(node=>{
+    const instance=echarts.getInstanceByDom(node),option=instance.getOption(),rect=node.getBoundingClientRect();
+    const point=instance.convertToPixel({seriesIndex:0},[11,option.series[0].data[11]]);
+    return {x:rect.left+point[0],y:rect.top+point[1]};
+  });
+  await page.mouse.move(triggerPoint.x,triggerPoint.y);
+  await page.waitForFunction(()=>document.querySelector('.detail-chart').innerText.includes('3,280次 / 4,000次'));
+  const tooltip=triggerChart.locator('div').filter({hasText:'3,280次 / 4,000次'}).last();
+  const tipRect=await tooltip.boundingBox(),chartRect=await triggerChart.boundingBox();
+  check(tipRect.x>=chartRect.x-1&&tipRect.y>=chartRect.y-1&&tipRect.x+tipRect.width<=chartRect.x+chartRect.width+1&&tipRect.y+tipRect.height<=chartRect.y+chartRect.height+1,'Evidence tooltip escaped its chart surface');
+  await page.mouse.click(triggerPoint.x,triggerPoint.y);
+  const triggerTable=page.locator('.detail-chart-panel').first().locator('.chart-data');
+  check(await triggerTable.evaluate(node=>node.open),'Point click did not expose complete evidence');
+  const selectedRow=triggerTable.locator('tbody tr').nth(11);
+  check((await selectedRow.innerText()).includes('3,280次 / 4,000次'),'Chart point and table denominators disagree');
   await page.goto(`${base}#/D`);
   await page.reload();
   await page.getByRole('heading',{name:'订阅转化',exact:true}).waitFor();
@@ -85,9 +104,17 @@ async (page) => {
         charts:[...document.querySelectorAll('.detail-chart,#trendChart,.headline-sparkline')].filter(node=>{
           const rect=node.getBoundingClientRect();return rect.width>0&&rect.height>0;
         }).length,
+        dateCollisions:[...document.querySelectorAll('.detail-chart,#trendChart')].flatMap(chart=>{
+          const dates=[...chart.querySelectorAll('svg text')].filter(node=>/^(W\d+|\d{1,2}\/\d{1,2}|\d{1,2}月)$/.test(node.textContent));
+          return dates.flatMap((date,index)=>dates.slice(index+1).filter(other=>{
+            const a=date.getBoundingClientRect(),b=other.getBoundingClientRect();
+            return Math.min(a.right,b.right)-Math.max(a.left,b.left)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1;
+          }).map(other=>[date.textContent,other.textContent]));
+        }),
       }));
       check(!state.overflow,`${code||'home'} overflows at ${width}`);
       check(state.headings===1,`${code||'home'} missing primary heading`);
+      check(state.dateCollisions.length===0,`${code||'home'} timeline dates overlap at ${width}: ${JSON.stringify(state.dateCollisions)}`);
       await page.screenshot({path:`output/playwright/final-${code||'home'}-${width}.png`,scale:'css'});
       pages.push({page:code||'home',width,...state});
     }
@@ -120,5 +147,5 @@ async (page) => {
   } finally {await probe.close();}
   check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
   await page.locator('.nav-link[data-page=""]').click();
-  return {status:'PASS',checks:['weighted story selection and focused scales','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
+  return {status:'PASS',checks:['weighted story selection and focused scales','chart tooltip and table point evidence','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths with legible dates','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
 }

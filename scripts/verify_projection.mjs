@@ -21,6 +21,9 @@ vm.runInContext(source,context,{filename:'app.js'});
 vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
+assert.equal(evaluate('chartValue(0,"人")'),'0人');
+assert.equal(evaluate('chartValue(5.2,"美元/人")'),'$5.20/人');
+assert.equal(evaluate('chartValue(null,"%")'),'无值');
 
 let result=project({productLine:'Bird'});
 assert.equal(result.m02.value,8000);
@@ -103,6 +106,13 @@ assert.equal(evaluate('availableOptions("C","functionType").includes("Recognitio
 assert.equal(evaluate('routeHref("C").includes("functionType")'),false);
 
 project({});
+for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'}]) {
+  project(filters);
+  const revenueHistory=evaluate('metricHistory(35)');
+  for(const [index,detail] of revenueHistory.details.entries())
+    assert.ok(Math.abs(revenueHistory.values[index]-detail.numerator/detail.denominator)<.005,`ARPPU point evidence contradicts the displayed value: ${JSON.stringify(filters)}`);
+}
+project({});
 const comparisons=evaluate('homeComparisons()');
 const activationComparison=comparisons.find(item=>item.id===13);
 for(const [key,weeks] of [['before',fixtures.weekly.slice(0,8)],['after',fixtures.weekly.slice(8)]]) {
@@ -149,12 +159,37 @@ assert.ok(activeAxes[1].min>40000&&activeAxes[1].max>=46800&&activeAxes[1].max<5
 const revenueAxis=evaluate('trendAxisDomain(sourceData.diagnostics.E.extraCharts[0].series,"美元\/人")');
 assert.ok(revenueAxis.min>0&&revenueAxis.max<10);
 evaluate('window.echarts={init:()=>({setOption:option=>window.__chartOptions=option})}');
-evaluate('drawDetailChart({},sourceData.diagnostics.G.extraCharts[0])');
+evaluate('drawDetailChart({clientWidth:800},sourceData.diagnostics.G.extraCharts[0])');
 assert.equal(evaluate('window.__chartOptions.yAxis.min'),lossAxis.min);
 assert.equal(evaluate('window.__chartOptions.yAxis.max'),lossAxis.max);
-evaluate('drawDetailChart({},sourceData.diagnostics.E.extraCharts[1])');
+evaluate('drawDetailChart({clientWidth:800},diagnosticChartFacts("E",sourceData.diagnostics.E.extraCharts[1]))');
 assert.equal(evaluate('window.__chartOptions.xAxis.min'),0);
 assert.equal(evaluate('window.__chartOptions.xAxis.max'),100);
+assert.equal(evaluate('window.__chartOptions.legend.selectedMode'),false);
+const entitlementTooltip=evaluate('window.__chartOptions.tooltip.formatter([{dataIndex:0,seriesIndex:1,seriesName:"仅Pack",value:1.2,marker:""}])');
+assert.match(entitlementTooltip,/150人 \/ 12,550人/);
+for(const page of ['A','C','D']) {
+  const spec=evaluate(`diagnosticChartFacts("${page}",sourceData.diagnostics.${page}.chart)`);
+  for(const line of spec.series)for(const [index,detail] of line.details.entries())
+    assert.ok(Math.abs(line.values[index]-detail.numerator/detail.denominator*100)<.051,`${page} ${line.name} W${index+1}: displayed rate contradicts point facts`);
+}
+evaluate('drawDetailChart({clientWidth:800},diagnosticChartFacts("C",sourceData.diagnostics.C.chart))');
+const triggerTooltip=evaluate('window.__chartOptions.tooltip.formatter([{dataIndex:11,seriesIndex:1,seriesName:"K6 · 固件2.8",value:82,marker:""}])');
+assert.match(triggerTooltip,/3,280次 \/ 4,000次/);
+assert.match(evaluate('window.__chartOptions.series[1].endLabel.formatter({value:82})'),/K6 · 固件2.8 82.0%/);
+assert.ok(evaluate('Number.isFinite(window.__chartOptions.grid.right)'));
+evaluate('drawDetailChart({clientWidth:800},{kind:"heatmap",title:"Contrast fixture",unit:"%",labels:["fixture"],dimensions:Array.from({length:101},(_,index)=>String(index)),series:[{values:[Array.from({length:101},(_,index)=>index)]}]})');
+const heatmap=evaluate('window.__chartOptions');
+const rgb=hex=>{const raw=hex.slice(1),full=raw.length===3?[...raw].map(char=>char+char).join(''):raw;return [0,2,4].map(index=>parseInt(full.slice(index,index+2),16));};
+const luminance=channels=>channels.map(channel=>channel/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);
+const palette=heatmap.visualMap.inRange.color.map(rgb);
+for(const cell of heatmap.series[0].data) {
+  const fraction=cell.value[2]/50,slot=Math.min(1,Math.floor(fraction));
+  const background=palette[slot].map((value,index)=>Math.round(value+(palette[slot+1][index]-value)*(fraction-slot)));
+  const light=luminance(background),foreground=luminance(rgb(cell.label.color));
+  const contrast=(Math.max(light,foreground)+.05)/(Math.min(light,foreground)+.05);
+  assert.ok(contrast>=4.5,`Heatmap text contrast ${contrast.toFixed(2)} at ${cell.value[2]}%`);
+}
 evaluate('document.querySelector=()=>({});drawTrend()');
 assert.ok(evaluate('window.__chartOptions.yAxis.min')>0);
 assert.ok(evaluate('window.__chartOptions.yAxis.max')<100);
@@ -165,4 +200,4 @@ assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),
 assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
 evaluate('chart=null;drawTrend(null)');
 assert.equal(evaluate('window.__chartOptions.series.length'),2);
-console.log(`PASS business filters, weighted period comparisons, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+console.log(`PASS business filters, weighted period comparisons, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

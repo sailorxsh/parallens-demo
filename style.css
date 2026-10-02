@@ -143,6 +143,10 @@ th:first-child,td:first-child {text-align:left}
 .evidence-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
 .data-table-scroll {min-width:0;max-width:100%;overflow-x:auto;background:var(--paper);border:1px solid var(--line);padding:1rem 1.1rem;scrollbar-color:#afbeb0 transparent}
 .detail-chart-panel .data-table-scroll {padding:.3rem .1rem;border:0}
+.chart-heading {display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.35rem}
+.chart-heading h3 {margin:0}
+.chart-unit {flex:none;border:1px solid #dce4d6;border-radius:.25rem;padding:.1rem .35rem;color:#58695b;font-size:.65rem;line-height:1.4;font-weight:500}
+.chart-cell-basis {display:block;color:#58695b;font-size:.67rem;line-height:1.55;margin-top:.22rem;white-space:nowrap}
 .diagnostic-table {width:100%;min-width:32rem;margin:.2rem 0 .5rem;font-size:.76rem}
 .diagnostic-table caption {font-size:.92rem;color:#1d3023;letter-spacing:-.01em;margin-bottom:.4rem}
 .diagnostic-table th,.diagnostic-table td {text-align:left;vertical-align:top;padding:.62rem .55rem;overflow-wrap:anywhere}

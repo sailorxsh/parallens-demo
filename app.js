@@ -555,26 +555,37 @@ function metricHistory(id) {
       return payers>=30?revenue/payers:null;
     });
     values[values.length-1]=metric(id).value.ARPPU;
-    return {labels:['6月','7月','8月'],values,unit:'美元/人',title:'订阅ARPPU',
+    const details=counts.map((count,index)=>({numerator:allocatedCount(Math.round(count*arppus[index]),filters,id,'numerator',shares),
+      denominator:allocatedCount(count,filters,id,'denominator',shares),basisLabel:'订阅净收入 / 付款主账号',numeratorUnit:'美元',denominatorUnit:'人'}));
+    return {labels:['6月','7月','8月'],values,details,unit:'美元/人',title:'订阅ARPPU',
       note:`按同月订阅净收入÷月内付款主账号重算；月份为完整自然月。${filters.length?'筛后历史为模拟分片估算。':''}`};
   }
   const history=sourceData.metricTrends?.[`m${String(id).padStart(2,'0')}`];
   const labels=history?.labels??sourceData.weekly.map(w=>`W${w.week}`);
   const values=trendValues(id);
   if(!values||!values.some(value=>value!==null&&Number.isFinite(value)))return null;
-  const details=id===18?sourceData.weekly.map(w=>{
-    const result=trialRows(Object.fromEntries(effectiveFor(18,{...filterState,week:String(w.week)})));
-    return result.rows?trialAggregate(result.rows):null;
-  }):history?.kind==='rate'?history.points.map(raw=>{
+  const details=history?.kind==='rate'?history.points.map(raw=>{
     const applicable=effectiveFor(id).filter(([key])=>key!=='week');
     const value=projectValue(raw,sharesFor(applicable,id),applicable,id);
     return value.kind==='rate'?value:null;
-  }):null;
+  }):[10,11,13,17,18,23,42].includes(id)?weeklyRateDetails(id):null;
   const estimated=effectiveFor(id).some(([key])=>key!=='week')&&id!==18?
     '当前筛选的整条历史序列采用同一模拟分片方法，不能用于真实经营判断。':'';
   return {labels,values,details,unit:history?.unit??([9,34].includes(id)?'人':'%'),
     title:id===54?'事件丢失率':catalogItem(id).name,
     note:`${history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
+}
+function weeklyRateDetails(id) {
+  if(id===18)return sourceData.weekly.map(week=>{
+    const result=trialRows(Object.fromEntries(effectiveFor(id,{...filterState,week:String(week.week)})));
+    return result.rows?{...trialAggregate(result.rows),numeratorUnit:'人',denominatorUnit:'人'}:null;
+  });
+  const filters=effectiveFor(id).filter(([key])=>key!=='week'&&!(key==='productLine'&&filterState.productLine==='Bird'&&[13,42].includes(id)));
+  const shares=sharesFor(filters,id);
+  return sourceData.weekly.map(week=>{
+    const value=projectValue(weeklyMetric(id,week),shares,filters,id);
+    return value.kind==='rate'?{...value,numeratorUnit:[11,42].includes(id)?'次':'人',denominatorUnit:[11,42].includes(id)?'次':'人'}:null;
+  });
 }
 function paidPayersHistory() {
   const id=35,filters=effectiveFor(id),value=metric(id);
@@ -587,13 +598,14 @@ function paidPayersHistory() {
     note:`完整自然月去重付款人数；与期末有效订阅人数不同。${filters.length?'筛后历史按模拟分片估算。':''}`};
 }
 function trialFailureHistory() {
-  const values=sourceData.weekly.map(w=>{
+  const details=sourceData.weekly.map(w=>{
     const result=trialRows(Object.fromEntries(effectiveFor(18,{...filterState,week:String(w.week)})));
     if(!result.rows)return null;
     const summary=trialAggregate(result.rows);
-    return summary.attempts>=30?summary.failed/summary.attempts*100:null;
+    return summary.attempts>=30?{numerator:summary.failed,denominator:summary.attempts,numeratorUnit:'人',denominatorUnit:'人'}:null;
   });
-  return values.some(Number.isFinite)?{labels:sourceData.weekly.map(w=>`W${w.week}`),values,unit:'%',
+  const values=details.map(detail=>detail?detail.numerator/detail.denominator*100:null);
+  return values.some(Number.isFinite)?{labels:sourceData.weekly.map(w=>`W${w.week}`),values,details,unit:'%',
     title:'支付失败率',note:'同一筛选下逐周按支付失败人数÷支付尝试人数计算；与成熟试用转正率分母不同。'}:null;
 }
 function filteredBreakdown(page) {
@@ -613,7 +625,7 @@ function filteredBreakdown(page) {
   const unit=rows[0].value.kind==='rate'?'%':rows[0].value.kind==='usd'?'美元':'人';
   const values=rows.map(row=>row.value.kind==='rate'?row.value.value*100:row.value.value);
   const spec={title:`${filterLabels[dimension]} · ${catalogItem(id).name}分组对照`,unit,
-    labels:rows.map(row=>row.label),series:[{name:catalogItem(id).name,values}],
+    labels:rows.map(row=>row.label),details:unit==='%'?rows.map(row=>row.value):null,series:[{name:catalogItem(id).name,values}],
     note:`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前模拟分组用于定位差异，不能证明原因。`};
   const table={title:`${filterLabels[dimension]} · 组规模与指标`,
     columns:['分组',unit==='%'?'分子':'当前值',unit==='%'?'分母':'统计对象', '指标值'],
@@ -677,7 +689,9 @@ function technicalBreakdown() {
   if(rows.length<2)return null;
   const keys=filterState.functionType?[{Upload:'upload',Live:'live',Push:'push'}[filterState.functionType]]:['upload','live','push'];
   const labels={upload:'上传',live:'直播',push:'推送'};
-  const series=keys.map(key=>({name:`${labels[key]}失败率`,values:rows.map(row=>(1-row.value.value[key].value)*100)}));
+  const series=keys.map(key=>({name:`${labels[key]}失败率`,values:rows.map(row=>(1-row.value.value[key].value)*100),
+    details:rows.map(row=>({numerator:row.value.value[key].denominator-row.value.value[key].numerator,
+      denominator:row.value.value[key].denominator,numeratorUnit:'次',denominatorUnit:'次'}))}));
   const highest=Math.max(...series.flatMap(line=>line.values));
   const maxY=Math.min(100,Math.max(5,Math.ceil(highest/5)*5));
   const spec={title:`${filterLabels[dimension]} · 技术链路失败请求率`,unit:'%',maxY,labels:rows.map(row=>row.label),series,
@@ -791,7 +805,7 @@ function drawSparkline(box,values,id,labels=dataset.weekly.map(w=>`W${w.week}`),
     animation:false,grid:{left:2,right:2,top:5,bottom:5},
     xAxis:{type:'category',show:false,data:labels},
     yAxis:{type:'value',show:false,scale:true},
-    tooltip:{trigger:'axis',formatter:params=>`${periodLabel(labels[params[0].dataIndex])}：${params[0].value==null?'无值':unit==='%'||unit==='美元/人'?`${Number(params[0].value).toFixed(1)}${unit}`:`${number(params[0].value)}${unit}`}`},
+    tooltip:{...chartTooltipStyle,trigger:'axis',formatter:params=>`${periodLabel(labels[params[0].dataIndex])}：${chartValue(params[0].value,unit)}`},
     series:[{type:'line',data:values,symbol:'circle',symbolSize:(_,params)=>filterState.week&&labels[params.dataIndex]===`W${filterState.week}`?6:0,
       smooth:.2,lineStyle:{width:2,color:'#bf762b'},areaStyle:{color:'rgba(232,150,60,.13)'}}]
   });
@@ -831,8 +845,13 @@ function drawStatus(box) {
     animationDuration:chartAnimationDuration(450),grid:{left:42,right:8,top:12,bottom:62},
     xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'},splitLine:{lineStyle:{color:'#e4eae2'}}},
     yAxis:{type:'category',data:keys.map(key=>key==='bird'?'观鸟':'狩猎'),axisLine:{show:false},axisTick:{show:false}},
-    legend:{bottom:0,itemWidth:12,textStyle:{fontSize:10,color:'#596b5e'}},
-    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:value=>`${Number(value).toFixed(1)}%`},
+    legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:10,color:'#596b5e'}},
+    tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+      const key=keys[params[0]?.dataIndex];
+      if(!key)return '';
+      return `${key==='bird'?'观鸟':'狩猎'} · 主账号 ${number(totals[key])}人<br>${params.map(item=>
+        `${item.marker}${item.seriesName}：${Number(item.value).toFixed(1)}% · ${number(Math.round(item.value/100*totals[key]))}人`).join('<br>')}`;
+    }},
     series:specs.map(([name,birdKey,huntingKey,color])=>({name,type:'bar',stack:'status',barWidth:25,itemStyle:{color},
       data:keys.map(key=>{const item=s[key];const value=key==='bird'?
         (item[birdKey]??0)+(birdKey==='trialEarly'?item.trialNearExpiry:0):
@@ -1076,21 +1095,27 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
   chart=window.echarts.init(node,null,{renderer:'svg'});
   const weeks=dataset.weekly;
   const selected=comparison??homeComparisons().find(item=>item.id===focusId);
-  const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:'#b87021'},
-    {id:18,name:'试用→转正率',values:conversion,color:'#356d51'}].filter(item=>item.values&&(!selected||item.id===selected.id));
+  const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:'#b87021',details:weeklyRateDetails(13)},
+    {id:18,name:'试用→转正率',values:conversion,color:'#356d51',details:weeklyRateDetails(18)}].filter(item=>item.values&&(!selected||item.id===selected.id));
   const axis=trendAxisDomain([...lines.map(item=>item.values),...(selected?[[selected.beforeRate,selected.afterRate]]:[])],'%');
   chart.setOption({
     color:lines.map(item=>item.color),
     animationDuration:chartAnimationDuration(450),
     textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif'},
-    tooltip:{trigger:'axis',formatter:params=>`${periodLabel(`W${weeks[params[0].dataIndex].week}`)}<br>${params.map(item=>`${item.marker}${item.seriesName}：${item.value==null?'无值':`${Number(item.value).toFixed(1)}%`}`).join('<br>')}`},
+    tooltip:{...chartTooltipStyle,trigger:'axis',formatter:params=>{
+      const index=params[0]?.dataIndex;if(index===undefined)return '';
+      return `${periodLabel(`W${weeks[index].week}`)}<br>${params.map(item=>{
+        const line=lines.find(line=>line.name===item.seriesName),basis=Number.isFinite(item.value)?chartBasis(line?.details[index]):'';
+        return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br><small>${basis}</small>`:''}`;
+      }).join('<br>')}`;
+    }},
     legend:{bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
     grid:{left:48,right:52,top:28,bottom:48},
     xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},axisLabel:{color:'#58695b'}},
     yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{formatter:value=>`${Number(value).toFixed(axis.step<.1?2:1)}%`,color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
     series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:5,lineStyle:{width:2.5},
       data:item.values.map(value=>Number.isFinite(value)?Number(value.toFixed(1)):null),
-      endLabel:{show:true,formatter:params=>`${Number(params.value).toFixed(1)}%`,color:item.color,fontSize:11,fontWeight:600},
+      endLabel:{show:true,formatter:params=>`${Number(params.value).toFixed(1)}%`,color:chartLabelColor(item.color),fontSize:11,fontWeight:600},
       ...(selected?{
         markLine:{silent:true,symbol:'none',lineStyle:{color:'#718777',type:'dashed',width:1.2},
           label:{formatter:`${selected.beforeLabel} ${selected.beforeRate.toFixed(1)}%`,position:'insideStartTop',color:'#4d6655',fontSize:10},
@@ -1171,11 +1196,56 @@ function dataTable(spec, extraClass='') {
   if (spec.note) wrap.append(element('p','table-note',spec.note));
   return wrap;
 }
+function chartValue(value,unit) {
+  if(value===null||value===undefined||!Number.isFinite(Number(value)))return '无值';
+  const numeric=Number(value);
+  if(unit==='%')return `${numeric.toFixed(1)}%`;
+  if(unit==='美元/人')return `$${numeric.toFixed(2)}/人`;
+  if(unit==='美元')return `$${number(numeric)}`;
+  return `${number(numeric)}${unit??''}`;
+}
+const chartLabelColor=color=>({'#bf762b':'#97541c','#b87021':'#97541c','#7593a0':'#496876','#e5484d':'#b82d37'})[color]??color;
+const chartTooltipStyle={confine:true,backgroundColor:'#fffefa',borderColor:'#cddbc7',
+  textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize:12,lineHeight:20,color:'#263d2e'}};
+function chartPointDetail(spec,line,index) {
+  if(!['%','美元/人'].includes(spec.unit))return null;
+  return line.details?.[index]??(spec.series.length===1?spec.details?.[index]:null);
+}
+function chartBasis(detail) {
+  if(!detail||!Number.isFinite(detail.numerator)||!Number.isFinite(detail.denominator)||detail.denominator<=0)return '';
+  return `${detail.basisLabel??'分子 / 分母'}：${detail.estimated?'约 ':''}${number(detail.numerator)}${detail.numeratorUnit??''} / ${number(detail.denominator)}${detail.denominatorUnit??''}`;
+}
+function diagnosticChartFacts(page,spec) {
+  const info=sourceData.diagnostics[page];
+  let details;
+  if(spec.title===info.chart.title) {
+    if(page==='A')details=[10,12,13].map(id=>sourceData.weekly.map(week=>{
+      const raw=weeklyMetric(id,week),rate=id===12?raw.value.D7:raw;
+      return {...rate,numeratorUnit:'人',denominatorUnit:'人'};
+    }));
+    if(page==='C')details=[null,'k6Firmware28','others'].map(key=>sourceData.weekly.map(week=>{
+      const part=key?week.deviceEventsBird[key]:week.deviceEventsBird;
+      return {numerator:part.empty,denominator:part.triggers,numeratorUnit:'次',denominatorUnit:'次'};
+    }));
+    if(page==='D')details=[weeklyRateDetails(18)];
+  } else if(page==='E'&&spec.kind==='stacked100'&&spec.title===info.extraCharts?.[1]?.title) {
+    const paid=metric(34),subscriptions=metric(2),packs=metric(36);
+    if(paid.kind==='count'&&subscriptions.kind==='count'&&packs.kind==='group') {
+      const onlyPack=paid.value-subscriptions.value,anyPack=packs.value.anyPack.numerator;
+      details=[paid.value-anyPack,onlyPack,anyPack-onlyPack].map(numerator=>[{
+        numerator,denominator:paid.value,numeratorUnit:'人',denominatorUnit:'人'}]);
+    }
+  } else if(page==='D'&&spec.title===info.extraCharts?.[0]?.title)details=[sourceData.weekly.map(week=>({
+    numerator:week.trialMaturity.plusMonthlyAndroid.paymentFailed,denominator:week.trialMaturity.plusMonthlyAndroid.paymentAttempts,
+    numeratorUnit:'人',denominatorUnit:'人'}))];
+  if(!details)return spec;
+  return {...spec,series:spec.series.map((line,index)=>({...line,details:details[index]}))};
+}
 function chartTable(spec) {
   const rows=spec.labels.map((label,index)=>[periodLabel(label),...spec.series.map(line=>{
     const value=line.values[index];
     if(value===null||value===undefined||!Number.isFinite(Number(value)))return '不适用';
-    return spec.unit==='%'?`${Number(value).toFixed(1)}%`:spec.unit==='美元/人'?`$${Number(value).toFixed(2)}`:number(value);
+    return chartValue(value,spec.unit);
   })]);
   let columns=['周期 / 分组',...spec.series.map(s=>s.name)];
   if (spec.kind==='boxplot') {
@@ -1203,7 +1273,16 @@ function chartTable(spec) {
     }));
   }
   const details=element('details','chart-data');
-  details.append(element('summary','','查看图表完整数据表'),dataTable({title:spec.title,columns,rows}));
+  const table=dataTable({title:spec.title,columns,rows});
+  if(!spec.kind||spec.kind==='stacked100')spec.labels.forEach((_,index)=>{
+    const cells=table.querySelectorAll('tbody tr')[index].querySelectorAll('td');
+    spec.series.forEach((line,seriesIndex)=>{
+      if(!Number.isFinite(line.values[index]))return;
+      const basis=chartBasis(chartPointDetail(spec,line,index));
+      if(basis)cells[seriesIndex].append(element('span','chart-cell-basis',basis));
+    });
+  });
+  details.append(element('summary','','查看图表完整数据表'),table);
   return details;
 }
 function drawEvidenceChart(box,spec) {
@@ -1286,7 +1365,7 @@ function drawDetailChart(box,spec) {
     const v=spec.flow;
     const lower=Math.max(0,Math.floor((Math.min(v.opening,v.closing)-800)/250)*250);
     instance.setOption({animationDuration:chartAnimationDuration(350),
-      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+      tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
         const index=params[0]?.dataIndex;
         return index===undefined?'':`${spec.labels[index]}：${index===0||index===5?number(spec.series[0].values[index]):
           `${spec.series[0].values[index]>=0?'+':''}${number(spec.series[0].values[index])}`} 人`;
@@ -1306,7 +1385,7 @@ function drawDetailChart(box,spec) {
   if (spec.kind==='boxplot') {
     instance.setOption({
       animationDuration:chartAnimationDuration(350),
-      tooltip:{trigger:'item',formatter:params=>{
+      tooltip:{...chartTooltipStyle,trigger:'item',formatter:params=>{
         const [minimum,q1,median,q3,maximum]=params.data;
         return `${spec.title}<br>最小 ${number(minimum)} · Q1 ${number(q1)} · P50 ${number(median)} · Q3 ${number(q3)} · 最大 ${number(maximum)} 分钟`;
       }},
@@ -1323,11 +1402,11 @@ function drawDetailChart(box,spec) {
   }
   if (spec.kind==='heatmap') {
     const cells=spec.series[0].values.flatMap((row,y)=>row.map((value,x)=>({
-      value:[x,y,value],label:{color:value>=55?'#fffefa':'#203b2b'},
+      value:[x,y,value],label:{color:value>=90?'#fffefa':'#000'},
     })));
     instance.setOption({
       animationDuration:chartAnimationDuration(350),
-      tooltip:{formatter:params=>{
+      tooltip:{...chartTooltipStyle,formatter:params=>{
         const index=params.value[1],owners=spec.sampleSizes?.[index];
         return `${spec.labels[index]} · ${spec.dimensions[params.value[0]]}：${Number(params.value[2]).toFixed(1)}%${owners?`<br>主账号 ${number(owners)} · 对应约 ${number(Math.round(owners*params.value[2]/100))} 人`:''}`;
       }},
@@ -1344,8 +1423,14 @@ function drawDetailChart(box,spec) {
   if (spec.kind==='stacked100') {
     instance.setOption({
       animationDuration:chartAnimationDuration(350),color:colors,
-      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},valueFormatter:value=>`${Number(value).toFixed(1)}%`},
-      legend:{bottom:0,itemWidth:12,textStyle:{fontSize:11,color:'#506455'}},
+      tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+        const index=params[0]?.dataIndex;if(index===undefined)return '';
+        return `${spec.labels[index]}<br>${params.map(item=>{
+          const basis=chartBasis(chartPointDetail(spec,spec.series[item.seriesIndex],index));
+          return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br><small>${basis}</small>`:''}`;
+        }).join('<br>')}`;
+      }},
+      legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:11,color:'#506455'}},
       grid:{left:115,right:24,top:22,bottom:55},
       xAxis:{type:'value',min:0,max:100,axisLabel:{formatter:'{value}%',color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}}},
       yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
@@ -1357,9 +1442,14 @@ function drawDetailChart(box,spec) {
   const plotted=spec.series.flatMap(line=>line.values).filter(value=>Number.isFinite(value));
   const span=plotted.length?Math.max(...plotted)-Math.min(...plotted):0;
   const trendAxis=isTimeline?trendAxisDomain(spec.series,spec.unit):null;
+  const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
+  const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${chartValue(value,spec.unit)}`;
+  const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?11:6.2),0)));
+  const leftReserve=spec.unit==='人'||spec.unit==='台'?62:46;
+  const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+14),box.clientWidth*.32)):18;
   const timelineLabelInterval=index=>{
     const spacing=Math.max(38,...spec.labels.map(label=>String(label).length*7+18));
-    const slots=Math.min(spec.labels.length,Math.max(2,Math.floor((box.clientWidth-80)/spacing)));
+    const slots=Math.min(spec.labels.length,Math.max(2,Math.floor((box.clientWidth-leftReserve-rightReserve)/spacing)+1));
     return Array.from({length:slots},(_,slot)=>Math.round(slot*(spec.labels.length-1)/Math.max(1,slots-1))).includes(index);
   };
   const axisValue=value=>{
@@ -1373,17 +1463,17 @@ function drawDetailChart(box,spec) {
     animationDuration:chartAnimationDuration(350),
     color:colors,
     textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif'},
-    tooltip:{trigger:'axis',formatter:params=>{
+    tooltip:{...chartTooltipStyle,trigger:'axis',formatter:params=>{
       const index=params[0]?.dataIndex;
       if(index===undefined)return '';
-      const lines=[periodLabel(spec.labels[index]),...params.map(item=>`${item.marker}${item.seriesName}：${item.value==null?'无值':
-        spec.unit==='%'?`${Number(item.value).toFixed(1)}%`:spec.unit==='美元/人'?`$${Number(item.value).toFixed(2)}`:number(item.value)}`)];
-      const detail=spec.details?.[index];
-      if(detail?.denominator)lines.push(`分子 / 分母：${number(detail.numerator)} / ${number(detail.denominator)}`);
+      const lines=[periodLabel(spec.labels[index]),...params.map(item=>{
+        const line=spec.series[item.seriesIndex],basis=Number.isFinite(item.value)?chartBasis(chartPointDetail(spec,line,index)):'';
+        return `${item.marker}${item.seriesName}：${chartValue(item.value,spec.unit)}${basis?`<br><small>${basis}</small>`:''}`;
+      })];
       return lines.join('<br>');
     }},
     legend:spec.series.length>1?{bottom:0,itemWidth:13,textStyle:{fontSize:11,color:'#506455'}}:{show:false},
-    grid:{left:spec.unit==='人'||spec.unit==='台'?62:46,right:18,top:28,bottom:isTimeline?(spec.series.length>1?55:32):76},
+    grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32):76},
     xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#58695b',
       interval:isTimeline?timelineLabelInterval:0,
       showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:isTimeline?0:18,fontSize:11},
@@ -1391,7 +1481,14 @@ function drawDetailChart(box,spec) {
     yAxis:{type:'value',min:trendAxis?.min??0,max:trendAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
       ...(trendAxis?{interval:trendAxis.step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
       axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
-    series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',data:line.values,smooth:isTimeline ? 0.18 : false,symbolSize:5,barMaxWidth:52,lineStyle:{width:2.5},itemStyle:{color:line.color??colors[index%colors.length]}})),
+    series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',data:line.values,smooth:false,symbolSize:5,
+      barMaxWidth:52,lineStyle:{width:2.5},itemStyle:{color:line.color??colors[index%colors.length]},
+      endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
+        color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:11,fontWeight:600,width:rightReserve-12,overflow:'truncate'},
+      label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
+        fontSize:11,fontWeight:600,color:'#365a43'},
+      labelLayout:{hideOverlap:true,moveOverlap:'shiftY'},
+    })),
   });
   return instance;
 }
@@ -1943,12 +2040,14 @@ function renderDetail(page,selectedMetric,showSelected=false) {
   if(showSelected)selectMetric(selectedMetric);
   const drawSpecs=[];
   const addChart=(container,spec)=>{
+    spec=diagnosticChartFacts(page,spec);
     if(spec.kind==='heatmap'&&!spec.sampleSizes&&metric(39).kind==='group')
       spec={...spec,sampleSizes:spec.labels.map(name=>metric(39).value[name]?.owners)};
     const chartPanel=element('div','detail-chart-panel');
-    chartPanel.append(element('h3','',spec.title));
+    const heading=element('div','chart-heading');heading.append(element('h3','',spec.title),element('span','chart-unit',`单位：${spec.unit}`));chartPanel.append(heading);
     const box=element('div','detail-chart');box.setAttribute('role','img');
-    box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
+    const latest=!spec.kind?spec.series.map(line=>`${line.name}：${chartValue(line.values.at(-1),spec.unit)}`).join('；'):'';
+    box.setAttribute('aria-label',`${spec.title}；${latest?`末期或最后一组 ${latest}；`:''}${chartNote(spec)}`);
     chartPanel.append(box);
     const scaleNote=chartScaleNote(spec);
     if(scaleNote)chartPanel.append(element('p','chart-scale-note',scaleNote));
