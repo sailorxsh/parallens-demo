@@ -362,9 +362,11 @@ check("D8-observation-window", date.fromisoformat(weekly[-1]["weekEnd"]) + timed
 check("D6-actions", len({action["id"] for item in diagnostics.values() for action in item["actions"]}) ==
       sum(len(item["actions"]) for item in diagnostics.values()) and
       all(action["status"] == "待研判" and "演示样本" in action["trigger"] and
-          action["id"] in action["object"] and action["updatedAt"]
-          for item in diagnostics.values() for action in item["actions"]),
-      "模拟行动ID唯一，对象、触发、状态、更新时间齐全")
+          action["id"] in action["object"] and action["updatedAt"] and
+          any(metric["id"] == action["evidenceMetric"] and metric["page"] == page
+              for metric in catalog)
+          for page, item in diagnostics.items() for action in item["actions"]),
+      "模拟行动ID唯一，对象、触发、状态、更新时间齐全，关联到本页有效指标依据")
 device_samples = entity_samples["C"]
 incident_samples = entity_samples["G"]
 incident_rows = diagnostics["G"]["tables"][0]["rows"]

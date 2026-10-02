@@ -225,7 +225,8 @@
         "suggestion": "核实联网、固件与首图链路",
         "owner": "设备运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 15
       },
       {
         "id": "A-02",
@@ -234,7 +235,8 @@
         "suggestion": "按型号与固件复核空触发",
         "owner": "产品分析",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 13
       }
     ],
     "extraCharts": [
@@ -574,7 +576,8 @@
         "suggestion": "先排查设备可用性，再设计回流触达",
         "owner": "用户运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 29
       },
       {
         "id": "B-02",
@@ -583,7 +586,8 @@
         "suggestion": "核对内容活跃和点击交叉集合",
         "owner": "数据分析",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 30
       }
     ]
   },
@@ -851,7 +855,8 @@
         "suggestion": "核验事件分类与固件日志",
         "owner": "设备产品",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 42
       },
       {
         "id": "C-02",
@@ -860,7 +865,8 @@
         "suggestion": "排查联网、供电与上传链路",
         "owner": "设备运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 44
       },
       {
         "id": "C-03",
@@ -869,7 +875,8 @@
         "suggestion": "先核验适用版本与设备风险，再评估OTA方案",
         "owner": "设备产品",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 47
       }
     ]
   },
@@ -1173,7 +1180,8 @@
         "suggestion": "核对支付错误码与扣费链路",
         "owner": "订阅产品",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 18
       },
       {
         "id": "D-02",
@@ -1182,7 +1190,8 @@
         "suggestion": "复核风险规则和可触达状态",
         "owner": "用户运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 52
       },
       {
         "id": "D-03",
@@ -1191,7 +1200,8 @@
         "suggestion": "核对权益状态与升级入口",
         "owner": "商业化运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 22
       }
     ],
     "extraCharts": [
@@ -1611,7 +1621,8 @@
         "suggestion": "核对Pack购买与权益生效映射",
         "owner": "商业化运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 36
       },
       {
         "id": "E-02",
@@ -1620,7 +1631,8 @@
         "suggestion": "先核验来源字段再比较用户质量",
         "owner": "数据分析",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 40
       }
     ],
     "structureViews": [
@@ -1895,7 +1907,8 @@
         "suggestion": "核对设备首次产出和绑定时间",
         "owner": "设备运营",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 50
       },
       {
         "id": "F-02",
@@ -1904,7 +1917,8 @@
         "suggestion": "区分转卖、退货与正常换绑",
         "owner": "用户研究",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 51
       }
     ],
     "extraCharts": [
@@ -2127,7 +2141,8 @@
         "suggestion": "核对日志抽样与映射规则",
         "owner": "数据工程",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 54
       },
       {
         "id": "G-02",
@@ -2136,7 +2151,8 @@
         "suggestion": "串联批次、设备型号与事件记录",
         "owner": "产品分析",
         "status": "待研判",
-        "updatedAt": "2026-09-24 09:00（模拟）"
+        "updatedAt": "2026-09-24 09:00（模拟）",
+        "evidenceMetric": 53
       }
     ],
     "extraCharts": [

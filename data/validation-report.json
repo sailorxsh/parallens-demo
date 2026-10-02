@@ -190,7 +190,7 @@
     {
       "rule": "D6-actions",
       "passed": true,
-      "detail": "模拟行动ID唯一，对象、触发、状态、更新时间齐全"
+      "detail": "模拟行动ID唯一，对象、触发、状态、更新时间齐全，关联到本页有效指标依据"
     },
     {
       "rule": "D17-entity-samples",

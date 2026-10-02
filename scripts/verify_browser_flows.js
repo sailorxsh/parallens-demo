@@ -104,6 +104,8 @@ async (page) => {
         charts:[...document.querySelectorAll('.detail-chart,#trendChart,.headline-sparkline')].filter(node=>{
           const rect=node.getBoundingClientRect();return rect.width>0&&rect.height>0;
         }).length,
+        unfocusableWideTables:[...document.querySelectorAll('.data-table-scroll')].filter(node=>
+          node.clientWidth>0&&node.scrollWidth>node.clientWidth+1&&node.tabIndex!==0).map(node=>node.querySelector('caption')?.textContent),
         dateCollisions:[...document.querySelectorAll('.detail-chart,#trendChart')].flatMap(chart=>{
           const dates=[...chart.querySelectorAll('svg text')].filter(node=>/^(W\d+|\d{1,2}\/\d{1,2}|\d{1,2}月)$/.test(node.textContent));
           return dates.flatMap((date,index)=>dates.slice(index+1).filter(other=>{
@@ -114,6 +116,7 @@ async (page) => {
       }));
       check(!state.overflow,`${code||'home'} overflows at ${width}`);
       check(state.headings===1,`${code||'home'} missing primary heading`);
+      check(state.unfocusableWideTables.length===0,`${code||'home'} has wide tables inaccessible to the keyboard at ${width}`);
       check(state.dateCollisions.length===0,`${code||'home'} timeline dates overlap at ${width}: ${JSON.stringify(state.dateCollisions)}`);
       await page.screenshot({path:`output/playwright/final-${code||'home'}-${width}.png`,scale:'css'});
       pages.push({page:code||'home',width,...state});
@@ -146,6 +149,12 @@ async (page) => {
     check(await probe.locator('.detail-kpi').count()===4,'Retry did not restore complete dashboard');
   } finally {await probe.close();}
   check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
+  await page.setViewportSize({width:1440,height:1000});
   await page.locator('.nav-link[data-page=""]').click();
-  return {status:'PASS',checks:['weighted story selection and focused scales','chart tooltip and table point evidence','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths with legible dates','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
+  const statusTable=page.locator('.status-table');
+  check(await statusTable.getAttribute('tabindex')==='0','Homepage status table is not keyboard-focusable');
+  await statusTable.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(()=>document.querySelector('.status-table').scrollLeft>0);
+  return {status:'PASS',checks:['weighted story selection and focused scales','chart tooltip and table point evidence','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths with legible dates','wide-table keyboard scrolling','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
 }

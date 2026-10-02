@@ -14,7 +14,7 @@ button,select {font:inherit}
 input {font:inherit}
 a {color:inherit;text-decoration:none}
 a:focus-visible,button:focus-visible,summary:focus-visible,select:focus-visible {outline:3px solid var(--orange);outline-offset:3px}
-input:focus-visible {outline:3px solid var(--orange);outline-offset:3px}
+input:focus-visible,textarea:focus-visible {outline:3px solid var(--orange);outline-offset:3px}
 .skip-link {position:absolute;z-index:10;top:.7rem;left:1rem;transform:translateY(-200%);background:white;padding:.5rem .8rem;border-radius:.25rem}
 .skip-link:focus {transform:none}
 .visually-hidden:where(:not(:focus-within,:active)) {position:absolute!important;clip-path:inset(50%)!important;overflow:hidden!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;border:0!important;white-space:nowrap!important}
@@ -59,7 +59,7 @@ h1 {font-size:clamp(2.1rem,3.1vw,3.25rem);font-weight:600;letter-spacing:-.045em
 .status-chart {height:12rem;width:100%}
 .status-details table {max-width:58rem;background:#fff}
 .status-details th,.status-details td {white-space:nowrap;padding:.42rem .55rem}
-.status-details {overflow-x:auto}
+.status-details .status-table {padding:0;border:0;background:transparent}
 .section-spacer {margin-top:2.3rem}
 .journey-caption {display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:1rem}
 .journey-rail {display:grid;grid-template-columns:repeat(6,minmax(10rem,1fr));gap:.55rem;overflow-x:auto;padding:.1rem .1rem 1rem;scrollbar-color:#93a79a transparent}
@@ -142,6 +142,8 @@ th:first-child,td:first-child {text-align:left}
 .structure-panel .diagnostic-table {min-width:25rem}
 .evidence-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
 .data-table-scroll {min-width:0;max-width:100%;overflow-x:auto;background:var(--paper);border:1px solid var(--line);padding:1rem 1.1rem;scrollbar-color:#afbeb0 transparent}
+.data-table-scroll:focus-visible {outline:3px solid var(--orange);outline-offset:3px}
+.table-scroll-hint {font-size:.7rem;line-height:1.5;color:#526e58;margin:.2rem 0 .5rem}
 .detail-chart-panel .data-table-scroll {padding:.3rem .1rem;border:0}
 .chart-heading {display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.35rem}
 .chart-heading h3 {margin:0}
@@ -356,14 +358,37 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .filter-bar-head {margin-bottom:.4rem}
 .filter-fields {grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem}
 .metric-inventory {margin-top:1.5rem}
-.action-record {background:#edf2e9;border:1px solid #cbd9c9;padding:.85rem 1rem;margin-top:.65rem}
+.action-record {background:#fffefa;border:1px solid #cbd9c9;border-radius:.4rem;padding:.85rem 1rem;margin-top:.65rem}
 .action-record>strong {font-size:.86rem}
+.action-record-header {display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;margin-bottom:.35rem}
+.action-record-header strong {font-size:.86rem}
+.action-stage-badge {flex:none;border:1px solid #c5d6c4;background:#edf3e8;padding:.2rem .45rem;border-radius:.25rem;color:#365a43;font-size:.66rem}
+.action-stage-badge[data-state=draft] {border-color:#d8b98b;background:#fff3e2;color:#83521d}
+.action-baseline-note {font-size:.68rem;color:#83521d;background:#fff6e9;padding:.45rem .6rem;border-left:2px solid #c99553}
+.action-stages {list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;margin:.8rem 0;padding:0}
+.action-stages li {border-top:2px solid #dce5d8;padding-top:.25rem;color:#58695b;font-size:.67rem}
+.action-stages li[data-active] {border-color:#356d51;color:#254632;font-weight:700}
+.action-registration {border:0;padding:0;margin:0;min-width:0}
+.action-registration legend {font-size:.75rem;font-weight:700;padding:0;margin-bottom:.45rem}
 .action-record .table-note {margin:.15rem 0 .6rem}
-.action-record-fields {display:grid;grid-template-columns:minmax(8rem,1fr) minmax(8rem,1fr) minmax(13rem,2fr) auto;align-items:end;gap:.55rem}
+.action-record-fields {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:.55rem}
 .action-record-fields label {display:flex;flex-direction:column;gap:.2rem;font-size:.71rem;font-weight:600;color:#4b6551;min-width:0}
-.action-record-fields input,.action-record-fields select {min-width:0;width:100%;border:1px solid #bdcdbd;background:#fffefa;color:#20372b;padding:.46rem .55rem;font:inherit;font-size:.76rem;height:2.15rem}
+.action-record-fields input,.action-record-fields select,.action-record-fields textarea {min-width:0;width:100%;border:1px solid #bdcdbd;border-radius:.25rem;background:#fffefa;color:#20372b;padding:.46rem .55rem;font:inherit;font-size:.76rem;height:2.15rem}
+.action-record-fields textarea {height:3.5rem;resize:vertical;line-height:1.5}
+.action-record-fields [aria-invalid=true] {border-color:#b82d37;background:#fff6f1}
+.action-record-fields .action-note-field {grid-column:1/-1}
+.action-review {margin:.7rem 0;border-top:1px solid #dce5d8;padding-top:.55rem}
+.action-review summary {cursor:pointer;font-size:.75rem;font-weight:700;color:#365a43}
+.action-review[open] summary {margin-bottom:.4rem}
+.action-record-fields.action-review-fields {grid-template-columns:repeat(3,minmax(0,1fr))}
+.action-record-footer {display:flex;justify-content:space-between;align-items:center;gap:.7rem;border-top:1px solid #dce5d8;padding-top:.65rem;margin:.7rem 0 .45rem}
 .action-record-fields button {height:2.15rem}
 .action-receipt {font-size:.7rem;color:#526e58;margin:.5rem 0 .2rem}
+.action-receipt[data-state=draft] {color:#83521d}
+.action-receipt[data-state=error],.action-operation-feedback[data-state=error] {color:#a72b34}
+.action-operation-feedback {font-size:.71rem;line-height:1.6;margin:.4rem 0;color:#365a43}
+.action-operation-feedback:empty {display:none}
+.action-evidence-link {display:block;color:#83521d;font-size:.69rem;text-decoration:underline;text-underline-offset:.16rem;margin-bottom:.45rem}
 .action-record .insight-link {font-size:.72rem}
 @media (max-width:1500px) {
   .journey-rail {grid-template-columns:repeat(3,minmax(0,1fr))}

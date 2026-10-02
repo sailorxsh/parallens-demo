@@ -13,7 +13,7 @@ const fixtures={
   subscriptionFlow:file('subscription-flow'),
 };
 const context=vm.createContext({
-  __fixtures:fixtures,document:{querySelector:()=>null},window:{addEventListener:()=>{}},
+  __fixtures:fixtures,document:{querySelector:()=>null},window:{addEventListener:()=>{},removeEventListener:()=>{}},
   localStorage:{getItem:()=>null},URLSearchParams,location:{hash:''},console,
 });
 const source=fs.readFileSync(path.join(root,'app.js'),'utf8').replace(/\nstart\(\);\s*$/,'\n');
@@ -141,6 +141,22 @@ assert.equal(evaluate('trialRows({...trialState(),week:undefined},"current").row
 assert.equal(evaluate('trendValues(18)'),null);
 assert.equal(evaluate('homeComparisons().some(item=>item.id===18)'),false,'A pooled sample must not imply a weekly trend when every week is suppressed');
 project({});
+assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W12 · ${fixtures.weekly.at(-1).weekEnd}`);
+assert.equal(evaluate('actionBaselineWindow(35)'),'完整月 2026-08');
+assert.equal(evaluate('actionBaselineWindow(3)'),`快照 ${fixtures.snapshot.asOf}`);
+project({week:'2'});
+assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W2 · ${fixtures.weekly[1].weekEnd}`);
+project({productLine:'Bird',plan:'Starter'});
+assert.equal(evaluate('actionBaselineWindow(18)'),'当前范围暂无可用基线周期','Unavailable data must not imply a snapshot baseline');
+project({});
+evaluate('simulatedActionState={existing:{complete:false}};localStorage.setItem=()=>{throw new Error("Storage blocked")};');
+assert.equal(evaluate('saveActionState("existing",{complete:true})'),false);
+assert.equal(evaluate('simulatedActionState.existing.complete'),false,'A failed write must not mutate in-memory action status');
+evaluate('localStorage.setItem=(key,value)=>{window.__savedActions={key,value}};');
+assert.equal(evaluate('saveActionState("new",{complete:true})'),true);
+assert.equal(evaluate('simulatedActionState.new.complete'),true);
+assert.equal(evaluate('window.__savedActions.key'),'parallens-demo-actions-v1');
+assert.deepEqual(JSON.parse(evaluate('window.__savedActions.value')),{existing:{complete:false},new:{complete:true}});
 const timelineAxes=evaluate(`Object.values(sourceData.diagnostics).flatMap(page=>[page.chart,...(page.extraCharts??[])])
   .filter(spec=>spec&&!spec.kind&&isTimelineSpec(spec)).map(spec=>({
     title:spec.title,axis:trendAxisDomain(spec.series,spec.unit),
@@ -200,4 +216,4 @@ assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),
 assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
 evaluate('chart=null;drawTrend(null)');
 assert.equal(evaluate('window.__chartOptions.series.length'),2);
-console.log(`PASS business filters, weighted period comparisons, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+console.log(`PASS business filters, weighted period comparisons, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

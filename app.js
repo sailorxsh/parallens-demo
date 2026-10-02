@@ -13,6 +13,7 @@ const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23
 const findingRuleVersion='demo-2026-09-26-v2';
 const findingSource=id=>({18:'合成试用明细交集重算',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
+main?.addEventListener('toggle',()=>updateScrollableTables(),true);
 document.querySelector('.skip-link')?.addEventListener('click',event=>{
   event.preventDefault();
   main.focus({preventScroll:true});
@@ -33,9 +34,36 @@ const sparklines=[];
 const detailCharts=[];
 const ACTION_STORAGE_KEY='parallens-demo-actions-v1';
 let simulatedActionState={};
-try { simulatedActionState=JSON.parse(localStorage.getItem(ACTION_STORAGE_KEY)||'{}')||{}; } catch { simulatedActionState={}; }
+try {
+  const saved=JSON.parse(localStorage.getItem(ACTION_STORAGE_KEY)||'{}');
+  simulatedActionState=saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
+} catch { simulatedActionState={}; }
+const actionDrafts=new Map();
+const warnActionDrafts=event=>{event.preventDefault();event.returnValue='';};
+function updateActionDraftWarning() {
+  window.removeEventListener('beforeunload',warnActionDrafts);
+  if(actionDrafts.size)window.addEventListener('beforeunload',warnActionDrafts);
+}
+function saveActionState(key,record) {
+  const next={...simulatedActionState,[key]:record};
+  try {localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(next));}
+  catch {return false;}
+  simulatedActionState=next;return true;
+}
+function actionBaselineWindow(id) {
+  if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
+  const history=metricHistory(id),last=history?.labels.at(-1);
+  if(last&&/^W\d+$/.test(last)) {
+    const selected=effectiveFor(id).find(([key])=>key==='week')?.[1];
+    const week=sourceData.weekly.find(item=>String(item.week)===String(selected??last.slice(1)));
+    if(week)return `完整周 W${week.week} · ${week.weekEnd}`;
+  }
+  if(last&&/^\d+月$/.test(last))return `完整月 ${sourceData.snapshot.asOf.slice(0,4)}-${last.slice(0,-1).padStart(2,'0')}`;
+  return `快照 ${sourceData.snapshot.asOf}`;
+}
 window.addEventListener('resize',()=>{
   chart?.resize(); statusChart?.resize(); sparklines.forEach(item=>item.resize()); detailCharts.forEach(item=>item.resize());
+  updateScrollableTables();
 },{passive:true});
 const number = value => Number(value).toLocaleString('zh-CN');
 const percent = value => `${(value * 100).toFixed(1)}%`;
@@ -830,7 +858,8 @@ function subscriptionDetails() {
     const values=[item.free??item.noEntitlement,item.trialEarly+item.trialNearExpiry,item.paidCurrent,item.cancelledButEntitled,item.paymentFailed,item.expired??0,Object.values(item).reduce((a,b)=>a+b,0)];
     const tr=element('tr','');tr.append(element('th','',label));values.forEach(value=>tr.append(element('td','',number(value))));body.append(tr);
   }
-  table.append(body);details.append(table);
+  table.append(body);
+  const tableWrap=element('div','data-table-scroll status-table');tableWrap.append(table);details.append(tableWrap);
   return details;
 }
 function drawStatus(box) {
@@ -1178,6 +1207,20 @@ function groupText(value,key='') {
   if (value?.kind==='rate') return `${percent(value.value)}（${number(value.numerator)} / ${number(value.denominator)}）`;
   if (value && typeof value==='object') return Object.entries(value).map(([field,item])=>`${groupLabels[field]??field}：${groupText(item,field)}`).join('；');
   return '—';
+}
+function updateScrollableTables() {
+  document.querySelectorAll('.data-table-scroll').forEach(wrap=>{
+    const overflowing=wrap.clientWidth>0&&wrap.scrollWidth>wrap.clientWidth+1;
+    wrap.toggleAttribute('data-scrollable',overflowing);
+    const hint=wrap.querySelector('.table-scroll-hint');
+    if(overflowing) {
+      wrap.tabIndex=0;wrap.setAttribute('role','region');
+      wrap.setAttribute('aria-label',`${wrap.querySelector('caption')?.textContent??'数据表'}，可横向滚动`);
+      if(!hint)wrap.insertBefore(element('p','table-scroll-hint','左右滚动查看完整列；键盘聚焦后可用左右方向键。'),wrap.querySelector('table'));
+    } else {
+      wrap.removeAttribute('tabindex');wrap.removeAttribute('role');wrap.removeAttribute('aria-label');hint?.remove();
+    }
+  });
 }
 function dataTable(spec, extraClass='') {
   const wrap=element('div',`data-table-scroll ${extraClass}`);
@@ -1675,7 +1718,8 @@ function trialSamplesPanel() {
       linked.value=`${row.trial_id} / ${row.user_id}`;
       const note=form.querySelector('[name="note"]');
       if(note&&!note.value.trim())note.value=`核对${row.trial_id}的支付失败记录与重试结果`;
-      form.scrollIntoView({block:'center',behavior:'smooth'});linked.focus({preventScroll:true});
+      linked.dispatchEvent(new Event('input',{bubbles:true}));
+      form.scrollIntoView({block:'center',behavior:chartAnimationDuration(1)?'smooth':'instant'});linked.focus({preventScroll:true});
       document.querySelector('#announcement').textContent=`已将${row.trial_id}关联到问题单，保存后生效`;
     });
     list.append(button);
@@ -1687,41 +1731,97 @@ function actionRecord(page,evidenceId) {
   const scope=activeFilterDescription()||'默认演示范围';
   const key=`record:${page}:${scope}:${evidenceId}`;
   const current=simulatedActionState[key]??{};
+  const draft=actionDrafts.get(key),initial=draft??current;
   const hash=[...key].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7).toString(36).toUpperCase();
   const issueId=`DEMO-${page}-${evidenceId}-${hash}`;
-  const baseline=current.baseline??displayValue(evidenceId);
-  const baselineAt=current.baselineAt??(filterState.week?`成熟批次W${filterState.week} · ${sourceData.weekly.find(w=>String(w.week)===filterState.week)?.weekEnd}`:sourceData.snapshot.asOf);
+  const baseline=draft?.baseline??current.baseline??displayValue(evidenceId);
+  const baselineAt=draft?.baselineAt??current.baselineAt??actionBaselineWindow(evidenceId);
   const form=element('form','action-record');
-  form.append(element('strong','',`问题单 ${issueId}`),element('p','table-note',
-    `基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}；范围：${scope}。仅保存在此浏览器。`));
+  form.noValidate=true;
+  const header=element('div','action-record-header');
+  const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}；范围：${scope}。`));
+  if(current.baselineAt&&current.baselineAt!==actionBaselineWindow(evidenceId))form.append(element('p','action-baseline-note',
+    `沿用此前登记的基线时间；当前指标对应${actionBaselineWindow(evidenceId)}。请核对历史基线，保存记录不会更新指标数据。`));
+  const stages=element('ol','action-stages');stages.setAttribute('aria-label','问题单处理进度');
+  ['待处理','核查中','待复查','人工确认'].forEach(label=>stages.append(element('li','',label)));form.append(stages);
+  const registration=element('fieldset','action-registration');registration.append(element('legend','','核查登记'));
   const fields=element('div','action-record-fields');
-  const ownerLabel=element('label','','负责人');const owner=element('input','');owner.name='owner';owner.placeholder='填写负责人';owner.value=current.owner??'';ownerLabel.append(owner);
+  const ownerLabel=element('label','','负责人');const owner=element('input','');owner.name='owner';owner.placeholder='填写负责人';owner.value=initial.owner??'';ownerLabel.append(owner);
   const statusLabel=element('label','','处理状态');const status=element('select','');status.name='status';
   [['pending','待处理'],['reviewing','核查中'],['resolved','已处理，待复查'],['verified','复查通过（人工确认）']].forEach(([value,label])=>{const option=element('option','',label);option.value=value;status.append(option);});
-  status.value=current.status??'pending';statusLabel.append(status);
-  const dueLabel=element('label','','计划复查日');const due=element('input','');due.type='date';due.name='due';due.value=current.due??'';dueLabel.append(due);
-  const targetLabel=element('label','','验收条件');const target=element('input','');target.name='target';target.placeholder='填写业务确认的目标';target.value=current.target??'';targetLabel.append(target);
-  const noteLabel=element('label','','处理说明');const note=element('input','');note.name='note';note.placeholder='记录核查或处理动作';note.value=current.note??'';noteLabel.append(note);
-  const sampleLabel=element('label','','关联演示记录');const linkedSample=element('input','');linkedSample.name='linkedSample';linkedSample.placeholder='从上方记录关联或手动填写';linkedSample.value=current.linkedSample??'';sampleLabel.append(linkedSample);
-  const reviewLabel=element('label','','复查实测值');const reviewValue=element('input','');reviewValue.name='reviewValue';reviewValue.placeholder='如 45.2% 或 434/1000';reviewValue.value=current.reviewValue??'';reviewLabel.append(reviewValue);
-  const reviewedLabel=element('label','','实际复查日');const reviewedAt=element('input','');reviewedAt.type='date';reviewedAt.name='reviewedAt';reviewedAt.value=current.reviewedAt??'';reviewedLabel.append(reviewedAt);
+  const statusValues=['pending','reviewing','resolved','verified'];status.value=statusValues.includes(initial.status)?initial.status:'pending';statusLabel.append(status);
+  const dueLabel=element('label','','计划复查日');const due=element('input','');due.type='date';due.name='due';due.value=initial.due??'';dueLabel.append(due);
+  const sampleLabel=element('label','','关联演示记录');const linkedSample=element('input','');linkedSample.name='linkedSample';linkedSample.placeholder='从上方记录关联或手动填写';linkedSample.value=initial.linkedSample??'';sampleLabel.append(linkedSample);
+  const noteLabel=element('label','action-note-field','处理说明');const note=element('textarea','');note.name='note';note.placeholder='记录核查过程、发现和处理动作';note.value=initial.note??'';note.rows=2;noteLabel.append(note);
+  fields.append(ownerLabel,statusLabel,dueLabel,sampleLabel,noteLabel);registration.append(fields);form.append(registration);
+  const reviewDetails=element('details','action-review');reviewDetails.append(element('summary','','复查与验收'));
+  const reviewFields=element('div','action-record-fields action-review-fields');
+  const targetLabel=element('label','','验收条件');const target=element('input','');target.name='target';target.placeholder='填写业务确认的目标';target.value=initial.target??'';targetLabel.append(target);
+  const reviewLabel=element('label','','复查实测值');const reviewValue=element('input','');reviewValue.name='reviewValue';reviewValue.placeholder='如 45.2% 或 434/1000';reviewValue.value=initial.reviewValue??'';reviewLabel.append(reviewValue);
+  const reviewedLabel=element('label','','实际复查日');const reviewedAt=element('input','');reviewedAt.type='date';reviewedAt.name='reviewedAt';reviewedAt.value=initial.reviewedAt??'';
+  const today=new Date();reviewedAt.max=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;reviewedLabel.append(reviewedAt);
+  reviewFields.append(targetLabel,reviewLabel,reviewedLabel);reviewDetails.append(element('p','table-note',
+    '登记“复查通过”时，这三项必填。结果由人工确认，系统不自动验算目标是否达成。'),reviewFields);form.append(reviewDetails);
+  reviewDetails.open=['resolved','verified'].includes(status.value)||Boolean(target.value||reviewValue.value||reviewedAt.value);
   const save=element('button','action-toggle','保存本地记录');save.type='submit';
-  fields.append(ownerLabel,statusLabel,dueLabel,targetLabel,noteLabel,sampleLabel,reviewLabel,reviewedLabel,save);form.append(fields);
-  const receipt=element('p','action-receipt',current.updatedAt?`已保存：${current.updatedAt} · ${status.selectedOptions[0].textContent}`:'尚未记录');form.append(receipt);
+  const receipt=element('p','action-receipt');receipt.id=`receipt-${issueId}`;receipt.setAttribute('role','status');
+  const footer=element('div','action-record-footer');footer.append(receipt,save);form.append(footer);
   const review=element('a','insight-link','复查关联指标 ↗');review.href=routeHref(page,evidenceId);form.append(review);
+  const controls=[owner,status,due,target,note,linkedSample,reviewValue,reviewedAt];
+  const readFields=()=>Object.fromEntries(controls.map(control=>[control.name,control.value]));
+  const savedFields=Object.fromEntries(controls.map(control=>[control.name,current[control.name]??(control===status?'pending':'')]));
+  let savedFingerprint=JSON.stringify(savedFields);
+  const showReceipt=(text,state)=>{
+    if(receipt.textContent!==text)receipt.textContent=text;
+    receipt.dataset.state=state;receipt.setAttribute('role',state==='error'?'alert':'status');
+  };
+  const updateStage=()=>{
+    const dirty=JSON.stringify(readFields())!==savedFingerprint;form.dataset.dirty=String(dirty);
+    badge.textContent=`${dirty?'未保存 · ':''}${status.selectedOptions[0].textContent}`;
+    badge.dataset.state=dirty?'draft':status.value;
+    [...stages.children].forEach((stage,index)=>{
+      const active=index===statusValues.indexOf(status.value);stage.toggleAttribute('data-active',active);
+      if(active)stage.setAttribute('aria-current','step');else stage.removeAttribute('aria-current');
+    });
+    [target,reviewValue,reviewedAt].forEach(control=>control.required=status.value==='verified');
+    return dirty;
+  };
+  function trackChanges() {
+    const dirty=updateStage();
+    if(dirty)actionDrafts.set(key,{...readFields(),baseline,baselineAt});else actionDrafts.delete(key);
+    updateActionDraftWarning();
+    showReceipt(dirty?'更改尚未保存；切页暂存，刷新后会丢失。':simulatedActionState[key]?.updatedAt?
+      `已保存至此浏览器：${simulatedActionState[key].updatedAt}`:'尚未记录；保存后仅在此浏览器保留。',dirty?'draft':'saved');
+  }
+  form.addEventListener('input',event=>{event.target.setCustomValidity('');event.target.removeAttribute('aria-invalid');event.target.removeAttribute('aria-describedby');trackChanges();});
+  status.addEventListener('change',()=>{if(['resolved','verified'].includes(status.value))reviewDetails.open=true;trackChanges();});
+  updateStage();
+  showReceipt(draft?'更改尚未保存；切页暂存，刷新后会丢失。':current.updatedAt?`已保存至此浏览器：${current.updatedAt}`:'尚未记录；保存后仅在此浏览器保留。',draft?'draft':'saved');
   form.addEventListener('submit',event=>{
     event.preventDefault();
-    if(status.value==='verified'&&(!target.value.trim()||!reviewValue.value.trim()||!reviewedAt.value)) {
-      receipt.textContent='复查通过需填写验收条件、复查实测值和实际复查日。';
+    updateStage();
+    [target,reviewValue].forEach(control=>control.setCustomValidity(control.required&&!control.value.trim()?'请填写此项复查信息':''));
+    const invalid=controls.filter(control=>!control.checkValidity());
+    if(invalid.length) {
+      reviewDetails.open=true;
+      const labels={target:'验收条件',reviewValue:'复查实测值',reviewedAt:'实际复查日'};
+      showReceipt(invalid.map(control=>control.validity.rangeOverflow?`${labels[control.name]}不能晚于今天`:`请填写${labels[control.name]??'有效信息'}`).join('；'),'error');
+      invalid.forEach(control=>{control.setAttribute('aria-invalid','true');control.setAttribute('aria-describedby',receipt.id);});
+      invalid[0].focus();invalid[0].reportValidity();
       return;
     }
     const updatedAt=new Date().toLocaleString('zh-CN',{hour12:false});
-    simulatedActionState[key]={issueId,owner:owner.value.trim()||'待指派',status:status.value,note:note.value.trim(),
+    const record={issueId,owner:owner.value.trim()||'待指派',status:status.value,note:note.value.trim(),
       due:due.value,target:target.value.trim(),linkedSample:linkedSample.value.trim(),reviewValue:reviewValue.value.trim(),reviewedAt:reviewedAt.value,
       updatedAt,page,evidenceId,scope,filters:{...filterState},baseline,baselineAt,reviewMetric:evidenceId};
-    try {localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(simulatedActionState));
-      receipt.textContent=`已保存：${updatedAt} · ${status.selectedOptions[0].textContent}`;document.querySelector('#announcement').textContent='处理记录已保存在此浏览器';}
-    catch {receipt.textContent='浏览器存储不可用，记录未保存';}
+    if(!saveActionState(key,record)) {
+      actionDrafts.set(key,{...readFields(),baseline,baselineAt});updateActionDraftWarning();
+      showReceipt('浏览器存储不可用，未保存；内容仍暂存在当前页面会话，刷新会丢失。','error');return;
+    }
+    controls.forEach(control=>{control.value=record[control.name];control.setCustomValidity('');control.removeAttribute('aria-invalid');control.removeAttribute('aria-describedby');});
+    savedFingerprint=JSON.stringify(readFields());actionDrafts.delete(key);updateActionDraftWarning();updateStage();
+    showReceipt(`已保存至此浏览器：${updatedAt} · ${status.selectedOptions[0].textContent}`,'saved');
   });
   return form;
 }
@@ -1751,9 +1851,10 @@ function actionQueue(page) {
   const wrap=element('div','data-table-scroll');const table=element('table','diagnostic-table action-table');
   table.append(element('caption','visually-hidden',`${pages[page].title}模拟行动清单`));
   const head=element('thead','');const row=element('tr','');
-  ['对象','触发信号','建议核对','责任角色','处理状态','更新时间','本地演示操作'].forEach(label=>row.append(element('th','',label)));
+  ['对象','触发信号','建议核对','责任角色','处理状态','更新时间','核对与研判'].forEach(label=>row.append(element('th','',label)));
   head.append(row);table.append(head);
   const body=element('tbody','');
+  const feedback=element('p','action-operation-feedback');feedback.setAttribute('role','status');
   info.actions.forEach(item=>{
     const tr=element('tr','');
     tr.append(element('th','',item.object),element('td','',item.trigger),element('td','',item.suggestion),element('td','',item.owner));
@@ -1761,14 +1862,23 @@ function actionQueue(page) {
     const status=element('td','');const time=element('td','');
     const cell=element('td','');
     const button=element('button','action-toggle');button.type='button';
+    button.dataset.actionId=item.id;
+    const evidenceId=item.evidenceMetric??defaultFindingMetric[page];
+    const evidenceLink=element('a','action-evidence-link','查看指标依据 ↗');evidenceLink.href=routeHref(contractFor(evidenceId).page,evidenceId);
+    evidenceLink.setAttribute('aria-label',`${item.id}，查看${catalogItem(evidenceId).name}指标依据`);
     const update=()=>{const state=simulatedActionState[key];const complete=Boolean(state?.complete);status.textContent=complete?'演示已研判':item.status;time.textContent=state?.updatedAt??item.updatedAt;button.textContent=complete?'撤销本地标记':'模拟标记已研判';button.setAttribute('aria-pressed',String(complete));};
     update();
-    button.addEventListener('click',()=>{const complete=!simulatedActionState[key]?.complete;simulatedActionState[key]={complete,updatedAt:`${new Date().toLocaleString('zh-CN',{hour12:false})}（本地演示）`,owner:item.owner,evidenceMetric:info.heroIds[0]};
-      try {localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(simulatedActionState));} catch {document.querySelector('#announcement').textContent='本地存储不可用，处理状态仅在当前页面有效';}
-      update();document.querySelector('#announcement').textContent=`${item.id}${complete?'已标记研判':'已撤销标记'}，本地演示状态`;});
-    cell.append(button);tr.append(status,time,cell);body.append(tr);
+    button.addEventListener('click',()=>{
+      const complete=!simulatedActionState[key]?.complete;
+      const record={complete,updatedAt:`${new Date().toLocaleString('zh-CN',{hour12:false})}（本地演示）`,owner:item.owner,evidenceMetric:evidenceId};
+      if(!saveActionState(key,record)) {
+        feedback.setAttribute('role','alert');feedback.dataset.state='error';feedback.textContent=`${item.id} 未保存：浏览器存储不可用，研判标记保持原状态。`;return;
+      }
+      update();feedback.setAttribute('role','status');feedback.dataset.state='saved';feedback.textContent=`${item.id}${complete?'已保存研判标记':'已撤销本地标记'}。研判标记不表示问题已解决或复查通过。`;
+    });
+    cell.append(evidenceLink,button);tr.append(status,time,cell);body.append(tr);
   });
-  table.append(body);wrap.append(table);section.append(wrap,actionRecord(page,defaultFindingMetric[page]));
+  table.append(body);wrap.append(table);section.append(wrap,element('p','table-note','指标依据用于核对同类信号；演示样本不参与总体聚合。清单标记与下方问题单的处理、复查进度分别登记。'),feedback,actionRecord(page,defaultFindingMetric[page]));
   return section;
 }
 function filteredFinding(page) {
@@ -2180,6 +2290,7 @@ function renderRoute({preserveScroll=false}={}) {
     link.classList.toggle('active',code===route);
     if(code===route)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
+  updateScrollableTables();
   if(!preserveScroll)main.focus({preventScroll:true});
   if(metricId&&route&&!preserveScroll) requestAnimationFrame(()=>document.querySelector(`#metric-evidence-${metricId}`)?.scrollIntoView({block:'start'}));
   else if(!preserveScroll)scrollTo({top:0,behavior:'instant'});
