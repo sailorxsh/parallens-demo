@@ -25,6 +25,32 @@ assert.equal(evaluate('chartValue(0,"人")'),'0人');
 assert.equal(evaluate('chartValue(5.2,"美元/人")'),'$5.20/人');
 assert.equal(evaluate('chartValue(null,"%")'),'无值');
 
+// Check indexed selection against the original rows, including week/period intersections.
+const trialFields={country:'country',appPlatform:'app_platform',productLine:'product_line',
+  subscriptionPlatform:'subscription_platform',plan:'plan',billingCycle:'billing_cycle'};
+for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'},
+  {appPlatform:'Android',productLine:'Hunting'},
+  {country:'US',appPlatform:'Android',productLine:'Bird',subscriptionPlatform:'Web',plan:'Plus',billingCycle:'monthly'},
+  {productLine:'Bird',plan:'Starter'}]) {
+  for(const week of [undefined,'1','9','10','12','99'])for(const period of [undefined,'previous','current','missing']) {
+    const state={...filters,...(week?{week}:{})};
+    const weekEnd=fixtures.weekly.find(item=>String(item.week)===week)?.weekEnd;
+    const expected=fixtures.trialFacts.records.filter(row=>(!period||row.period===period)&&
+      (!week||row.maturity_week_end===weekEnd)&&Object.entries(filters).every(([key,value])=>row[trialFields[key]]===value));
+    const actual=JSON.parse(evaluate(`JSON.stringify(trialRows(${JSON.stringify(state)},${JSON.stringify(period)??'undefined'}).rows)`));
+    assert.deepEqual(actual.map(row=>row.trial_id),expected.map(row=>row.trial_id),`Trial selection changed for ${JSON.stringify({state,period})}`);
+    const aggregate=evaluate(`trialAggregate(trialRows(${JSON.stringify(state)},${JSON.stringify(period)??'undefined'}).rows)`);
+    assert.equal(aggregate.numerator,expected.filter(row=>row.converted).length);
+    assert.equal(aggregate.denominator,expected.length);
+    assert.equal(aggregate.attempts,expected.filter(row=>row.payment_attempted).length);
+    assert.equal(aggregate.failed,expected.filter(row=>row.payment_status==='failed').length);
+  }
+}
+evaluate('sourceData={...sourceData,trialFacts:{...sourceData.trialFacts,records:[...sourceData.trialFacts.records,{...sourceData.trialFacts.records.at(-1),trial_id:"RELOADED-SAMPLE"}]}}');
+assert.equal(evaluate('trialRows({week:"12"},"current").rows.at(-1).trial_id'),'RELOADED-SAMPLE','Reloaded facts were hidden by a stale index');
+evaluate('sourceData=__fixtures');
+assert.equal(evaluate('trialRows({week:"12"},"current").rows.length'),1000,'An old index survived source replacement');
+
 let result=project({productLine:'Bird'});
 assert.equal(result.m02.value,8000);
 assert.equal(result.m06.numerator,8000);
@@ -255,4 +281,4 @@ assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),
 assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
 evaluate('chart=null;drawTrend(null)');
 assert.equal(evaluate('window.__chartOptions.series.length'),2);
-console.log(`PASS business filters, weighted observation evidence and adjacent periods, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+console.log(`PASS indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

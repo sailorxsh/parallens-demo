@@ -21,10 +21,12 @@ document.querySelector('.skip-link')?.addEventListener('click',event=>{
 });
 let dataset;
 let sourceData;
+let trialFactIndex;
 let filterState={};
 const filterDisclosure=new Map();
 let startupInProgress=false;
 let appEventsBound=false;
+let lastRenderedHash;
 const chartAnimationDuration=duration=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:duration;
 let definitionReturnFocus;
 let chart;
@@ -95,26 +97,43 @@ const optionLabel=(key,value)=>key==='season'&&value==='Other'?'淡季':optionLa
 const controlScopes={period:'时间',page:'页面范围',module:'模块细分',view:'分析视角',rule:'业务规则'};
 const paidPlanMetricIds=new Set([2,3,6,17,18,19,21,23,32,33,34,35,52]);
 const trialFactDimensions=new Set(['week','country','appPlatform','productLine','subscriptionPlatform','plan','billingCycle']);
+function indexedTrialFacts() {
+  const records=sourceData.trialFacts.records;
+  if(trialFactIndex?.records===records)return trialFactIndex;
+  const weeks=new Map(),periods=new Map();
+  for(const row of records) {
+    for(const [groups,key] of [[weeks,row.maturity_week_end],[periods,row.period]]) {
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(row);
+    }
+  }
+  // A retry replaces the records array; its first query rebuilds the index.
+  trialFactIndex={records,weeks,periods};
+  return trialFactIndex;
+}
 function trialRows(state=filterState,period) {
   const unsupported=Object.entries(state).find(([key,value])=>value&&value!=='All'&&!trialFactDimensions.has(key));
   if(unsupported)return {rows:null,reason:`新增试用明细暂无${filterLabels[unsupported[0]]}字段`};
-  let rows=sourceData.trialFacts.records.filter(row=>!period||row.period===period);
-  if(state.week) {
-    const week=sourceData.weekly.find(item=>String(item.week)===String(state.week));
-    rows=rows.filter(row=>row.maturity_week_end===week?.weekEnd);
-  }
-  if(state.country)rows=rows.filter(row=>row.country===state.country);
-  if(state.appPlatform)rows=rows.filter(row=>row.app_platform===state.appPlatform);
-  if(state.productLine)rows=rows.filter(row=>row.product_line===state.productLine);
-  if(state.subscriptionPlatform)rows=rows.filter(row=>row.subscription_platform===state.subscriptionPlatform);
-  if(state.plan)rows=rows.filter(row=>row.plan===state.plan);
-  if(state.billingCycle)rows=rows.filter(row=>row.billing_cycle===state.billingCycle);
+  const index=indexedTrialFacts();
+  const weekEnd=state.week?sourceData.weekly.find(item=>String(item.week)===String(state.week))?.weekEnd:null;
+  const candidates=state.week?(index.weeks.get(weekEnd)??[]):period?(index.periods.get(period)??[]):index.records;
+  const rows=candidates.filter(row=>(!period||row.period===period)&&
+    (!state.country||row.country===state.country)&&
+    (!state.appPlatform||row.app_platform===state.appPlatform)&&
+    (!state.productLine||row.product_line===state.productLine)&&
+    (!state.subscriptionPlatform||row.subscription_platform===state.subscriptionPlatform)&&
+    (!state.plan||row.plan===state.plan)&&
+    (!state.billingCycle||row.billing_cycle===state.billingCycle));
   return {rows};
 }
 function trialAggregate(rows) {
-  const denominator=rows.length,numerator=rows.filter(row=>row.converted).length;
-  const attempts=rows.filter(row=>row.payment_attempted).length;
-  const failed=rows.filter(row=>row.payment_status==='failed').length;
+  const denominator=rows.length;
+  let numerator=0,attempts=0,failed=0;
+  for(const row of rows) {
+    if(row.converted)numerator++;
+    if(row.payment_attempted)attempts++;
+    if(row.payment_status==='failed')failed++;
+  }
   return {denominator,numerator,value:denominator?numerator/denominator:null,attempts,failed};
 }
 function trialMetric(state=filterState) {
@@ -2331,6 +2350,11 @@ function renderRoute({preserveScroll=false}={}) {
   if(metricId&&route&&!preserveScroll) requestAnimationFrame(()=>document.querySelector(`#metric-evidence-${metricId}`)?.scrollIntoView({block:'start'}));
   else if(!preserveScroll)scrollTo({top:0,behavior:'instant'});
   document.querySelector('#announcement').textContent=route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
+  lastRenderedHash=location.hash;
+}
+function handleRouteChange() {
+  // History traversal can emit both popstate and hashchange for one view.
+  if(location.hash!==lastRenderedHash)renderRoute();
 }
 const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow'];
 function showLoadingState() {
@@ -2403,9 +2427,16 @@ function bindAppEvents() {
       for(const button of buttons)if(button===current)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
     });
   },{passive:true});
-    window.addEventListener('hashchange',()=>renderRoute());
-    window.addEventListener('popstate',()=>renderRoute());
+    window.addEventListener('hashchange',handleRouteChange);
+    window.addEventListener('popstate',handleRouteChange);
     document.addEventListener('keydown',event=>{
+      const table=event.target.matches?.('.data-table-scroll[data-scrollable]')?event.target:null;
+      if(table&&!event.defaultPrevented&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&
+        ['ArrowLeft','ArrowRight'].includes(event.key)) {
+        event.preventDefault();
+        table.scrollLeft+=event.key==='ArrowRight'?80:-80;
+        return;
+      }
       if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k') {event.preventDefault();openSearch();return;}
       if(event.key==='Escape'&&search.open) {event.preventDefault();search.close();return;}
       if(event.key==='Escape'&&document.querySelector('#metric-definition-popover')?.matches(':popover-open')) {

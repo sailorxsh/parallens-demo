@@ -4,6 +4,7 @@ async (page) => {
   const base=new URL('.',page.url()).href;
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
+  await page.setViewportSize({width:1440,height:1000});
   await page.goto(base);
   await page.locator('.home-signal').first().waitFor();
   const conversionSignal=page.locator('.home-signal[data-metric-id="18"]');
@@ -33,6 +34,7 @@ async (page) => {
   await page.reload();
   const triggerChart=page.locator('.detail-chart').first();
   await triggerChart.waitFor();await page.waitForTimeout(600);
+  await triggerChart.evaluate(node=>node.scrollIntoView({block:'center',behavior:'instant'}));
   const triggerPoint=await triggerChart.evaluate(node=>{
     const instance=echarts.getInstanceByDom(node),option=instance.getOption(),rect=node.getBoundingClientRect();
     const point=instance.convertToPixel({seriesIndex:0},[11,option.series[0].data[11]]);
@@ -156,5 +158,18 @@ async (page) => {
   await statusTable.focus();
   await page.keyboard.press('ArrowRight');
   await page.waitForFunction(()=>document.querySelector('.status-table').scrollLeft>0);
+  const right=await statusTable.evaluate(node=>node.scrollLeft);
+  await page.keyboard.press('ArrowLeft');
+  check(await statusTable.evaluate(node=>node.scrollLeft)<right,'Left arrow did not return toward the start of the table');
+  await page.keyboard.press('Tab');
+  check(!await statusTable.evaluate(node=>node===document.activeElement),'Wide table trapped keyboard focus');
+  const child=await statusTable.evaluateHandle(node=>{
+    const input=document.createElement('input');input.value='demo';node.append(input);input.focus();input.setSelectionRange(2,2);return input;
+  });
+  const left=await statusTable.evaluate(node=>node.scrollLeft);
+  await page.keyboard.press('ArrowLeft');
+  check(await child.evaluate(node=>node.selectionStart)===1,'Table arrow handling prevented editing a descendant input');
+  check(await statusTable.evaluate(node=>node.scrollLeft)===left,'Editing a table input also scrolled its container');
+  await child.evaluate(node=>node.remove());
   return {status:'PASS',checks:['weighted story selection and focused scales','chart tooltip and table point evidence','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths with legible dates','wide-table keyboard scrolling','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
 }
