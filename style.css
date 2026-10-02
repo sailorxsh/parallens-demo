@@ -341,7 +341,7 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .detail-evidence-link {margin-top:.35rem}
 .detail-finding {margin:.65rem 0;padding:.8rem .95rem}
 .detail-finding p {font-size:.82rem;line-height:1.55}
-.detail-finding .finding-meta {font-size:.67rem;color:#627568;margin:.2rem 0 .45rem}
+.detail-finding .finding-meta {font-size:.67rem;color:var(--muted);margin:.2rem 0 .45rem}
 .detail-finding .related-link {margin-left:1rem;color:#52745e;border-color:#a5bba7}
 .headline-trend {border-top:1px solid #e4eae1;margin-top:.4rem;padding-top:.25rem}
 .snapshot-card:first-child .headline-trend {border-color:#627f69}
@@ -437,6 +437,19 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .analysis-grid .detail-finding .finding-meta {font-size:.65rem}
 .analysis-grid .finding-title {font-size:1.1rem;line-height:1.65;letter-spacing:-.02em;margin:.8rem 0 .6rem;font-weight:600}
 .analysis-grid .finding-context {font-size:.82rem;color:#405a48}
+.finding-comparison {margin:.65rem 0 .85rem;padding:.65rem 0;border-block:1px solid #d5dfce}
+.finding-comparison-values {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin:0}
+.finding-comparison-values dt {font-size:.68rem;color:#52694f;margin-bottom:.18rem}
+.finding-comparison-values dd {font-size:1.6rem;line-height:1.2;font-weight:600;letter-spacing:-.035em;margin:0;color:#203c2b}
+.finding-comparison-values>div+div {border-left:1px solid #d5dfce;padding-left:.75rem}
+.finding-comparison-change {display:inline-block;font-size:.7rem;font-weight:600;line-height:1.5;border-radius:.25rem;padding:.16rem .4rem;margin:.5rem 0 0;background:#e7eee0;color:#52694f}
+.finding-comparison-change[data-direction=adverse] {background:#faece2;color:#8c4219}
+.finding-comparison-change[data-direction=improving] {background:#e0ebdc;color:#2b573b}
+.finding-calculation {width:100%;border-collapse:collapse;font-size:.68rem;font-variant-numeric:tabular-nums}
+.finding-calculation th,.finding-calculation td {text-align:left;padding:.45rem .15rem;border-bottom:1px solid #d5dfce;white-space:nowrap}
+.finding-calculation th {font-weight:600;color:#405a48}
+.finding-calculation td:last-child {text-align:right}
+.analysis-grid .finding-calculation-window,.analysis-grid .finding-calculation-note {font-size:.68rem;line-height:1.6;color:#405a48;margin:.5rem 0}
 .finding-basis {border-top:1px solid #d5dfce;padding-top:.65rem;margin:.85rem 0}
 .finding-basis summary {font-size:.72rem;color:#52694f;cursor:pointer}
 .analysis-grid .finding-basis .finding-meta {font-size:.72rem;line-height:1.65;margin:.6rem 0}

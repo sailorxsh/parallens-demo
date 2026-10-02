@@ -10,7 +10,7 @@ const pages = {
 const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
 const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
-const findingRuleVersion='demo-2026-09-26-v2';
+const findingRuleVersion='demo-2026-10-02-v3';
 const findingSource=id=>({18:'合成试用明细交集重算',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 main?.addEventListener('toggle',()=>updateScrollableTables(),true);
@@ -615,6 +615,36 @@ function weeklyRateDetails(id) {
     return value.kind==='rate'?{...value,numeratorUnit:[11,42].includes(id)?'次':'人',denominatorUnit:[11,42].includes(id)?'次':'人'}:null;
   });
 }
+function weeklyRateComparison(id,split=id===18?9:8,respectWeek=true) {
+  const series=trendValues(id);
+  if(metric(id)?.kind!=='rate'||!series)return null;
+  const rows=weeklyRateDetails(id);
+  const aggregate=items=>{
+    if(!items.length||items.some(row=>!row||!Number.isFinite(row.numerator)||!Number.isFinite(row.denominator)||row.denominator<0||row.numerator<0||row.numerator>row.denominator))return null;
+    const numerator=items.reduce((sum,row)=>sum+row.numerator,0),denominator=items.reduce((sum,row)=>sum+row.denominator,0);
+    return denominator>=30?{numerator,denominator}:null;
+  };
+  const selected=respectWeek?effectiveFor(id).find(([key])=>key==='week')?.[1]:null;
+  const index=selected?sourceData.weekly.findIndex(week=>String(week.week)===selected):-1;
+  const before=selected?aggregate(index>0?[rows[index-1]]:[]):aggregate(rows.slice(0,split));
+  const after=selected?aggregate(index>=0?[rows[index]]:[]):aggregate(rows.slice(split));
+  if(!before||!after)return null;
+  const window=(first,last)=>{
+    const firstWeek=`W${sourceData.weekly[first].week}`,lastWeek=`W${sourceData.weekly[last].week}`;
+    if(first===last)return periodLabel(firstWeek);
+    return `${firstWeek}–${lastWeek} · ${periodLabel(firstWeek).split(' · ')[1].split('–')[0]}–${periodLabel(lastWeek).split('–')[1]}`;
+  };
+  const beforeRate=before.numerator/before.denominator*100,afterRate=after.numerator/after.denominator*100;
+  const estimated=id!==18&&effectiveFor(id).some(([key])=>key!=='week'&&!(id===13&&key==='productLine'&&filterState.productLine==='Bird'));
+  return {id,before,after,beforeRate,afterRate,delta:afterRate-beforeRate,split,series,
+    selectedWeek:selected?Number(selected):null,
+    beforeLabel:selected?`W${sourceData.weekly[index-1].week}`:`前${split}周合并率`,
+    afterLabel:selected?`W${sourceData.weekly[index].week}`:`近${rows.length-split}周合并率`,
+    beforeWindow:selected?window(index-1,index-1):window(0,split-1),
+    afterWindow:selected?window(index,index):window(split,rows.length-1),
+    unit:id===42?'次':'人',scope:id===42?'观鸟触发事件':id===13?'观鸟注册批次':'成熟试用批次',
+    source:estimated?'模拟分片估算':id===18?'合成试用明细汇总':id===42?'合成周度触发汇总':'合成周度注册批次'};
+}
 function paidPayersHistory() {
   const id=35,filters=effectiveFor(id),value=metric(id);
   if(value.kind!=='group'||filters.some(([key])=>!policyFor(id).demonstrableDimensions.includes(key)))return null;
@@ -923,27 +953,10 @@ function intro() {
 }
 function homeComparisons() {
   const comparisons=[];
-  const activationSeries=trendValues(13);
-  if(activationSeries?.length===12&&activationSeries.every(Number.isFinite)) {
-    const filters=effectiveFor(13).filter(([key])=>key!=='week'&&!(key==='productLine'&&filterState.productLine==='Bird'));
-    const shares=sharesFor(filters,13);
-    const rows=sourceData.weekly.map(week=>projectValue(weeklyMetric(13,week),shares,filters,13));
-    const aggregate=items=>({numerator:items.reduce((sum,row)=>sum+row.numerator,0),denominator:items.reduce((sum,row)=>sum+row.denominator,0)});
-    if(rows.every(row=>row.kind==='rate'))comparisons.push({id:13,page:'A',name:'7日价值激活',scope:'观鸟注册批次',
-      before:aggregate(rows.slice(0,8)),after:aggregate(rows.slice(8)),split:8,
-      beforeLabel:'前8周合并率',afterLabel:'近4周合并率',source:filters.length?'模拟分片估算':'合成周度注册批次',series:activationSeries});
-  }
-  const current=trialRows({...trialState(),week:undefined},'current');
-  const previous=trialRows({...trialState(),week:undefined},'previous');
-  if(current.rows&&previous.rows) {
-    const now=trialAggregate(current.rows),before=trialAggregate(previous.rows);
-    const series=trendValues(18);
-    if(now.denominator>=30&&before.denominator>=30&&series)comparisons.push({id:18,page:'D',name:'试用转正',scope:'成熟试用批次',
-      before,after:now,split:9,beforeLabel:'前9周合并率',afterLabel:'近3周合并率',source:'合成试用明细汇总',series});
-  }
-  return comparisons.map(item=>({...item,beforeRate:item.before.numerator/item.before.denominator*100,
-    afterRate:item.after.numerator/item.after.denominator*100,
-    delta:(item.after.numerator/item.after.denominator-item.before.numerator/item.before.denominator)*100}));
+  const activation=weeklyRateComparison(13,8,false),trial=weeklyRateComparison(18,9,false);
+  if(activation?.series.length===12&&activation.series.every(Number.isFinite))comparisons.push({...activation,page:'A',name:'7日价值激活'});
+  if(trial)comparisons.push({...trial,page:'D',name:'试用转正'});
+  return comparisons;
 }
 function homeComparisonChange(comparison) {
   return Math.abs(comparison.delta)<0.05?'基本持平':`${comparison.delta>0?'+':'−'}${Math.abs(comparison.delta).toFixed(1)} 个百分点`;
@@ -1883,13 +1896,6 @@ function actionQueue(page) {
 }
 function filteredFinding(page) {
   const m=id=>metric(id);
-  const trend=(id,split)=>{
-    const values=trendValues(id);
-    if(!values||values.some(value=>value===null||!Number.isFinite(value)))return null;
-    const before=values.slice(0,split).reduce((a,b)=>a+b,0)/split;
-    const after=values.slice(split).reduce((a,b)=>a+b,0)/(values.length-split);
-    return {before,after,delta:after-before};
-  };
   const recentChange=id=>{
     const history=metricHistory(id);
     if(!history)return null;
@@ -1903,8 +1909,8 @@ function filteredFinding(page) {
     `；${change.current}较${change.previous}${Math.abs(change.delta)<.05?'基本持平':
       `${change.delta>=0?'上升':'下降'} ${Math.abs(change.delta).toFixed(digits)} ${change.unit==='%'?'个百分点':change.unit}`}`;
   if(page==='A'&&m(13).kind==='rate') {
-    const t=trend(13,8);
-    if(t)return {id:13,text:`所选范围的观鸟7日价值激活率为 ${percent(m(13).value)}；近4周均值较前8周 ${t.delta>=0?'上升':'下降'} ${Math.abs(t.delta).toFixed(1)} 个百分点。按当前合格批次${number(m(13).denominator)}人估算，差额约${number(Math.round(Math.abs(t.delta)/100*m(13).denominator))}人。该比较不证明设备问题是原因。`};
+    const t=weeklyRateComparison(13),week=filterState.week??sourceData.weekly.at(-1).week;
+    return {id:13,comparison:t,text:`W${week}观鸟7日价值激活率 ${percent(m(13).value)}。${t?'按比较周期的合格注册人数合并计算。该变化不证明设备问题是原因。':'前期无可比样本，暂不生成变化判断。'}`};
   }
   if(page==='B'&&filterState.functionType&&m(27).kind==='rate')
     return {id:27,text:`查看${optionLabel('functionType',filterState.functionType)}的活跃主账号 ${number(m(27).numerator)}/${number(m(27).denominator)}（${percent(m(27).value)}）。功能人数可能重叠，不与其他功能相加。`};
@@ -1917,8 +1923,8 @@ function filteredFinding(page) {
   if(page==='B'&&m(29).kind==='rate')
     return {id:29,text:`按当前${m(29).thresholdDays}天阈值，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。迁徙季与淡季规则不可当作两个互斥人群相加。`};
   if(page==='C'&&m(42).kind==='rate') {
-    const t=trend(42,8);
-    if(t)return {id:42,text:`所选范围空触发率 ${percent(m(42).value)}；近4周均值较前8周 ${t.delta>=0?'上升':'下降'} ${Math.abs(t.delta).toFixed(1)} 个百分点。按当前${number(m(42).denominator)}次触发估算，差额约${number(Math.round(Math.abs(t.delta)/100*m(42).denominator))}次。请核对型号与固件分组，尚不能据此认定原因。`};
+    const t=weeklyRateComparison(42),week=filterState.week??sourceData.weekly.at(-1).week;
+    return {id:42,comparison:t,text:`W${week}空触发率 ${percent(m(42).value)}。${t?'按比较周期的触发次数合并计算。请核对型号与固件分组，尚不能据此认定原因。':'前期无可比样本，暂不生成变化判断。'}`};
   }
   if(page==='D'&&filterState.plan==='Free'&&m(22).kind==='group') {
     const part=m(22).value.anyExhausted;
@@ -1927,27 +1933,23 @@ function filteredFinding(page) {
   if(page==='D'&&m(18).kind==='na')
     return {id:18,text:`试用转正率当前${m(18).availability==='pending'?'待补数据':'不适用'}：${m(18).reason}。请查看指标口径与可用明细。`};
   if(page==='D'&&m(18).kind==='rate') {
+    const comparison=weeklyRateComparison(18);
     if(filterState.week) {
       const currentWeek=Number(filterState.week);
-      const previousRows=trialRows(trialState({...filterState,week:String(currentWeek-1)}));
-      const before=previousRows.rows?trialAggregate(previousRows.rows):null;
-      const delta=before?.denominator>=30?(m(18).value-before.value)*100:null;
-      const change=delta===null?'；前一周无可比样本':Math.abs(delta)<.05?`，较W${currentWeek-1} 持平`:`，较W${currentWeek-1} ${delta>=0?'+':''}${delta.toFixed(1)} 个百分点`;
-      return {id:18,text:`W${currentWeek}成熟试用转正 ${number(m(18).numerator)}/${number(m(18).denominator)}（${percent(m(18).value)}）${change}。`};
+      return {id:18,comparison,text:`W${currentWeek}成熟试用转正率 ${percent(m(18).value)}。转正 ${number(m(18).numerator)}/${number(m(18).denominator)}${comparison?'':'；前一周无可比样本'}。`};
     }
     const current=trialRows({...trialState(),week:undefined},'current');
     const previous=trialRows({...trialState(),week:undefined},'previous');
     if(current.rows&&previous.rows) {
       const now=trialAggregate(current.rows),before=trialAggregate(previous.rows);
       if(now.denominator>=30&&before.denominator>=30) {
-        const delta=(now.value-before.value)*100;
         const target=row=>row.product_line==='Bird'&&row.app_platform==='Android'&&row.plan==='Plus'&&row.billing_cycle==='monthly';
         const targetNow=trialAggregate(current.rows.filter(target));
         const targetBefore=trialAggregate(previous.rows.filter(target));
-        let text=`近3个成熟周的转正率 ${percent(now.value)}，较前9周 ${delta>=0?'+':''}${delta.toFixed(1)} 个百分点；最新W12为 ${number(m(18).numerator)}/${number(m(18).denominator)}。`;
+        let text=`W12成熟试用转正率 ${percent(m(18).value)}。W12转正 ${number(m(18).numerator)}/${number(m(18).denominator)}。`;
         if(targetNow.denominator>=30&&targetBefore.denominator>=30)
           text+=`Android Plus月付组周均转正 ${Math.round(targetBefore.numerator/9)}→${Math.round(targetNow.numerator/3)} 人，周均支付失败 ${Math.round(targetBefore.failed/9)}→${Math.round(targetNow.failed/3)} 人；两项变化同步，尚不能据此确认因果。`;
-        return {id:18,text};
+        return {id:18,comparison,text};
       }
     }
     return {id:18,text:`当前试用转正 ${number(m(18).numerator)}/${number(m(18).denominator)}（${percent(m(18).value)}）；可比批次样本不足，暂不生成变化判断。`};
@@ -1970,6 +1972,38 @@ function filteredFinding(page) {
   const fallback=dataset.diagnostics[page].heroIds.find(id=>m(id).kind!=='na')??
     sourceData.catalog.find(item=>item.page===page&&m(item.id).kind!=='na')?.id;
   return fallback?{id:fallback,text:`${catalogItem(fallback).name}为 ${displayValue(fallback)}。当前筛选下缺少可核验的趋势比较；请查看本项分子、分母和来源。`}:null;
+}
+function findingComparison(comparison) {
+  const wrap=element('div','finding-comparison');wrap.dataset.metricId=comparison.id;
+  const values=element('dl','finding-comparison-values');
+  [['before',comparison.beforeLabel,comparison.beforeRate],['after',comparison.afterLabel,comparison.afterRate]].forEach(([period,label,rate])=>{
+    const cell=element('div','');cell.dataset.period=period;
+    cell.append(element('dt','',label),element('dd','',`${rate.toFixed(1)}%`));values.append(cell);
+  });
+  const delta=comparison.delta,steady=Math.abs(delta)<.05;
+  const adverse=comparison.id===42?delta>0:delta<0;
+  const change=element('p','finding-comparison-change',steady?'基本持平':`${delta>0?'上升':'下降'} ${Math.abs(delta).toFixed(1)} 个百分点`);
+  change.dataset.direction=steady?'neutral':adverse?'adverse':'improving';wrap.append(values,change);
+  return wrap;
+}
+function findingCalculation(comparison) {
+  const table=element('table','finding-calculation');
+  table.append(element('caption','visually-hidden','本条观察的比率计算依据'));
+  const head=element('thead',''),headRow=element('tr','');
+  ['周期','分子 / 分母','比率'].forEach(text=>headRow.append(element('th','',text)));head.append(headRow);table.append(head);
+  const body=element('tbody','');
+  [['before',comparison.beforeLabel,comparison.before,comparison.beforeRate],['after',comparison.afterLabel,comparison.after,comparison.afterRate]].forEach(([period,label,counts,rate])=>{
+    const row=element('tr','');row.dataset.period=period;
+    const heading=element('th','',label);heading.scope='row';
+    row.append(heading,element('td','',`${number(counts.numerator)} / ${number(counts.denominator)}`),element('td','',`${rate.toFixed(1)}%`));body.append(row);
+  });
+  table.append(body);
+  const names={13:'价值激活人数 / 合格观鸟注册人数',18:'转正人数 / 成熟试用人数',42:'空触发次数 / 总触发次数'};
+  const wrap=element('div','finding-calculation-basis');
+  wrap.append(element('p','finding-calculation-window',`${comparison.beforeWindow} → ${comparison.afterWindow}`),table,
+    element('p','finding-calculation-note',`${names[comparison.id]}，单位：${comparison.unit}。先合并各周分子、分母，再计算比率；变化为后期比率减前期比率。`));
+  if(comparison.series.some(value=>!Number.isFinite(value)))wrap.append(element('p','finding-calculation-note','样本少于30的周在折线上留空；合并率按整个比较周期的合格人数计算。'));
+  return wrap;
 }
 function metricInspector(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
@@ -2116,28 +2150,30 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     hero.append(card);
   });
   const finding=element('aside','detail-finding');
+  const observation=filteredFinding(page);
   const appendFinding=text=>{
     const end=text.indexOf('。');
     finding.append(element('h3','finding-title',end>=0?text.slice(0,end):text));
+    if(observation?.comparison)finding.append(findingComparison(observation.comparison));
     if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
   };
   let findingMetric=defaultFindingMetric[page];
   if(selectedFilters().length) {
-    const observation=filteredFinding(page);
     findingMetric=observation?.id??selectedMetric;
     finding.append(element('span','insight-tag','筛后观察'));
     appendFinding(observation?
       `${observation.text} 所选条件：${activeFilterDescription()}。`:
       '当前筛选下，本页关键指标均无适用的模拟事实；请调整筛选条件。');
   } else {
-    const observation=filteredFinding(page);
     findingMetric=observation?.id??findingMetric;
     finding.append(element('span','insight-tag','关键观察'));
     appendFinding(observation?.text??info.finding);
   }
   const findingBasis=element('details','finding-basis');
-  findingBasis.append(element('summary','','合成数据 · 查看观察依据'),element('p','finding-meta',
-    `演示文案规则 ${findingRuleVersion} · 证据指标 #${String(findingMetric).padStart(2,'0')} · ${findingSource(findingMetric)}。不作因果归因。`));
+  findingBasis.append(element('summary','','合成数据 · 查看观察依据'));
+  if(observation?.comparison)findingBasis.append(findingCalculation(observation.comparison));
+  findingBasis.append(element('p','finding-meta',
+    `演示文案规则 ${findingRuleVersion} · 证据指标 #${String(findingMetric).padStart(2,'0')} · ${observation?.comparison?.source??findingSource(findingMetric)}。不作因果归因。`));
   finding.append(findingBasis);
   const cross=element('a','insight-link','查看本条指标证据 ↓');
   cross.href=routeHref(page,findingMetric);finding.append(cross);

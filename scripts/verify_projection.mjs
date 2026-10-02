@@ -141,6 +141,45 @@ assert.equal(evaluate('trialRows({...trialState(),week:undefined},"current").row
 assert.equal(evaluate('trendValues(18)'),null);
 assert.equal(evaluate('homeComparisons().some(item=>item.id===18)'),false,'A pooled sample must not imply a weekly trend when every week is suppressed');
 project({});
+for(const [id,page,split,numerator,denominator] of [
+  [13,'A',8,week=>week.registrationCohort.valueActivated7dBird,week=>week.registrationCohort.birdEligible],
+  [42,'C',8,week=>week.deviceEventsBird.empty,week=>week.deviceEventsBird.triggers],
+  [18,'D',9,week=>week.trialMaturity.converted,week=>week.trialMaturity.completed],
+]) {
+  const comparison=evaluate(`filteredFinding("${page}").comparison`);
+  for(const [period,rows] of [['before',fixtures.weekly.slice(0,split)],['after',fixtures.weekly.slice(split)]]) {
+    const n=rows.reduce((sum,week)=>sum+numerator(week),0),d=rows.reduce((sum,week)=>sum+denominator(week),0);
+    assert.equal(comparison[period].numerator,n);
+    assert.equal(comparison[period].denominator,d);
+    assert.equal(comparison[`${period}Rate`],n/d*100);
+  }
+  project({week:'2'});
+  const selected=evaluate(`filteredFinding("${page}").comparison`);
+  assert.equal(selected.selectedWeek,2);
+  assert.equal(selected.before.numerator,numerator(fixtures.weekly[0]));
+  assert.equal(selected.after.denominator,denominator(fixtures.weekly[1]));
+  assert.match(selected.beforeWindow,/W1/);
+  assert.match(selected.afterWindow,/W2/);
+  project({week:'1'});
+  assert.equal(evaluate(`filteredFinding("${page}").comparison`),null,`${page} fabricated a predecessor for the first mature week`);
+  project({});
+}
+evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));
+sourceData.weekly.forEach((week,index)=>{
+  week.registrationCohort.birdEligible=index===0||index===8?1000:100;
+  week.registrationCohort.valueActivated7dBird=index===0?900:index===8?500:index<8?10:30;
+});`);
+project({});
+const weightedStress=evaluate('filteredFinding("A").comparison');
+assert.equal(weightedStress.before.numerator,970);
+assert.equal(weightedStress.before.denominator,1700);
+assert.equal(weightedStress.after.numerator,590);
+assert.equal(weightedStress.after.denominator,1300);
+assert.ok(weightedStress.delta<0,'Unequal cohort sizes reversed the change: averaging percentages would incorrectly show an increase');
+evaluate('sourceData=__fixtures');
+project({country:'UK',productLine:'Bird',subscriptionPlatform:'Web',plan:'Plus',billingCycle:'monthly'});
+assert.equal(evaluate('weeklyRateComparison(18)'),null,'All suppressed weekly samples must not produce a strong comparison');
+project({});
 assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W12 · ${fixtures.weekly.at(-1).weekEnd}`);
 assert.equal(evaluate('actionBaselineWindow(35)'),'完整月 2026-08');
 assert.equal(evaluate('actionBaselineWindow(3)'),`快照 ${fixtures.snapshot.asOf}`);
@@ -216,4 +255,4 @@ assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),
 assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
 evaluate('chart=null;drawTrend(null)');
 assert.equal(evaluate('window.__chartOptions.series.length'),2);
-console.log(`PASS business filters, weighted period comparisons, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+console.log(`PASS business filters, weighted observation evidence and adjacent periods, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
