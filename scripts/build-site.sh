@@ -6,5 +6,6 @@ mkdir -p dist/data dist/vendor
 cp index.html app.js style.css favicon.svg dist/
 cp data/*.json dist/data/
 cp vendor/echarts.min.js dist/vendor/
+cp -R vendor/fonts dist/vendor/
 
 printf 'Prepared %s static files for publication.\n' "$(find dist -type f | wc -l | tr -d ' ')"
