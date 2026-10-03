@@ -347,6 +347,21 @@ assert.equal(evaluate('weeklyRateComparison(18)'),null,'All suppressed weekly sa
 project({});
 assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W12 · ${fixtures.weekly.at(-1).weekEnd}`);
 assert.equal(evaluate('actionBaselineWindow(35)'),'完整月 2026-08');
+assert.equal(evaluate('actionBaselineValue(35)'),
+  '订阅ARPPU：$5.20/人；月内订阅付款主账号：10,000人；订阅净收入：$52,000');
+assert.match(evaluate('actionBaselineValue(25)'),/DAU.*12,600人.*WAU：29,800人.*MAU：68,000人/);
+assert.match(evaluate('actionBaselineValue(8)'),/累计首图激活设备.*台.*当前绑定设备：.*台/);
+assert.match(evaluate('actionBaselineValue(46)'),/关键功能最低成功率.*成功率：/);
+assert.match(evaluate('actionBaselineValue(54)'),/事件丢失率.*ID映射覆盖率：/);
+project({country:'US'});
+const payerBaseline=evaluate('metric(35).value');
+assert.ok(evaluate('actionBaselineValue(35)').includes(`${payerBaseline.monthlySubscriptionPayers.toLocaleString('zh-CN')}人`));
+assert.ok(evaluate('actionBaselineValue(35)').includes(`订阅净收入：$${payerBaseline.subscriptionNetIncome.toLocaleString('zh-CN')}`));
+assert.notEqual(evaluate('actionBaselineValue(35)'),
+  '订阅ARPPU：$5.20/人；月内订阅付款主账号：10,000人；订阅净收入：$52,000');
+project({deviceModel:'K6'});
+assert.equal(evaluate('actionBaselineValue(35)'),'待补数据','Missing facts must not register overall income as a baseline');
+project({});
 assert.equal(evaluate('actionBaselineWindow(3)'),`快照 ${fixtures.snapshot.asOf}`);
 project({week:'2'});
 assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W2 · ${fixtures.weekly[1].weekEnd}`);

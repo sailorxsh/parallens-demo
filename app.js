@@ -1460,6 +1460,17 @@ function metricSecondaryValues(summary) {
   });
   return list;
 }
+function actionBaselineValue(id) {
+  const summary=metricCardSummary(id);
+  if(!summary.fields.length)return `${summary.text}${summary.unit}`;
+  const parts=[`${summary.label}：${summary.text}${summary.unit}`,
+    ...summary.fields.map(([label,value])=>`${label}：${value}`)];
+  if(id===35) {
+    const income=metric(id).value.subscriptionNetIncome;
+    if(Number.isFinite(income))parts.push(`订阅净收入：$${number(income)}`);
+  }
+  return parts.join('；');
+}
 function groupText(value,key='') {
   if (typeof value==='boolean') return value?'是':'否';
   if (typeof value==='number') {
@@ -2052,7 +2063,7 @@ function actionRecord(page,evidenceId) {
   const draft=actionDrafts.get(key),initial=draft??current;
   const hash=[...key].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7).toString(36).toUpperCase();
   const issueId=`DEMO-${page}-${evidenceId}-${hash}`;
-  const baseline=draft?.baseline??current.baseline??displayValue(evidenceId);
+  const baseline=draft?.baseline??current.baseline??actionBaselineValue(evidenceId);
   const baselineAt=draft?.baselineAt??current.baselineAt??actionBaselineWindow(evidenceId);
   const form=element('form','action-record');
   form.noValidate=true;

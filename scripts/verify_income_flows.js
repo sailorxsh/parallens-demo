@@ -30,9 +30,36 @@ async(page)=>{
       }
       sizes.push(width);
     }
-    await open('E?country=US&metric=35');
+    await open('E?metric=35&issue=35');
+    const form=()=>p.locator('.action-record');
+    const baseline=()=>form().locator('> .table-note').first();
+    const expected='订阅ARPPU：$5.20/人；月内订阅付款主账号：10,000人；订阅净收入：$52,000';
+    check((await baseline().innerText()).includes(expected),'Issue registration loses payer or income baseline');
+    await form().locator('[name="owner"]').fill('收入核查');
+    await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
+    const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('parallens-demo-actions-v1')));
+    const key=Object.keys(saved).find(key=>key.startsWith('record:E:')&&key.endsWith(':35'));
+    check(saved[key].baseline===expected&&saved[key].baselineAt==='完整月 2026-08','Saved income baseline is incomplete or uses another window');
+    await p.reload();await form().waitFor();
+    check((await baseline().innerText()).includes(expected),'Reload loses the full saved income baseline');
+    await form().scrollIntoViewIfNeeded();
+    await form().screenshot({path:'output/playwright/v56-04-complete-record.png'});
+    await p.evaluate(key=>{
+      const records=JSON.parse(localStorage.getItem('parallens-demo-actions-v1'));
+      records[key].baseline='$5.20';
+      localStorage.setItem('parallens-demo-actions-v1',JSON.stringify(records));
+    },key);
+    await p.reload();await form().waitFor();
+    check(!(await baseline().innerText()).includes('订阅净收入：'),'Old income baseline was silently expanded');
+    await form().locator('[name="note"]').fill('沿用历史登记值继续核查');
+    await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
+    check(await p.evaluate(key=>JSON.parse(localStorage.getItem('parallens-demo-actions-v1'))[key].baseline,key)==='$5.20',
+      'Editing an old issue rewrites its historical baseline');
+    await open('E?country=US&metric=35&issue=35');
     check((await p.locator('.detail-finding').innerText()).includes('模拟分片估算'),'Filtered attribution masquerades as observed facts');
     check(!((await p.locator('.detail-finding').innerText()).includes('增加 $2,020')),'Country selection retains total income change');
+    check((await baseline().innerText()).includes('订阅净收入：')&&!(await baseline().innerText()).includes('$52,000'),
+      'Filtered issue records overall revenue instead of its current scope');
     await pair().waitFor();check(await pair().locator('svg').count()===1,'Filtered contribution chart missing');
     await p.reload();await pair().waitFor();
     check(p.url().includes('country=US'),'Refresh loses income scope');
@@ -60,6 +87,6 @@ async(page)=>{
     check(!negative.clipped.length&&negative.text.includes('$-2,000'),`Negative contribution label is missing or clipped: ${JSON.stringify(negative)}`);
     check((await p.locator('.detail-finding').innerText()).includes('减少 $2,000'),'Income decrease reported as improvement');
     check(errors.length===0,errors.join('; '));
-    return {status:'PASS',sizes,checks:['visible income comparison','symmetric amounts reconcile','calculation disclosure','observation to income chart','country recomputation and reload','missing scope suppressed','negative contribution and labels','no browser errors or page overflow']};
+    return {status:'PASS',sizes,checks:['visible income comparison','symmetric amounts reconcile','calculation disclosure','observation to income chart','complete issue baseline saved and reloaded','historical baseline preserved on edit','filtered issue baseline','country recomputation and reload','missing scope suppressed','negative contribution and labels','no browser errors or page overflow']};
   } finally {await context.close();}
 }
