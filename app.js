@@ -536,9 +536,10 @@ function definition(id,label=catalogItem(id)?.name ?? '指标') {
 }
 function closeDefinitionPopover() {
   const popover=document.querySelector('#metric-definition-popover');
+  const wasOpen=popover&&(popover.showPopover?popover.matches(':popover-open'):!popover.hidden);
   if (popover?.showPopover && popover.matches(':popover-open')) popover.hidePopover();
   else if (popover) {popover.hidden=true;popover.classList.remove('definition-fallback-open');}
-  if(definitionReturnFocus?.isConnected) definitionReturnFocus.focus({preventScroll:true});
+  if(wasOpen&&definitionReturnFocus?.isConnected) definitionReturnFocus.focus({preventScroll:true});
 }
 function card({id,label,value,page,detail,status='',severity='neutral',star=false,kind='snapshot'}) {
   const article = element('article',kind==='journey' ? `journey-card${star?' star':''}` : 'snapshot-card');

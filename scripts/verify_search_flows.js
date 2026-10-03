@@ -18,6 +18,10 @@ async (page) => {
   };
   try {
     await p.goto(`${base}#/B?country=US`);await p.locator('.detail-kpi').first().waitFor();
+    await p.locator('.detail-kpi[data-metric-id="25"] .definition-trigger').click();
+    await p.locator('#metric-definition-popover .definition-close').click();
+    check(await p.locator('.detail-kpi[data-metric-id="25"] .definition-trigger').evaluate(node=>document.activeElement===node),
+      'Closing a visible definition did not restore its trigger focus');
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
       await p.setViewportSize({width,height});
       await p.locator('#open-metric-search').click();
@@ -39,6 +43,9 @@ async (page) => {
       check(await p.locator('#open-metric-search').evaluate(node=>document.activeElement===node),'Dismissal lost the trigger focus');
       results.push({width,height,status:'PASS'});
     }
+    const priorFocus=p.locator('.detail-kpi[data-metric-id="25"] .detail-select');
+    await priorFocus.focus();await p.keyboard.press('Control+k');await p.keyboard.press('Escape');
+    check(await priorFocus.evaluate(node=>document.activeElement===node),'A closed definition stole shortcut dismissal focus');
     await p.keyboard.press('Control+k');await lookup('DAU');await p.keyboard.press('Enter');
     await p.locator('#metric-evidence-25').waitFor();
     check(p.url().includes('country=US')&&p.url().includes('metric=25'),'Alias selection lost the supported filter or metric');
