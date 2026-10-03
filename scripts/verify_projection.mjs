@@ -22,6 +22,35 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+// Pending outcomes never become false conversions or enter mature denominators.
+const readiness=state=>JSON.parse(JSON.stringify(evaluate(`trialReadiness(${JSON.stringify(state)})`)));
+let ready=readiness({});
+assert.deepEqual(ready.batches.map(b=>[b.end,b.status,b.expected,b.received,b.missing,b.ready]),[
+  ['2026-09-27','观察未结束',300,null,null,false],['2026-09-20','结果待齐',300,248,52,false]]);
+assert.deepEqual(readiness({week:'1'}),ready,'Mature week selection must not suppress separate readiness dates');
+for(const filters of [{country:'US'},{appPlatform:'Android'},{productLine:'Hunting'},
+  {country:'DE',productLine:'Hunting',plan:'Starter',billingCycle:'monthly',subscriptionPlatform:'Google Play'}]) {
+  const expected=fixtures.trialFacts.readiness.records.filter(r=>r.batch_end==='2026-09-20'&&
+    Object.entries(filters).every(([key,value])=>r[({appPlatform:'app_platform',productLine:'product_line',billingCycle:'billing_cycle',subscriptionPlatform:'subscription_platform'})[key]??key]===value));
+  const batch=readiness(filters).batches[1];
+  assert.equal(batch.expected,expected.reduce((sum,r)=>sum+r.expected_outcomes,0));
+  assert.equal(batch.received,expected.reduce((sum,r)=>sum+r.received_outcomes,0));
+}
+assert.equal(readiness({country:'Other'}).batches.length,0);
+assert.match(readiness({country:'Other'}).reason,/暂无.*不能据此/);
+assert.deepEqual(readiness({deviceModel:'K6'}),ready,'Device model is outside trial batch scope');
+assert.equal(project({week:'12'}).m18.value,.434);
+assert.equal(evaluate('trialAggregate(trialRows({}).rows).denominator'),12000);
+evaluate('sourceData={...__fixtures,trialFacts:{...__fixtures.trialFacts,readiness:{...__fixtures.trialFacts.readiness,as_of:"2026-09-25"}}}');
+assert.equal(readiness({}).batches.length,0,'Do not display readiness from another snapshot');
+evaluate('sourceData=__fixtures');
+evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.trialFacts.readiness.records[0].received_outcomes=null');
+const unknownCount=readiness({}).batches[1];
+assert.equal(unknownCount.status,'结果待齐');
+assert.equal(unknownCount.observed,true);
+assert.equal(unknownCount.received,null);
+assert.equal(unknownCount.missing,null,'Unknown received outcomes must not become zero');
+evaluate('sourceData=__fixtures');
 for(const week of fixtures.weekly) {
   const rows=week.deviceEventsBird.records;
   assert.equal(rows.reduce((sum,row)=>sum+row.triggers,0),week.deviceEventsBird.triggers);

@@ -138,6 +138,63 @@ function trialAggregate(rows) {
   }
   return {denominator,numerator,value:denominator?numerator/denominator:null,attempts,failed};
 }
+function trialReadiness(state=filterState) {
+  const source=sourceData.trialFacts.readiness;
+  if(!source||source.as_of!==sourceData.snapshot.asOf)return {batches:[],reason:'暂无当前快照的批次可用性样例'};
+  const scoped=trialState(state);
+  const fields={country:'country',appPlatform:'app_platform',productLine:'product_line',
+    subscriptionPlatform:'subscription_platform',plan:'plan',billingCycle:'billing_cycle'};
+  const unsupported=Object.keys(scoped).find(key=>key!=='week'&&!fields[key]);
+  if(unsupported)return {batches:[],reason:`批次可用性样例待补${filterLabels[unsupported]}明细`};
+  const rows=source.records.filter(row=>Object.entries(fields).every(([key,field])=>!scoped[key]||row[field]===scoped[key]));
+  if(!rows.length)return {batches:[],reason:'当前条件暂无批次可用性样例；不能据此判断没有待齐批次'};
+  const batches=[...new Set(rows.map(row=>row.batch_end))].sort().reverse().map(end=>{
+    const groups=rows.filter(row=>row.batch_end===end);
+    const observationEnd=groups[0].observation_end;
+    const expected=groups.reduce((sum,row)=>sum+row.expected_outcomes,0);
+    const observed=observationEnd<=source.as_of;
+    const received=observed&&groups.every(row=>Number.isInteger(row.received_outcomes))?
+      groups.reduce((sum,row)=>sum+row.received_outcomes,0):null;
+    const ready=observed&&received===expected;
+    return {end,observationEnd,expected,received,observed,groups,
+      status:!observed?'观察未结束':ready?'结果已齐':'结果待齐',
+      ready,missing:received===null?null:expected-received};
+  });
+  return {batches};
+}
+function trialReadinessPanel() {
+  const panel=element('section','entity-workspace trial-readiness');
+  panel.append(element('h3','','批次数据可用性'),element('p','table-note',
+    `快照 ${sourceData.snapshot.asOf} · 独立合成样例。业务条件沿用试用转正指标；统计周仅控制上方 W1–W12 成熟趋势，本区按下列批次日期核对。`));
+  const ignored=selectedFilters().filter(([key])=>key!=='week'&&!policyFor(18).businessDimensions.includes(key));
+  if(ignored.length)panel.append(element('p','table-note',`${ignored.map(([key])=>filterLabels[key]).join('、')}不适用于试用批次，本区不应用这些条件。`));
+  const result=trialReadiness();
+  if(!result.batches.length) {panel.append(element('p','na-note',result.reason));return panel;}
+  const grid=element('div','trial-readiness-grid');
+  result.batches.forEach(batch=>{
+    const card=element('article','trial-readiness-card');card.dataset.batchEnd=batch.end;
+    const header=element('div','trial-readiness-header');
+    header.append(element('h4','',`${batch.end} 试用结束批次`),element('span','trial-readiness-status',batch.status));
+    card.append(header,element('p','trial-readiness-count',!batch.observed?
+      `${number(batch.expected)} 人待完成观察`:batch.received===null?`应齐 ${number(batch.expected)} 人 · 已齐数量待核验`:
+        `已齐 ${number(batch.received)} / 应齐 ${number(batch.expected)} 人`),
+      element('p','table-note',!batch.observed?`观察截止 ${batch.observationEnd}；尚不核算最终转正结果。`:
+        batch.received===null?`观察已于 ${batch.observationEnd} 结束；需补齐回流计数后核对结果。`:
+        `观察截止 ${batch.observationEnd}；${batch.missing?`仍缺 ${number(batch.missing)} 人的最终结果，需核对迟到与缺失记录。`:'当前样例结果已齐。'}`),
+      element('p','trial-readiness-rule',batch.ready?'样例结果已齐；未并入本页 W1–W12 历史。':'未纳入转正率分母；转正率 —'));
+    const details=element('details','trial-readiness-details');
+    details.append(element('summary','','核对分组与应齐 / 已齐人数'));
+    details.append(dataTable({title:`${batch.end} 批次可用性合成分组`,
+      columns:['业务分组','应齐人数','已齐人数','尚缺人数'],
+      rows:batch.groups.map(row=>[`${optionLabel('country',row.country)} · ${row.product_line==='Bird'?'观鸟':'狩猎'} · ${row.app_platform} · ${row.subscription_platform} · ${row.plan} · ${optionLabel('billingCycle',row.billing_cycle)}`,
+        number(row.expected_outcomes),row.received_outcomes===null?'—':number(row.received_outcomes),
+        row.received_outcomes===null?'—':number(row.expected_outcomes-row.received_outcomes)]),
+      note:'互斥分组人数可相加；— 表示尚不可核验。计数是可用性样例，不是转正人数，不与成熟试用明细混合。'}));
+    card.append(details);grid.append(card);
+  });
+  panel.append(grid,element('p','table-note','样例仅覆盖部分交叉组合；未提供样例的范围显示待补数据，不显示为 0 或全部正常。'));
+  return panel;
+}
 function trialMetric(state=filterState) {
   const selectedWeek=state.week??String(sourceData.weekly.at(-1).week);
   const result=trialRows({...state,week:selectedWeek});
@@ -2529,6 +2586,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     if(!evidence.querySelector('.detail-chart-panel,.entity-workspace'))
       evidence.append(element('p','table-note','当前条件下没有额外的可比趋势；完整指标值与适用性见上方数据核对。'));
   }
+  if(page==='D')evidence.insertBefore(trialReadinessPanel(),evidence.children[1]??null);
   body.append(evidence,evidenceFor.node,actionQueue(page),metricInventory(page));
   const navigation=element('nav','section-navigation');navigation.setAttribute('aria-label','本页章节');
   const labels=['关键指标','趋势与观察','分组证据','数据核对','行动与复查','全部指标'];

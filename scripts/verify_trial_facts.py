@@ -5,9 +5,11 @@ from datetime import date
 from pathlib import Path
 
 DATA=Path(__file__).resolve().parents[1]/'data'
-rows=json.loads((DATA/'trial-facts.json').read_text())['records']
+artifact=json.loads((DATA/'trial-facts.json').read_text())
+rows=artifact['records']
 weeks=json.loads((DATA/'weekly.json').read_text())
 assert len(rows)==12000
+assert all(r['cohort_mature'] for r in rows)
 assert len({r['trial_id'] for r in rows})==len(rows)
 assert len({r['user_id'] for r in rows})==len(rows)
 assert all((date.fromisoformat(r['trial_ended_at'])-date.fromisoformat(r['trial_started_at'])).days==7 for r in rows)
@@ -50,4 +52,22 @@ for country,platform,plan in [('US','Android','Plus'),('UK','iOS','Pro'),('DE','
     assert sum(r['converted'] for r in selected)<=len(selected)
 assert not [r for r in rows if r['country']=='FR']
 assert len([r for r in rows if r['week']==12 and r['country']=='Other' and r['product_line']=='Bird' and r['plan']=='Plus'])==20
-print('PASS 12,000 synthetic trial facts: cohort windows, payments, 12 weekly totals, cross-filter intersections, small/empty samples')
+readiness=artifact['readiness']
+assert readiness['as_of']==json.loads((DATA/'snapshot.json').read_text())['asOf']
+examples=readiness['records']
+assert len(examples)==8
+assert len({tuple(r[key] for key in ['batch_end','country','app_platform','product_line','subscription_platform','plan','billing_cycle']) for r in examples})==8
+for r in examples:
+    assert r['batch_end']>artifact['latest_complete_week']
+    assert (date.fromisoformat(r['observation_end'])-date.fromisoformat(r['batch_end'])).days==3
+    assert r['expected_outcomes']>0
+    if r['observation_end']>readiness['as_of']:
+        assert r['received_outcomes'] is None
+    else:
+        assert 0<=r['received_outcomes']<r['expected_outcomes']
+    assert 'converted' not in r and 'user_id' not in r
+    assert r['plan'] in ({'Plus','Pro'} if r['product_line']=='Bird' else {'Starter','Plus','Pro'})
+    assert r['subscription_platform'] in ({'App Store','Web'} if r['app_platform']=='iOS' else {'Google Play','Web'})
+assert sum(r['expected_outcomes'] for r in examples if r['batch_end']=='2026-09-20')==300
+assert sum(r['received_outcomes'] for r in examples if r['batch_end']=='2026-09-20')==248
+print('PASS 12,000 mature trial facts unchanged; 8 independent readiness buckets, unfinished observation, missing outcomes, filterable business dimensions')

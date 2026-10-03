@@ -53,6 +53,21 @@ for week in WEEKS:
     assert len(focus)==400
     assert sum(r['payment_status']=='failed' for r in focus)==(6 if week['week']<=9 else 22)
     assert sum(r['converted'] for r in focus)==(194 if week['week']<=9 else 178)
+# Readiness examples are disjoint aggregate buckets, not trial outcome facts.
+# Null means observation is unfinished; an absent bucket means no example.
+readiness_groups=[
+ ('US','Android','Bird','Google Play','Plus','monthly',120,100),
+ ('UK','iOS','Bird','App Store','Pro','annual',80,68),
+ ('DE','Android','Hunting','Google Play','Starter','monthly',60,49),
+ ('US','iOS','Hunting','App Store','Plus','monthly',40,31),
+]
+readiness_rows=[]
+for end,observed in [('2026-09-20','2026-09-23'),('2026-09-27','2026-09-30')]:
+    for country,app,product,platform,plan,cycle,expected,received in readiness_groups:
+        readiness_rows.append(dict(batch_end=end,observation_end=observed,country=country,
+            app_platform=app,product_line=product,subscription_platform=platform,plan=plan,
+            billing_cycle=cycle,expected_outcomes=expected,
+            received_outcomes=received if observed<='2026-09-24' else None))
 artifact={
  'classification':'entirely_synthetic',
  'scenario':'12 mature trial weeks; W1-W9 baseline and W10-W12 change',
@@ -62,6 +77,13 @@ artifact={
  'dimensions':['week','country','app_platform','product_line','subscription_platform','plan','billing_cycle'],
  'limitations':['Synthetic demonstration; no real person or transaction.','Starter exists only for Hunting; Free is not a paid trial.','Payment failure association does not establish cause.','Other is a residual geography, not a country.'],
  'records':rows,
+ 'readiness':{
+   'as_of':'2026-09-24',
+   'classification':'entirely_synthetic',
+   'grain':'disjoint batch x business-dimension aggregate buckets; separate from mature trial facts',
+   'coverage':'selected example intersections only; absence is unknown, never zero',
+   'records':readiness_rows,
+ },
 }
 path=ROOT/'prototype/data/trial-facts.json'
 path.write_text(json.dumps(artifact,ensure_ascii=False,separators=(',',':'))+'\n')

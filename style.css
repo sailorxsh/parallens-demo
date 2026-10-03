@@ -542,6 +542,20 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .inspector-close {display:block;margin:0 0 .55rem auto;border:0;background:none;color:#52745e;cursor:pointer;font:inherit;font-size:.71rem;text-decoration:underline;text-underline-offset:.18rem}
 .inspector-close:focus-visible {outline:2px solid var(--orange);outline-offset:2px}
 .trial-samples h3 {font-size:.95rem;margin:0 0 .35rem}
+.trial-readiness {container-type:inline-size;margin:0 0 1rem}
+.trial-readiness h3 {font-size:.95rem;margin:0 0 .35rem}
+.trial-readiness-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-top:.8rem;align-items:start}
+.trial-readiness-card {min-width:0;padding:.9rem;border:1px solid var(--line);border-radius:var(--card-radius);background:#fafcf7}
+.trial-readiness-header {display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
+.trial-readiness-header h4 {margin:0;font-size:.85rem}
+.trial-readiness-status {color:#815018;background:#f5ecd8;border:1px solid #e3d4b6;border-radius:1rem;padding:.15rem .5rem;font-size:.75rem}
+.trial-readiness-count {font-size:1.25rem;font-weight:650;color:var(--forest-soft);margin:.75rem 0 .35rem;font-variant-numeric:tabular-nums}
+.trial-readiness-rule {font-size:.75rem;color:#536752;margin:.65rem 0}
+.trial-readiness-details summary {font-size:.75rem;color:#815018;cursor:pointer;text-underline-offset:.2rem}
+.trial-readiness-details summary:focus-visible {outline:2px solid #6d926c;outline-offset:.25rem}
+.trial-readiness-details .diagnostic-table {min-width:0}
+.trial-readiness-details .diagnostic-table tbody th {white-space:normal;min-width:12rem}
+@container (max-width:800px) {.trial-readiness-grid {grid-template-columns:minmax(0,1fr)}}
 .trial-sample-list {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.5rem;margin-top:.7rem}
 .trial-sample-item {display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;min-width:0;border:1px solid #d5e1d2;background:#fbfdf9;color:#2a4433;border-radius:.38rem;padding:.55rem .65rem;text-align:left;cursor:pointer;font:inherit;font-size:.68rem}
 .trial-sample-item:hover,.trial-sample-item:focus-visible {border-color:#7da98a;outline:2px solid #a9c7a8;outline-offset:1px}
