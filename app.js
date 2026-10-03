@@ -27,6 +27,7 @@ const filterDisclosure=new Map();
 let startupInProgress=false;
 let appEventsBound=false;
 let lastRenderedHash;
+let incomeWorkspaceView='change';
 const chartAnimationDuration=duration=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:duration;
 let definitionReturnFocus;
 let chart;
@@ -226,12 +227,14 @@ function routeHref(page='',metricId) {
   if (metricId) params.set('metric',String(metricId));
   const issue=activeIssueMetrics.get(issueScopeKey(page));
   if(issue)params.set('issue',String(issue));
+  if(page==='E'&&incomeWorkspaceView!=='change')params.set('panel',incomeWorkspaceView);
   return `#/${page}${params.size?`?${params}`:''}`;
 }
 function readRoute() {
   const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
+  incomeWorkspaceView=page==='E'&&['change','groups','data'].includes(params.get('panel'))?params.get('panel'):'change';
   filterState={};
   for (const key of relevantFilters(pages[page]?page:'')) if(params.has(key)&&
     availableOptions(pages[page]?page:'',key,filterState).includes(params.get(key)))filterState[key]=params.get(key);
@@ -1837,8 +1840,9 @@ function metricEvidence(id,page) {
   panel.append(registerIssueButton(page,id));
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
   const specs=[];
-  const appendEvidencePair=(spec,tableSpec)=>{
+  const appendEvidencePair=(spec,tableSpec,kind='groups')=>{
     const pair=element('div','evidence-pair');
+    pair.dataset.evidenceKind=kind;
     const plot=element('div','evidence-plot');
     const box=element('div','detail-chart');box.setAttribute('role','img');
     box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
@@ -1861,7 +1865,7 @@ function metricEvidence(id,page) {
     if(qualityDetails)rows.forEach((row,index)=>row.push(qualityDetails[index]?number(qualityDetails[index].numerator):'—',
       qualityDetails[index]?number(qualityDetails[index].denominator):'—'));
     appendEvidencePair(spec,{title:`${history.title} · 趋势数据`,columns:qualityDetails?['日期','丢失率','丢失事件（次）','预期事件（次）']:['周期','值'],rows,
-      note:history.note});
+      note:history.note},'change');
     if(id===54)panel.append(element('p','table-note','ID映射覆盖率仅有当前快照，暂无可比历史；当前分子、分母见下方完整值。'));
   }
   if(id===3&&!selectedFilters().length) {
@@ -1923,24 +1927,26 @@ function metricEvidence(id,page) {
     panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
   } else if(id===35&&value.kind==='group') {
     const incomeChange=subscriptionIncomeChange();
-    if(incomeChange)appendEvidencePair(subscriptionIncomeSpec(incomeChange),subscriptionIncomeCalculationSpec(incomeChange));
+    if(incomeChange)appendEvidencePair(subscriptionIncomeSpec(incomeChange),subscriptionIncomeCalculationSpec(incomeChange),'change');
     const dimension=selectedFilters().map(([key])=>key).find(key=>key!=='week'&&contract.dimensions.includes(key)&&sourceData.slices[key])
       ??contract.dimensions.find(key=>key!=='week'&&sourceData.slices[key]);
     if(dimension) {
       const options=Object.keys(sourceData.slices[dimension]);
       const parts=options.map(option=>projectMetric(id,{...filterState,[dimension]:option}));
-      const labels=options.map(option=>optionLabels[option]??option);
+      const labels=options.map(option=>`${optionLabels[option]??option}${filterState[dimension]===option?'（当前）':''}`);
+      const groupNote=`保留当前其他筛选条件，仅切换${filterLabels[dimension]}进行组间对照；${filterState[dimension]?`当前选择为${optionLabel(dimension,filterState[dimension])}。`:'当前未限定该维度。'}付款人数与ARPPU分别呈现，不使用双Y轴；各组为模拟分片估算。`;
       for(const [title,unit,field] of [['月度订阅付款主账号','人','monthlySubscriptionPayers'],['订阅ARPPU','美元/人','ARPPU']]) {
         const spec={title:`${filterLabels[dimension]} · ${title}`,unit,labels,
           series:[{name:title,values:parts.map(part=>part.kind==='group'?part.value[field]:null)}],
-          note:'同一筛选人口；付款人数与人均收入分别呈现，不使用双Y轴。'};
+          note:groupNote};
         const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
         panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
       }
-      panel.append(dataTable({title:`${filterLabels[dimension]} · 付款人数与ARPPU验算`,
+      const groupTable=dataTable({title:`${filterLabels[dimension]} · 付款人数与ARPPU验算`,
         columns:['分组','付款主账号','订阅净收入','ARPPU'],
         rows:parts.map((part,index)=>part.kind==='group'?[labels[index],number(part.value.monthlySubscriptionPayers),`$${number(part.value.subscriptionNetIncome)}`,`$${part.value.ARPPU.toFixed(2)}`]:[labels[index],'不适用','—','—']),
-        note:'订阅净收入除以同组付款主账号；金额与人数均为模拟分片。'}));
+        note:`订阅净收入除以同组付款主账号。${groupNote}`});
+      groupTable.dataset.evidenceKind='groups';panel.append(groupTable);
     }
   } else if(id===39&&value.kind==='group') {
     const entries=Object.entries(value.value);
@@ -1977,8 +1983,9 @@ function metricEvidence(id,page) {
       }),note:groupNote});
     }
   }
-  panel.append(dataTable({title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
-    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}));
+  const fullValue=dataTable({title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
+    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`});
+  fullValue.dataset.evidenceKind='data';panel.append(fullValue);
   return {node:panel,specs};
 }
 function metricInventory(page) {
@@ -2043,7 +2050,7 @@ function registerIssue(page,id) {
   history.pushState(null,'',routeHref(page,id));
   renderRoute({preserveScroll:true});
   const form=document.querySelector('.action-record');
-  form?.scrollIntoView({block:'center',behavior:'instant'});
+  (page==='E'?document.querySelector('.income-workspace'):form)?.scrollIntoView({block:page==='E'?'start':'center',behavior:'instant'});
   form?.querySelector('[name="owner"]')?.focus({preventScroll:true});
   document.querySelector('#announcement').textContent=`已打开 #${id} ${catalogItem(id).name} 的当前范围问题单；填写后保存本地记录`;
 }
@@ -2161,7 +2168,7 @@ function actionRecord(page,evidenceId) {
   });
   return form;
 }
-function actionQueue(page) {
+function actionQueue(page,defaultMetric) {
   const info=dataset.diagnostics[page];
   const section=element('section','detail-section action-section');
   if(selectedFilters().length) {
@@ -2194,7 +2201,7 @@ function actionQueue(page) {
       if(summary.context)row.children[1].append(element('p','metric-table-context',summary.context));
     });
     section.append(checks);
-    section.append(actionRecord(page,findingId??info.heroIds[0]));
+    section.append(actionRecord(page,defaultMetric??findingId??info.heroIds[0]));
     return section;
   }
   section.append(sectionTitle('05  /  ACTION QUEUE','模拟行动出口','演示样本，处理记录保存在此浏览器；不会触达用户或连接外部系统'));
@@ -2228,7 +2235,7 @@ function actionQueue(page) {
     });
     cell.append(evidenceLink,button);tr.append(status,time,cell);body.append(tr);
   });
-  table.append(body);wrap.append(table);section.append(wrap,element('p','table-note','指标依据用于核对同类信号；演示样本不参与总体聚合。清单标记与下方问题单的处理、复查进度分别登记。'),feedback,actionRecord(page,defaultFindingMetric[page]));
+  table.append(body);wrap.append(table);section.append(wrap,element('p','table-note','指标依据用于核对同类信号；演示样本不参与总体聚合。清单标记与问题单的处理、复查进度分别登记。'),feedback,actionRecord(page,defaultMetric??defaultFindingMetric[page]));
   return section;
 }
 function filteredFinding(page) {
@@ -2447,6 +2454,183 @@ function entitySamplesPanel(page) {
   grid.append(list,detail);panel.append(grid);select(records[0],0);
   return panel;
 }
+function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingMetric) {
+  body.classList.add('income-page');
+  const evidence=metricEvidence(selectedMetric,'E'),specs=[...evidence.specs];
+  const workspace=element('section','income-workspace');workspace.id='E-diagnosis';
+  const layout=element('div','income-workspace-grid');
+  const left=evidence.node;left.classList.add('income-evidence');
+  const original=[...left.children];
+  const heading=original[0];heading.querySelector('.section-kicker')?.remove();
+  const register=original.find(node=>node.matches('.issue-register'));if(register)heading.append(register);
+  const tabs=element('div','income-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','付费价值证据');
+  const panels=new Map(),buttons=new Map();
+  for(const [key,label] of [['change','变化拆分'],['groups','分组证据'],['data','完整数据']]) {
+    const button=element('button','income-tab',label);button.type='button';button.id=`E-tab-${key}`;
+    button.setAttribute('role','tab');button.setAttribute('aria-controls',`E-panel-${key}`);
+    const panel=element('div','income-panel');panel.id=`E-panel-${key}`;panel.tabIndex=0;
+    panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);
+    tabs.append(button);panels.set(key,panel);buttons.set(key,button);
+  }
+  left.replaceChildren(heading,original[1],tabs,...panels.values());
+  let previousKind='data';
+  for(const node of original.slice(2)) {
+    if(node.matches('.issue-register'))continue;
+    const kind=node.dataset.evidenceKind??(node.matches('.na-note')?'change':node.matches('.detail-chart')?'groups':
+      node.matches('.table-note')?previousKind:'data');
+    previousKind=kind;
+    if(node.matches('.detail-chart')) {
+      const title=specs.find(([box])=>box===node)?.[1].title;
+      if(title)panels.get(kind).append(element('h3','workspace-chart-title',title));
+    }
+    panels.get(kind).append(node);
+  }
+  // Keep the full calculation adjacent but reveal it on demand at desktop widths.
+  for(const pair of left.querySelectorAll('.evidence-pair')) {
+    const table=pair.querySelector(':scope > .data-table-scroll');
+    const disclosure=element('details','workspace-calculation');
+    disclosure.append(element('summary','','查看计算依据与完整数值'),table);pair.append(disclosure);
+  }
+  const addChart=(container,spec)=>{
+    spec=diagnosticChartFacts('E',spec);
+    const panel=element('div','detail-chart-panel workspace-chart-panel');
+    panel.append(element('h3','workspace-chart-title',spec.title));
+    const box=element('div','detail-chart');box.setAttribute('role','img');
+    box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
+    panel.append(box);
+    const scale=chartScaleNote(spec);if(scale)panel.append(element('p','chart-scale-note',scale));
+    panel.append(element('p','table-note',spec.note),chartTable(spec));
+    container.append(panel);specs.push([box,spec]);
+  };
+  if(selectedMetric===35) {
+    const histories=[paidPayersHistory(),metricHistory(35)].filter(Boolean);
+    if(histories.length) {
+      const trends=element('details','workspace-context');
+      trends.append(element('summary','','查看付款人数与ARPPU趋势'));
+      for(const history of histories)addChart(trends,{title:`${history.title} · 最近3个完整月`,unit:history.unit,
+        labels:history.labels,details:history.details,series:[{name:history.title,values:history.values}],note:history.note});
+      panels.get('change').append(trends);
+    }
+  }
+  const info=dataset.diagnostics.E;
+  const context=element('details','workspace-context');context.append(element('summary','','其他付费结构与型号对照'));
+  const ranking=modelSubscriptionRanking();
+  if(ranking){addChart(context,ranking.spec);context.append(dataTable(ranking.table));}
+  if(!hasDataFilters('E')) {
+    info.extraCharts.slice(1).forEach(spec=>addChart(context,spec));
+    if(info.structureViews) {
+      const explorer=structureExplorer(info.structureViews);context.append(explorer.node);
+      context.addEventListener('toggle',()=>{if(context.open&&!explorer.node.dataset.initialized){explorer.init();explorer.node.dataset.initialized='true';}});
+    }
+    const tables=element('details','workspace-context');tables.append(element('summary','','查看付费专题其他完整数据'));
+    info.tables.forEach(spec=>tables.append(dataTable(spec)));panels.get('data').append(tables);
+  }
+  if(context.children.length>1)panels.get('groups').append(context);
+  const queue=actionQueue('E',selectedMetric),form=queue.querySelector('.action-record');
+  const queueDetails=element('details','workspace-context');queueDetails.append(element('summary','','查看核查对象与演示行动清单'));
+  queueDetails.append(queue);panels.get('data').append(queueDetails);
+  const right=element('aside','income-context');right.setAttribute('aria-label','当前观察与问题登记');
+  const rightControls=element('div','income-context-controls');
+  const observationButton=element('button','','关键观察'),recordButton=element('button','','问题登记');
+  observationButton.type=recordButton.type='button';
+  observationButton.setAttribute('aria-controls','E-workspace-observation');recordButton.setAttribute('aria-controls','E-workspace-record');
+  rightControls.append(observationButton,recordButton);
+  finding.id='E-workspace-observation';
+  finding.querySelector('.insight-tag').textContent+=` · #${String(findingMetric).padStart(2,'0')}`;
+  if(metric(findingMetric).kind!=='na')finding.append(registerIssueButton('E',findingMetric));
+  else finding.append(element('p','table-note','当前证据待补数据或不适用；补齐可核验数据后再登记。'));
+  const record=element('div','income-record');record.id='E-workspace-record';
+  record.append(element('p','workspace-record-hint','当前范围的问题单 · 保存仅保留在此浏览器'),form);
+  right.append(rightControls,finding,record);
+  const showRight=mode=>{
+    finding.hidden=mode==='record';record.hidden=mode!=='record';
+    observationButton.setAttribute('aria-pressed',String(mode!=='record'));
+    recordButton.setAttribute('aria-pressed',String(mode==='record'));
+  };
+  observationButton.addEventListener('click',()=>showRight('observation'));
+  recordButton.disabled=metric(selectedMetric).kind==='na'&&!activeIssueMetrics.get(issueScopeKey('E'));
+  recordButton.addEventListener('click',()=>{
+    const id=Number(form.querySelector('[name="issueMetric"]').value);
+    activeIssueMetrics.set(issueScopeKey('E'),id);
+    const params=new URLSearchParams(location.hash.split('?')[1]??'');params.set('issue',String(id));
+    history.replaceState(null,'',`#/E?${params}`);lastRenderedHash=location.hash;
+    syncIncomeLinks();showRight('record');
+  });
+  const routeParams=new URLSearchParams(location.hash.split('?')[1]??'');
+  showRight(routeParams.has('issue')?'record':'observation');
+  const initialView=routeParams.has('panel')?incomeWorkspaceView:
+    panels.get('change').querySelector('.detail-chart,.na-note')?'change':
+      panels.get('groups').querySelector(':scope > .detail-chart,:scope > .evidence-pair')?'groups':'data';
+  function syncIncomeLinks() {
+    for(const link of document.querySelectorAll('a[href]')) {
+      const href=link.getAttribute('href');if(!/^#\/E(?:\?|$)/.test(href))continue;
+      const params=new URLSearchParams(href.split('?')[1]??'');
+      const issue=activeIssueMetrics.get(issueScopeKey('E'));
+      if(issue)params.set('issue',String(issue));else params.delete('issue');
+      if(incomeWorkspaceView==='change')params.delete('panel');else params.set('panel',incomeWorkspaceView);
+      link.href=`#/E${params.size?`?${params}`:''}`;
+    }
+  }
+  const drawVisible=()=>{
+    for(const [box,spec] of specs) {
+      let closed=false;
+      for(let ancestor=box.parentElement;ancestor&&ancestor!==workspace;ancestor=ancestor.parentElement)
+        if(ancestor.hidden||ancestor.tagName==='DETAILS'&&!ancestor.open){closed=true;break;}
+      if(closed||!box.isConnected||!box.getClientRects().length||!box.clientWidth)continue;
+      const existing=window.echarts?.getInstanceByDom(box);
+      if(existing)existing.resize();else drawEvidenceChart(box,spec);
+    }
+    updateScrollableTables();
+  };
+  const activate=(key,{focus=false,push=false}={})=>{
+    incomeWorkspaceView=key;
+    for(const [name,panel] of panels) {
+      panel.hidden=name!==key;buttons.get(name).setAttribute('aria-selected',String(name===key));
+      buttons.get(name).tabIndex=name===key?0:-1;
+    }
+    if(push) {
+      const params=new URLSearchParams(location.hash.split('?')[1]??'');
+      if(key==='change')params.delete('panel');else params.set('panel',key);
+      history.pushState(null,'',`#/E${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
+    }
+    if(focus)buttons.get(key).focus({preventScroll:true});
+    syncIncomeLinks();
+    requestAnimationFrame(drawVisible);
+  };
+  for(const [key,button] of buttons) {
+    button.addEventListener('click',()=>activate(key,{push:true}));
+    button.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      event.preventDefault();const keys=[...buttons.keys()],index=keys.indexOf(key);
+      const next=event.key==='Home'?keys[0]:event.key==='End'?keys.at(-1):keys[(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length];
+      activate(next,{focus:true,push:true});
+    });
+  }
+  for(const [key,panel] of panels)if(!panel.children.length)
+    panel.append(element('p','na-note',key==='change'?'当前指标没有可比历史；分组和完整值可在其他标签核对。':'当前筛选下没有可核验的分组数据。'));
+  workspace.addEventListener('toggle',()=>requestAnimationFrame(drawVisible),true);
+  layout.append(left,right);workspace.append(layout);body.append(workspace);
+  const inventory=metricInventory('E');inventory.id='E-catalog';
+  const catalogDetails=element('details','income-catalog');catalogDetails.append(element('summary','','展开本页全部 7 项指标'));
+  catalogDetails.append(inventory.lastElementChild);inventory.append(catalogDetails);body.append(inventory);
+  overview.id='E-signals';
+  const navigation=element('nav','section-navigation');navigation.setAttribute('aria-label','本页章节');
+  for(const [label,target] of [['关键指标',overview],['付费诊断',workspace],['全部指标',inventory]]) {
+    const button=element('button','section-navigation-item',label);button.type='button';button.dataset.target=target.id;
+    button.setAttribute('aria-controls',target.id);
+    button.addEventListener('click',()=>{
+      if(target===inventory)catalogDetails.open=true;
+      const heading=target.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});
+      target.scrollIntoView({block:'start',behavior:'instant'});
+    });navigation.append(button);
+  }
+  navigation.firstElementChild.setAttribute('aria-current','location');body.insertBefore(navigation,overview);
+  main.append(top,body);activate(initialView);
+  document.querySelectorAll('.headline-sparkline').forEach(box=>{
+    const id=Number(box.dataset.metricId),history=metricHistory(id);
+    if(history)drawSparkline(box,history.values,id,history.labels,history.unit);
+  });
+}
 function renderDetail(page,selectedMetric,showSelected=false) {
   disposeCharts();
   const detail=pages[page];
@@ -2542,7 +2726,8 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     finding.append(element('p','finding-meta','跨页时仅保留目标页支持的筛选条件。'));
   overviewMain.append(hero);overviewGrid.append(overviewMain,inspector);
   overview.append(overviewGrid);body.append(overview);
-  if(showSelected)selectMetric(selectedMetric);
+  if(showSelected&&page!=='E')selectMetric(selectedMetric);
+  if(page==='E'){renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingMetric);return;}
   const drawSpecs=[];
   const addChart=(container,spec)=>{
     spec=diagnosticChartFacts(page,spec);
@@ -2675,7 +2860,7 @@ function renderRoute({preserveScroll=false}={}) {
     const requested=supportsPageMetric(route,metricId)?
       metricId:null;
     const observed=selectedFilters().length?filteredFinding(route)?.id:null;
-    const selected=requested??(observed&&metric(observed).kind!=='na'?observed:defaultFindingMetric[route]);
+    const selected=requested??(observed&&metric(observed).kind!=='na'?observed:route==='E'?35:defaultFindingMetric[route]);
     renderDetail(route,selected,Boolean(metricId)); document.title=`${pages[route].title} · Parallens`;
   } else {
     renderHome(); document.title='用户与设备经营总览 · Parallens';

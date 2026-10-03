@@ -562,6 +562,60 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .trial-sample-item strong {font-size:.75rem;overflow-wrap:anywhere}
 .trial-sample-action {color:#965a1e;text-decoration:underline;text-underline-offset:.16rem;margin-top:auto}
 .action-record-fields button {grid-column:1/-1;justify-self:end}
+
+/* E-page pilot: one place to inspect evidence and register the next action. */
+.income-workspace {scroll-margin-top:4rem;margin-top:1rem}
+.income-workspace-grid {display:grid;grid-template-columns:minmax(0,2fr) minmax(20rem,1fr);gap:1rem;align-items:start}
+.income-evidence {min-width:0;margin:0;background:#fffefa;border:1px solid var(--line);border-radius:var(--card-radius)}
+.income-evidence>.section-top {align-items:center;gap:.6rem;flex-wrap:wrap;margin-bottom:.6rem}
+.income-evidence>.section-top h2 {font-size:1rem;line-height:1.5}
+.income-evidence>.section-top .section-note {font-size:.7rem}
+.income-evidence>.section-top .issue-register {margin:0;margin-left:auto;white-space:nowrap}
+.income-tabs {display:flex;gap:.25rem;border-bottom:1px solid #d4dfd0;margin:.75rem 0}
+.income-tab {border:0;border-bottom:2px solid transparent;background:transparent;color:#566b58;padding:.65rem .8rem;font:inherit;font-size:.8rem;cursor:pointer}
+.income-tab[aria-selected=true] {border-color:#356d51;color:#244b35;background:#f0f5eb;font-weight:650}
+.income-tab:hover {background:#f4f7ef}
+.income-tab:focus-visible,.income-context-controls button:focus-visible,.income-panel:focus-visible {outline:2px solid var(--orange);outline-offset:2px}
+.income-panel[hidden],.income-context [hidden] {display:none}
+.income-panel {min-width:0;min-height:19rem}
+.income-evidence .evidence-pair {display:block;margin:.5rem 0 .75rem}
+.income-evidence .detail-chart {height:16.5rem}
+.income-evidence .evidence-pair>.workspace-calculation {margin-top:.5rem}
+.workspace-calculation summary,.workspace-context>summary,.income-catalog>summary {font-size:.78rem;font-weight:600;color:#52745e;cursor:pointer;padding:.7rem .1rem}
+.workspace-calculation,.workspace-context {border-top:1px solid #dce5d7;margin:.6rem 0}
+.workspace-calculation .data-table-scroll {margin:0;padding:.45rem .65rem;min-width:0}
+.income-evidence .table-note {font-size:.75rem;line-height:1.65}
+.workspace-chart-title {font-size:.87rem;line-height:1.5;margin:.5rem 0}
+.income-evidence .workspace-chart-panel {padding:.6rem .8rem;margin:.6rem 0;min-width:0}
+.income-evidence .data-table-scroll {min-width:0}
+.income-context {position:sticky;top:4rem;max-height:calc(100dvh - 5rem);overflow:auto;overscroll-behavior:contain;border:1px solid #ccd9c6;border-radius:var(--card-radius);background:#f1f5eb;min-width:0;scrollbar-gutter:stable}
+.income-context-controls {position:sticky;top:0;z-index:1;display:flex;gap:.25rem;background:#f1f5eb;border-bottom:1px solid #d1deca;padding:.45rem .65rem}
+.income-context-controls button {border:0;border-radius:.3rem;padding:.45rem .7rem;font:inherit;font-size:.78rem;background:transparent;color:#526b54;cursor:pointer}
+.income-context-controls button[aria-pressed=true] {background:#213b31;color:#fffefa;font-weight:600}
+.income-context .detail-finding {border:0;border-top:3px solid var(--orange);margin:0;padding:1rem;background:transparent}
+.income-context .finding-title {font-size:1.05rem;line-height:1.65;margin:.7rem 0 .6rem}
+.income-context .finding-context {font-size:.8rem;color:#405a48}
+.income-context .detail-finding .finding-meta {font-size:.72rem;line-height:1.6}
+.income-context .detail-finding .issue-register {display:block;margin-top:1rem}
+.income-record {padding:.65rem}
+.workspace-record-hint {font-size:.72rem;line-height:1.5;color:#536a53;margin:.2rem 0 .6rem}
+.income-record .action-record {padding:.75rem;margin:0}
+.income-record .action-record-header {align-items:start;flex-wrap:wrap}
+.income-record .action-record-header strong {font-size:.75rem;overflow-wrap:anywhere}
+.income-record .action-record-fields,.income-record .action-review-fields {grid-template-columns:repeat(2,minmax(0,1fr))}
+.income-record .action-review-fields>label:last-child {grid-column:1/-1}
+.income-record .issue-switch {display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:.4rem}
+.income-record .issue-switch select {max-width:100%;width:100%;font-size:.72rem}
+.income-record .action-record-footer {flex-wrap:wrap}
+.income-record .action-stages {gap:.25rem}
+.income-evidence .action-section {margin:0;padding:0}
+.income-catalog {border-top:1px solid #d8e1d0}
+.income-page>.metric-inventory {margin-top:1.25rem}
+.income-workspace-grid {container-type:inline-size}
+@media (max-width:1100px) {
+  .income-workspace-grid {grid-template-columns:minmax(0,1fr)}
+  .income-context {position:static;max-height:none;overflow:visible}
+}
 @media (max-width:1180px) {.trial-sample-list {grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:1180px) {
   .signals-layout:not(.inspector-open) .detail-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}

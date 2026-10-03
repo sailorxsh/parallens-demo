@@ -23,8 +23,13 @@ async (page) => {
       for(const [topic,id,filters] of cases) {
         await p.goto(`${base}#/${topic}?metric=${id}${filters?`&${filters}`:''}`);
         const evidence=p.locator(`#metric-evidence-${id}`);await evidence.waitFor();
+        if(topic==='E') {
+          await evidence.locator('.evidence-pair:visible svg').first().waitFor();
+          for(const disclosure of await evidence.locator('.evidence-pair:visible .workspace-calculation').all())
+            await disclosure.locator('summary').click();
+        }
         await p.evaluate(()=>document.fonts.ready);
-        const panels=await evidence.locator('.evidence-pair').evaluateAll(nodes=>nodes.map(pair=>{
+        const panels=await evidence.locator('.evidence-pair:visible').evaluateAll(nodes=>nodes.map(pair=>{
           const plot=pair.querySelector('.detail-chart'),table=pair.querySelector('.data-table-scroll');
           const plotBox=plot.getBoundingClientRect(),tableBox=table.getBoundingClientRect(),outer=pair.getBoundingClientRect();
           const option=window.echarts.getInstanceByDom(plot).getOption();
@@ -45,6 +50,7 @@ async (page) => {
           }).map(text=>text.textContent);
           return {title:table.querySelector('caption').textContent,rows:rows.length,
             sideBySide:plotBox.right<tableBox.left&&Math.abs(pair.querySelector('.evidence-plot').getBoundingClientRect().top-tableBox.top)<2,
+            stacked:tableBox.top>=plotBox.bottom-1,
             contained:plotBox.left>=outer.left-1&&tableBox.right<=outer.right+1,
             tableFits:table.scrollWidth<=table.clientWidth+1,exact,finalLabel,clipped,
             axis:{min:option.yAxis[0].min,max:option.yAxis[0].max}};
@@ -68,7 +74,7 @@ async (page) => {
           check(qualityCharts===1,'Quality evidence duplicates the same daily trend elsewhere on the page');
         }
         for(const panel of panels) {
-          check(panel.sideBySide&&panel.contained,`Evidence blocks overlap or escape at ${width}px: ${JSON.stringify(panel)}`);
+          check((topic==='E'?panel.stacked:panel.sideBySide)&&panel.contained,`Evidence blocks overlap or escape at ${width}px: ${JSON.stringify(panel)}`);
           check(panel.tableFits,`Narrow evidence table loses columns at ${width}px: ${panel.title}`);
           check(panel.exact,`Chart and adjacent table disagree at ${width}px: ${panel.title}`);
           check(panel.finalLabel,`The latest chart value is truncated at ${width}px: ${panel.title}`);

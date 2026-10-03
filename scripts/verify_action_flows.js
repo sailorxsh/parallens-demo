@@ -121,7 +121,9 @@ async (page) => {
         'Action evidence lost the metric or supported filter scope');
       check(await input('note').inputValue()==='按链路核对请求失败，保留当前核查草稿','Action evidence navigation lost the current draft');
       check(await form().locator('.action-record-header strong').innerText()===originalIssue,'Opening auxiliary evidence changed the current issue');
-      await probe.goto(`${base}#/E?country=US`);await probe.locator('.action-checks').waitFor();
+      await probe.goto(`${base}#/E?country=US`);await probe.locator('.income-workspace').waitFor();
+      await probe.getByRole('tab',{name:'完整数据',exact:true}).click();
+      await probe.getByText('查看核查对象与演示行动清单',{exact:true}).click();
       const paymentCard=probe.locator('.detail-kpi[data-metric-id="35"]');
       const paymentSignal=await probe.locator('.action-checks tr[data-metric-id="35"] td').first().innerText();
       check(paymentSignal.includes(await paymentCard.locator('.detail-select').innerText())&&

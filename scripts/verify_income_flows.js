@@ -5,7 +5,7 @@ async(page)=>{
   const p=await context.newPage(),errors=[],sizes=[];
   const check=(ok,message)=>{if(!ok)throw new Error(message);};
   p.on('pageerror',error=>errors.push(error.message));
-  const open=async hash=>{await p.goto(`${base}#/${hash}`);await p.locator('.detail-finding').waitFor();};
+  const open=async hash=>{await p.goto(`${base}#/${hash}`);await p.locator('.income-workspace').waitFor();};
   const pair=()=>p.locator('#metric-evidence-35 .evidence-pair').filter({has:p.getByRole('heading',{name:/订阅净收入变化拆分/})});
   try {
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
@@ -22,6 +22,7 @@ async(page)=>{
       await pair().waitFor();await pair().locator('svg').waitFor();
       const plotText=await pair().locator('svg').textContent();
       check(plotText.includes('$1,030')&&plotText.includes('$990'),'Chart hides contribution values');
+      await pair().locator('.workspace-calculation > summary').click();
       check((await pair().innerText()).includes('合计 +$2,020'),'Calculation does not reconcile revenue change');
       check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Income evidence causes page overflow');
       if(width===1600) {
