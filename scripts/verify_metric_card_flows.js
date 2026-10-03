@@ -23,9 +23,17 @@ async (page) => {
     results.push({topic,filters,width:await p.evaluate(()=>innerWidth),items});return items;
   };
   try {
-    for(const width of [1366,1920]) {
-      await p.setViewportSize({width,height:1000});
-      for(const topic of ['A','B','C','D','E','F','G'])await inspect(topic);
+    for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
+      await p.setViewportSize({width,height});
+      for(const topic of ['A','B','C','D','E','F','G']) {
+        await inspect(topic);
+        for(const selector of ['h1','.filter-bar summary','.detail-kpis','.finding-title',
+          ...(['A','C','D'].includes(topic)?['.finding-comparison-values','.finding-comparison-change']:[])]) {
+          const bounds=await p.locator(selector).first().boundingBox();
+          check(bounds&&bounds.y>=0&&bounds.y+bounds.height<=height,
+            `${topic} hides its first-view ${selector} at ${width}x${height}: ${JSON.stringify(bounds)}`);
+        }
+      }
     }
     await p.setViewportSize({width:1440,height:1000});
     await inspect('F');
@@ -105,7 +113,7 @@ async (page) => {
       await card(8).locator('.metric-secondary-values').count()===0,'Unavailable device data is shown as a real count');
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['precise metric names and units','independent composite measures','visible values in accessible names',
-      'seven pages at two desktop widths','neutral structural changes','device-share evidence history','inspector consistency',
+      'seven pages at three specified desktop sizes','first-view observations and rate comparisons','neutral structural changes','device-share evidence history','inspector consistency',
       'all independent technical rates and request failures','single-chain model and firmware evidence','filtered payment and weekly values','unavailable data without fabricated counts'],results};
   } finally {await context.close();}
 }

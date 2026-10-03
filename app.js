@@ -2259,7 +2259,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
              element('h1','',detail.title),element('p','heading-sub',detail.question),element('p','detail-period',period));
   const body=element('div','detail-shell');
   body.append(filterBar(page));
-  const overview=element('section','detail-section');
+  const overview=element('section','detail-section signal-overview');
   overview.append(sectionTitle('01  /  SIGNALS','关键指标'));
   const overviewGrid=element('div','signals-layout');
   const overviewMain=element('div','signals-main');
@@ -2285,7 +2285,8 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     const item=catalogItem(id),summary=metricCardSummary(id);
     const card=element('article',`detail-kpi${showSelected&&id===selectedMetric?' selected':''}`);
     card.dataset.metricId=String(id);
-    const heading=element('div','metric-heading');heading.append(element('h3','',summary.label),definition(id,item.name));
+    const heading=element('div','metric-heading');heading.append(
+      element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),element('h3','',summary.label),definition(id,item.name));
     const select=element('button','detail-select',summary.text);select.type='button';
     if(summary.unit)select.append(element('span','metric-value-unit',summary.unit));
     select.setAttribute('aria-label',`查看${summary.label}摘要：${summary.text}${summary.unit}`);
@@ -2293,7 +2294,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     select.addEventListener('click',()=>{selectMetric(id);inspector.focus({preventScroll:true});});
     const trend=headlineTrend(id);
     const link=element('a','detail-evidence-link','查看对应数据 ↓');link.href=routeHref(page,id);
-    card.append(element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),heading,metricValueRow(id,select,trend),link);
+    card.append(heading,metricValueRow(id,select,trend),link);
     if(summary.fields.length)card.append(metricSecondaryValues(summary));
     if(summary.context)card.append(element('p','metric-value-context',summary.context));
     if(trend)card.append(trend);
