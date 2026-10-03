@@ -68,11 +68,44 @@ async (page) => {
     await inspect('A','week=2');
     check(await card(9).locator('.detail-select').innerText()===await p.evaluate(()=>`${metric(9).value.toLocaleString('zh-CN')}人`),
       'Registration summary is stale after selecting a week');
+    await inspect('C');
+    check(await card(46).locator('h3').innerText()==='关键功能最低成功率'&&
+      await card(46).locator('.detail-select').innerText()==='直播 · 97.0%',
+      'A healthy upload rate hides the lower live success rate');
+    const otherRates=await card(46).locator('.metric-secondary-values').innerText();
+    check(otherRates.includes('上传成功率')&&otherRates.includes('99.0%')&&otherRates.includes('推送成功率')&&otherRates.includes('98.5%'),
+      'Independent upload and push success rates are missing');
+    check((await card(46).locator('.metric-value-context').innerText()).includes('最近24小时'),'Request sample period is missing');
+    await card(46).locator('.detail-select').click();
+    const requestSummary=await p.locator('.metric-inspector').innerText();
+    check(requestSummary.includes('9,700 / 10,000 次成功；失败 300 次')&&!requestSummary.includes('统计期未注明'),
+      'Live request counts or the actual synthetic period are absent from the inspector');
+    await card(46).locator('.detail-evidence-link').click();await p.locator('#metric-evidence-46 svg').first().waitFor();
+    const requestEvidence=await p.locator('#metric-evidence-46 .evidence-pair').first().evaluate(node=>{
+      const option=echarts.getInstanceByDom(node.querySelector('.detail-chart')).getOption();
+      return {labels:option.xAxis[0].data,values:option.series[0].data,min:option.yAxis[0].min,max:option.yAxis[0].max,
+        rows:[...node.querySelectorAll('tbody tr')].map(row=>[...row.children].map(cell=>cell.textContent))};
+    });
+    check(requestEvidence.labels.join(',')==='直播,推送,上传'&&requestEvidence.values.join(',')==='3,1.5,1'&&
+      requestEvidence.min===0&&requestEvidence.max===5&&requestEvidence.rows[0].join(',')==='直播,10,000,9,700,300,3.0%',
+      `Request failure evidence cannot be reconciled: ${JSON.stringify(requestEvidence)}`);
+    await inspect('C','deviceModel=K6&firmware=2.8&functionType=Live');
+    check(await card(46).locator('h3').innerText()==='直播成功率'&&await card(46).locator('.detail-select').innerText()==='91.3%'&&
+      await card(46).locator('.metric-secondary-values').count()===0,'A selected live chain still includes other chains');
+    await card(46).locator('.detail-evidence-link').click();await p.locator('#metric-evidence-46 svg').first().waitFor();
+    check((await p.locator('#metric-evidence-46 .evidence-pair tbody tr').first().innerText()).replace(/\s+/g,' ')===
+      '直播 400 365 35 8.8%','Selected model, firmware and chain do not share the same request evidence');
+    check(!(await p.locator('#metric-evidence-46 .evidence-pair').innerText()).includes('分片估算'),
+      'Model and firmware request facts are incorrectly labelled as an independent slice estimate');
+    await inspect('C','deviceStatus=Effective&functionType=Live');
+    await card(46).locator('.detail-select').click();
+    check((await p.locator('.inspector-source').innerText()).includes('分片估算'),'Device-state estimates are presented as direct request facts');
     await inspect('C','deviceStatus=Inactive');
     check((await card(8).locator('.detail-select').innerText()).match(/不适用|待补数据/)&&await card(8).locator('.metric-value-unit').count()===0&&
       await card(8).locator('.metric-secondary-values').count()===0,'Unavailable device data is shown as a real count');
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['precise metric names and units','independent composite measures','visible values in accessible names',
-      'seven pages at two desktop widths','neutral structural changes','device-share evidence history','inspector consistency','filtered payment and weekly values','unavailable data without fabricated counts'],results};
+      'seven pages at two desktop widths','neutral structural changes','device-share evidence history','inspector consistency',
+      'all independent technical rates and request failures','single-chain model and firmware evidence','filtered payment and weekly values','unavailable data without fabricated counts'],results};
   } finally {await context.close();}
 }

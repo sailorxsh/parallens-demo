@@ -6,7 +6,8 @@ async (page) => {
   const context=await page.context().browser().newContext({viewport:{width:1440,height:1000},reducedMotion:'reduce'});
   const p=await context.newPage(),errors=[],results=[];
   p.on('pageerror',error=>errors.push(error.message));
-  const cases=[['D',52,''],['A',11,''],['B',24,''],['C',41,''],['E',3,''],['G',53,''],['D',23,'country=US']];
+  const cases=[['D',52,''],['A',11,''],['B',24,''],['C',41,''],['C',46,''],
+    ['C',46,'deviceModel=K6&firmware=2.8&functionType=Live'],['E',3,''],['G',53,''],['D',23,'country=US']];
   try {
     for(const width of [1366,1600,1920]) {
       await p.setViewportSize({width,height:1000});

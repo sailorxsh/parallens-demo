@@ -315,6 +315,10 @@ function projectGroup(value,shares,filters,metricId) {
   if(value&&typeof value==='object') return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,projectGroup(item,shares,filters,metricId)]));
   return value;
 }
+function technicalRequestSource(id) {
+  return effectiveFor(id).some(([key])=>!['productLine','deviceModel','firmware','functionType'].includes(key))?
+    '合成请求明细与模拟分片估算':'型号×固件合成请求明细';
+}
 function technicalMetric(id,state,filters) {
   const records=sourceData.technicalFacts.records.filter(row=>
     (!state.productLine||(row.model==='Hunt Pro'?'Hunting':'Bird')===state.productLine)&&
@@ -1269,6 +1273,13 @@ function metricCardSummary(id) {
       summary.text=`${name} · ${percent(part.subscriptionRate)}`;
       summary.fields=[['主账号样本',`${number(part.owners)}人`],['同型号活跃率',percent(part.activeRate)]];
       summary.context='两项比率均以该型号主账号为分母';
+    } else if(id===46) {
+      const entries=Object.entries(v).sort((a,b)=>a[1].value-b[1].value);
+      const [name,part]=entries[0];
+      summary.label=entries.length===1?`${groupLabels[name]}成功率`:'关键功能最低成功率';
+      summary.text=entries.length===1?percent(part.value):`${groupLabels[name]} · ${percent(part.value)}`;
+      summary.fields=entries.slice(1).map(([key,rate])=>[`${groupLabels[key]}成功率`,percent(rate.value)]);
+      summary.context=`${sourceData.technicalFacts.window} · 各链路独立计算`;
     } else if(id===54) {
       summary.text=percent(v.eventLoss.value);
       summary.fields=[['ID映射覆盖率',percent(v.idMapping.value)]];
@@ -1639,7 +1650,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    id===18?'合成试用明细 · 逐条聚合':selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    id===18?'合成试用明细 · 逐条聚合':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=id===18?[...trialFactDimensions]:contract.dimensions;
   const intro=element('p','evidence-meta',`统计对象：${contract.entity} · 窗口：${contract.window} · 当前数据可筛选维度：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
@@ -1752,6 +1763,18 @@ function metricEvidence(id,page) {
       note:'统一0–100%色阶；两列分别以各型号主账号为分母。'};
     const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
     panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
+  } else if(id===46&&value.kind==='group') {
+    const entries=Object.entries(value.value).sort((a,b)=>a[1].value-b[1].value);
+    const failures=entries.map(([,part])=>({numerator:part.denominator-part.numerator,denominator:part.denominator,
+      numeratorUnit:'次',denominatorUnit:'次'}));
+    const rates=failures.map(part=>part.numerator/part.denominator*100);
+    const note=`${sourceData.technicalFacts.window}，截至${sourceData.technicalFacts.asOf}。${technicalRequestSource(id)}。失败率＝失败请求÷该链路请求；链路请求不可相加，未设定生产达标阈值。`;
+    const spec={title:'关键功能失败请求率 · 当前筛选',unit:'%',labels:entries.map(([name])=>groupLabels[name]),
+      maxY:Math.min(100,Math.max(5,Math.ceil(Math.max(...rates)/5)*5)),
+      series:[{name:'失败请求率',values:rates,details:failures}],note};
+    appendEvidencePair(spec,{title:'关键功能请求验算',columns:['链路','请求次数','成功次数','失败次数','失败率'],
+      rows:entries.map(([name,part],index)=>[groupLabels[name],number(part.denominator),number(part.numerator),
+        number(failures[index].numerator),percent(failures[index].numerator/part.denominator)]),note});
   } else if(['rate','count','usd'].includes(value.kind)) {
     const dimension=selectedFilters().map(([key])=>key).find(key=>key!=='week'&&contract.dimensions.includes(key)&&sourceData.slices[key])
       ??contract.dimensions.find(key=>key!=='week'&&sourceData.slices[key]);
@@ -2107,7 +2130,10 @@ function metricInspector(id,page) {
   fact('时间窗口',contract.window);
   if(value.kind==='rate')fact('本期分子 / 分母',`${number(value.numerator)} / ${number(value.denominator)}`);
   else if(value.kind==='na')fact('当前状态',value.reason);
-  else if(id===21&&value.kind==='group') {
+  else if(id===46&&value.kind==='group') {
+    Object.entries(value.value).forEach(([name,part])=>fact(`${groupLabels[name]}请求`,
+      `${number(part.numerator)} / ${number(part.denominator)} 次成功；失败 ${number(part.denominator-part.numerator)} 次`));
+  } else if(id===21&&value.kind==='group') {
     fact('期初 / 期末',`${number(value.value.opening)} / ${number(value.value.closing)}`);
     fact('本期净增',`${value.value.closing-value.value.opening>=0?'+':''}${number(value.value.closing-value.value.opening)} 人`);
   }
@@ -2127,6 +2153,7 @@ function metricInspector(id,page) {
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
     id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
+      id===46?`${technicalRequestSource(id)}按当前条件重算；各链路使用自身请求数。`:
       selectedFilters().length?'当前筛选结果含模拟分片估算；请结合下方数据核对。':'结果来自演示底表；趋势中的构造数据在图注中说明。'));
   const link=element('a','inspector-link','查看图表与完整数据 ↓');
   link.href=routeHref(page,id);panel.append(link);
@@ -2237,7 +2264,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     if(id===21){const flow=netAddComparison();if(flow)card.append(flow);}
     if(metric(id).kind==='na')card.append(element('p','metric-na-reason',metric(id).reason));
     else if(!trend&&id!==21)card.append(element('p','metric-compare-unavailable',
-      metric(id).kind==='group'?'当前结构 · 无可比历史':
+      id===46?'无可比历史':metric(id).kind==='group'?'当前结构 · 无可比历史':
         selectedFilters().length?'筛后无可比历史':'当前快照 · 无可比历史'));
     hero.append(card);
   });
