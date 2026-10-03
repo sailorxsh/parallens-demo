@@ -2591,6 +2591,7 @@ function handleRouteChange() {
   if(location.hash!==lastRenderedHash)renderRoute();
 }
 const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow'];
+const dataBatchSize=6;
 function showLoadingState() {
   const panel=element('section','load-panel');panel.setAttribute('aria-labelledby','load-title');
   const heading=element('h1','','正在准备经营数据');heading.id='load-title';
@@ -2694,8 +2695,8 @@ async function start() {
     main.setAttribute('aria-busy','true');
     document.querySelector('#announcement').textContent='正在准备经营数据';
     const parts=[];
-    for(let offset=0;offset<dataParts.length;offset+=3) {
-      const results=await Promise.allSettled(dataParts.slice(offset,offset+3).map(async name=>{
+    for(let offset=0;offset<dataParts.length;offset+=dataBatchSize) {
+      const results=await Promise.allSettled(dataParts.slice(offset,offset+dataBatchSize).map(async name=>{
         const part=await fetchDataPart(name);
         ready++;
         document.querySelector('#load-meter').value=ready;

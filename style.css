@@ -27,7 +27,7 @@ input:focus-visible,textarea:focus-visible {outline:3px solid var(--orange);outl
 .site-head nav {display:flex;align-items:center;gap:2rem;font-size:.84rem;letter-spacing:.05em}
 .nav-link {padding:1.8rem .1rem;border-bottom:2px solid var(--orange);color:white}
 .nav-stage {font-family:'DM Sans',sans-serif;color:#a0b5a9;letter-spacing:.16em;font-size:.7rem}
-#main {min-height:calc(100dvh - 9rem)}
+#main {display:flow-root;min-height:100dvh}
 #main:focus {outline:none}
 .page-heading {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:1rem;color:#f8f6e9;padding:2.7rem 0 2.3rem}
 .eyebrow {font-size:.7rem;letter-spacing:.24em;font-weight:700;color:#b9c9b7;text-transform:uppercase;margin:0 0 .65rem}
