@@ -14,7 +14,13 @@ async (page) => {
   const open=async hash=>{
     await probe.goto(`${base}#/${hash}`);
     await probe.waitForFunction(code=>document.querySelector('h1')?.textContent===({D:'订阅转化',C:'设备健康'}[code]),hash[0]);
+    if(!await form().isVisible())await probe.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
     await form().waitFor();
+  };
+  const revealQueue=async()=>{
+    const code=new URL(probe.url()).hash.slice(2,3);await probe.locator(`#${code}-tab-data`).click();
+    const details=probe.locator('.workspace-context').filter({has:probe.locator('.action-section')});
+    if(!await details.evaluate(node=>node.open))await details.locator('summary').first().click();
   };
   try {
     await open('D');
@@ -26,6 +32,7 @@ async (page) => {
     await input('note').fill('核对 Android Plus 支付失败记录');
     check(await form().getAttribute('data-dirty')==='true','Edited record does not expose an unsaved state');
     check(await stored()===null,'Draft was presented as persisted without a save');
+    await revealQueue();
     await probe.locator('.action-evidence-link[aria-label^="D-02，"]').click();
     await probe.locator('#metric-evidence-52').waitFor();
     check(probe.url().includes('metric=52'),'Action linked the wrong metric evidence');
@@ -49,19 +56,20 @@ async (page) => {
     await open('C');await open('D');
     check(await input('note').inputValue()==='这一修改应该保存失败','Failed-save content was lost on navigation');
     const actionButton=probe.locator('button[data-action-id="D-01"]');
-    await actionButton.click();
+    await revealQueue();await actionButton.click();
     check(await actionButton.getAttribute('aria-pressed')==='false','Failed action toggle altered the in-memory status');
     check((await probe.locator('.action-operation-feedback').innerText()).includes('保持原状态'),'Failed action toggle omitted its unchanged state');
     check(await stored()===savedJSON,'Failed action toggle changed persisted records');
     await probe.evaluate(()=>{Storage.prototype.setItem=window.__setItem;});
     await probe.reload();await form().waitFor();
     check(await input('note').inputValue()==='核对 Android Plus 支付失败记录','Failed save falsely changed the committed registration');
-    await probe.locator('button[data-action-id="D-01"]').click();
+    await revealQueue();await probe.locator('button[data-action-id="D-01"]').click();
     check(await probe.locator('button[data-action-id="D-01"]').getAttribute('aria-pressed')==='true','Action toggle did not save');
     check(JSON.parse(await stored())['D:D-01'].evidenceMetric===18,'Action saved another metric as its evidence');
     await probe.reload();await form().waitFor();
+    await revealQueue();
     check(await probe.locator('button[data-action-id="D-01"]').getAttribute('aria-pressed')==='true','Action state did not survive reload');
-    await probe.locator('button[data-action-id="D-01"]').click();
+    await revealQueue();await probe.locator('button[data-action-id="D-01"]').click();
     check(await probe.locator('button[data-action-id="D-01"]').getAttribute('aria-pressed')==='false','Undo did not restore the unmarked state');
     const beforeReview=await stored();
     await input('status').selectOption('verified');
@@ -79,6 +87,7 @@ async (page) => {
     await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
     check(JSON.parse(await stored())[recordKey].status==='verified','Complete manual review was not saved');
     check(await form().getAttribute('data-dirty')==='false','Verified save still appears unsaved');
+    await probe.locator('#D-tab-groups').click();
     await probe.locator('.trial-sample-item').first().click();
     check(Boolean(await input('linkedSample').inputValue()),'Sample linkage did not fill the record');
     check(await form().getAttribute('data-dirty')==='true','Sample linkage bypassed unsaved-state feedback');
@@ -116,7 +125,7 @@ async (page) => {
         'The action table combines cumulative and currently bound devices without names');
       await input('note').fill('按链路核对请求失败，保留当前核查草稿');
       const originalIssue=await form().locator('.action-record-header strong').innerText();
-      await technicalRow.locator('a').click();await probe.locator('#metric-evidence-46 svg').first().waitFor();
+      await revealQueue();await technicalRow.locator('a').click();await probe.locator('#metric-evidence-46 svg').first().waitFor();
       check(probe.url().includes('deviceModel=K6')&&probe.url().includes('firmware=2.8')&&probe.url().includes('metric=46'),
         'Action evidence lost the metric or supported filter scope');
       check(await input('note').inputValue()==='按链路核对请求失败，保留当前核查草稿','Action evidence navigation lost the current draft');
@@ -129,7 +138,7 @@ async (page) => {
       check(paymentSignal.includes(await paymentCard.locator('.detail-select').innerText())&&
         paymentSignal.includes('月内订阅付款主账号：')&&paymentSignal.includes('8月'),
         'Payment actions lose the per-payer unit, payer count, or complete month');
-      await probe.goto(`${base}#/F?country=US`);await probe.locator('.action-checks').waitFor();
+      await probe.goto(`${base}#/F?country=US`);await probe.locator('.income-workspace').waitFor();await revealQueue();
       check(await probe.locator('.action-checks tr[data-metric-id="48"] th').innerText()==='多设备主账号占比',
         'Device-share actions are still labelled as device counts');
       check(!await probe.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Filtered action evidence overflows at desktop width');

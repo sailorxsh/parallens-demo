@@ -1,7 +1,10 @@
 // Run with playwright-cli run-code --filename=scripts/verify_browser_flows.js.
-async (page) => {
+async (parent) => {
   const check=(condition,message)=>{if(!condition)throw new Error(message);};
-  const base=new URL('.',page.url()).href;
+  const base=new URL('.',parent.url()).href;
+  const context=await parent.context().browser().newContext({locale:'zh-CN'});
+  const page=await context.newPage();
+  try {
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.setViewportSize({width:1440,height:1000});
@@ -172,4 +175,5 @@ async (page) => {
   check(await statusTable.evaluate(node=>node.scrollLeft)===left,'Editing a table input also scrolled its container');
   await child.evaluate(node=>node.remove());
   return {status:'PASS',checks:['weighted story selection and focused scales','chart tooltip and table point evidence','linked evidence keeps filters','continuous filters and focus','dependent options','search and keyboard dismissal','history','section navigation','8 pages at 2 desktop widths with legible dates','wide-table keyboard scrolling','loading feedback','failed fetch and retry','local assets','reduced motion'],pages};
+  } finally {await context.close();}
 }

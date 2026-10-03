@@ -89,6 +89,8 @@ async (page) => {
     check(requestSummary.includes('9,700 / 10,000 次成功；失败 300 次')&&!requestSummary.includes('统计期未注明'),
       'Live request counts or the actual synthetic period are absent from the inspector');
     await card(46).locator('.detail-evidence-link').click();await p.locator('#metric-evidence-46 svg').first().waitFor();
+    for(const details of await p.locator('#metric-evidence-46 .evidence-pair:visible .workspace-calculation').all())
+      if(!await details.evaluate(node=>node.open))await details.locator('summary').click();
     const requestEvidence=await p.locator('#metric-evidence-46 .evidence-pair').first().evaluate(node=>{
       const option=echarts.getInstanceByDom(node.querySelector('.detail-chart')).getOption();
       return {labels:option.xAxis[0].data,values:option.series[0].data,min:option.yAxis[0].min,max:option.yAxis[0].max,
@@ -101,6 +103,8 @@ async (page) => {
     check(await card(46).locator('h3').innerText()==='直播成功率'&&await card(46).locator('.detail-select').innerText()==='91.3%'&&
       await card(46).locator('.metric-secondary-values').count()===0,'A selected live chain still includes other chains');
     await card(46).locator('.detail-evidence-link').click();await p.locator('#metric-evidence-46 svg').first().waitFor();
+    for(const details of await p.locator('#metric-evidence-46 .evidence-pair:visible .workspace-calculation').all())
+      if(!await details.evaluate(node=>node.open))await details.locator('summary').click();
     check((await p.locator('#metric-evidence-46 .evidence-pair tbody tr').first().innerText()).replace(/\s+/g,' ')===
       '直播 400 365 35 8.8%','Selected model, firmware and chain do not share the same request evidence');
     check(!(await p.locator('#metric-evidence-46 .evidence-pair').innerText()).includes('分片估算'),

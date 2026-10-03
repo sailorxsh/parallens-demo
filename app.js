@@ -27,7 +27,7 @@ const filterDisclosure=new Map();
 let startupInProgress=false;
 let appEventsBound=false;
 let lastRenderedHash;
-let incomeWorkspaceView='change';
+let diagnosticWorkspaceView='change';
 const chartAnimationDuration=duration=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:duration;
 let definitionReturnFocus;
 let chart;
@@ -227,14 +227,15 @@ function routeHref(page='',metricId) {
   if (metricId) params.set('metric',String(metricId));
   const issue=activeIssueMetrics.get(issueScopeKey(page));
   if(issue)params.set('issue',String(issue));
-  if(page==='E'&&incomeWorkspaceView!=='change')params.set('panel',incomeWorkspaceView);
+  const currentPage=location.hash.replace(/^#\/?/,'').split(/[/?]/)[0].toUpperCase();
+  if(page&&page===currentPage&&!metricId&&diagnosticWorkspaceView!=='change')params.set('panel',diagnosticWorkspaceView);
   return `#/${page}${params.size?`?${params}`:''}`;
 }
 function readRoute() {
   const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
-  incomeWorkspaceView=page==='E'&&['change','groups','data'].includes(params.get('panel'))?params.get('panel'):'change';
+  diagnosticWorkspaceView=['change','groups','data'].includes(params.get('panel'))?params.get('panel'):'change';
   filterState={};
   for (const key of relevantFilters(pages[page]?page:'')) if(params.has(key)&&
     availableOptions(pages[page]?page:'',key,filterState).includes(params.get(key)))filterState[key]=params.get(key);
@@ -2029,7 +2030,7 @@ function trialSamplesPanel() {
       `${optionLabel('country',row.country)} · ${row.app_platform} · ${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · 观察至${row.outcome_observed_through}`),
       element('span','trial-sample-action','关联到试用转正问题单 ↘'));
     button.addEventListener('click',()=>{
-      if(activeIssueMetrics.get(issueScopeKey(page))&&activeIssueMetrics.get(issueScopeKey(page))!==18)registerIssue(page,18);
+      registerIssue(page,18);
       const form=document.querySelector('.action-record');
       const linked=form?.querySelector('[name="linkedSample"]');
       if(!linked)return;
@@ -2047,10 +2048,13 @@ function trialSamplesPanel() {
 }
 function registerIssue(page,id) {
   activeIssueMetrics.set(issueScopeKey(page),id);
-  history.pushState(null,'',routeHref(page,id));
+  const target=new URL(routeHref(page,id),location.href);
+  const params=new URLSearchParams(target.hash.split('?')[1]??'');
+  if(diagnosticWorkspaceView!=='change')params.set('panel',diagnosticWorkspaceView);
+  history.pushState(null,'',`#/${page}?${params}`);
   renderRoute({preserveScroll:true});
   const form=document.querySelector('.action-record');
-  (page==='E'?document.querySelector('.income-workspace'):form)?.scrollIntoView({block:page==='E'?'start':'center',behavior:'instant'});
+  document.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
   form?.querySelector('[name="owner"]')?.focus({preventScroll:true});
   document.querySelector('#announcement').textContent=`已打开 #${id} ${catalogItem(id).name} 的当前范围问题单；填写后保存本地记录`;
 }
@@ -2454,21 +2458,22 @@ function entitySamplesPanel(page) {
   grid.append(list,detail);panel.append(grid);select(records[0],0);
   return panel;
 }
-function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingMetric) {
+function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric,legacy) {
   body.classList.add('income-page');
-  const evidence=metricEvidence(selectedMetric,'E'),specs=[...evidence.specs];
-  const workspace=element('section','income-workspace');workspace.id='E-diagnosis';
+  const evidence=legacy?.selectedEvidence??metricEvidence(selectedMetric,page),specs=[...evidence.specs,...(legacy?.specs??[])];
+  body.replaceChildren(body.querySelector('.filter-bar'),overview);
+  const workspace=element('section','income-workspace');workspace.id=`${page}-diagnosis`;
   const layout=element('div','income-workspace-grid');
   const left=evidence.node;left.classList.add('income-evidence');
   const original=[...left.children];
   const heading=original[0];heading.querySelector('.section-kicker')?.remove();
   const register=original.find(node=>node.matches('.issue-register'));if(register)heading.append(register);
-  const tabs=element('div','income-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','付费价值证据');
+  const tabs=element('div','income-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label',`${pages[page].title}证据`);
   const panels=new Map(),buttons=new Map();
-  for(const [key,label] of [['change','变化拆分'],['groups','分组证据'],['data','完整数据']]) {
-    const button=element('button','income-tab',label);button.type='button';button.id=`E-tab-${key}`;
-    button.setAttribute('role','tab');button.setAttribute('aria-controls',`E-panel-${key}`);
-    const panel=element('div','income-panel');panel.id=`E-panel-${key}`;panel.tabIndex=0;
+  for(const [key,label] of [['change',page==='E'?'变化拆分':'趋势与变化'],['groups','分组证据'],['data','完整数据']]) {
+    const button=element('button','income-tab',label);button.type='button';button.id=`${page}-tab-${key}`;
+    button.setAttribute('role','tab');button.setAttribute('aria-controls',`${page}-panel-${key}`);
+    const panel=element('div','income-panel');panel.id=`${page}-panel-${key}`;panel.tabIndex=0;
     panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',button.id);
     tabs.append(button);panels.set(key,panel);buttons.set(key,button);
   }
@@ -2492,7 +2497,7 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
     disclosure.append(element('summary','','查看计算依据与完整数值'),table);pair.append(disclosure);
   }
   const addChart=(container,spec)=>{
-    spec=diagnosticChartFacts('E',spec);
+    spec=diagnosticChartFacts(page,spec);
     const panel=element('div','detail-chart-panel workspace-chart-panel');
     panel.append(element('h3','workspace-chart-title',spec.title));
     const box=element('div','detail-chart');box.setAttribute('role','img');
@@ -2502,7 +2507,7 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
     panel.append(element('p','table-note',spec.note),chartTable(spec));
     container.append(panel);specs.push([box,spec]);
   };
-  if(selectedMetric===35) {
+  if(page==='E'&&selectedMetric===35) {
     const histories=[paidPayersHistory(),metricHistory(35)].filter(Boolean);
     if(histories.length) {
       const trends=element('details','workspace-context');
@@ -2512,34 +2517,61 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
       panels.get('change').append(trends);
     }
   }
-  const info=dataset.diagnostics.E;
-  const context=element('details','workspace-context');context.append(element('summary','','其他付费结构与型号对照'));
-  const ranking=modelSubscriptionRanking();
-  if(ranking){addChart(context,ranking.spec);context.append(dataTable(ranking.table));}
-  if(!hasDataFilters('E')) {
-    info.extraCharts.slice(1).forEach(spec=>addChart(context,spec));
-    if(info.structureViews) {
-      const explorer=structureExplorer(info.structureViews);context.append(explorer.node);
-      context.addEventListener('toggle',()=>{if(context.open&&!explorer.node.dataset.initialized){explorer.init();explorer.node.dataset.initialized='true';}});
+  const info=dataset.diagnostics[page];
+  if(page==='E') {
+    const context=element('details','workspace-context');context.append(element('summary','','其他付费结构与型号对照'));
+    const ranking=modelSubscriptionRanking();
+    if(ranking){addChart(context,ranking.spec);context.append(dataTable(ranking.table));}
+    if(!hasDataFilters('E')) {
+      info.extraCharts.slice(1).forEach(spec=>addChart(context,spec));
+      if(info.structureViews) {
+        const explorer=structureExplorer(info.structureViews);context.append(explorer.node);
+        context.addEventListener('toggle',()=>{if(context.open&&!explorer.node.dataset.initialized){explorer.init();explorer.node.dataset.initialized='true';}});
+      }
+      const tables=element('details','workspace-context');tables.append(element('summary','','查看付费专题其他完整数据'));
+      info.tables.forEach(spec=>tables.append(dataTable(spec)));panels.get('data').append(tables);
     }
-    const tables=element('details','workspace-context');tables.append(element('summary','','查看付费专题其他完整数据'));
-    info.tables.forEach(spec=>tables.append(dataTable(spec)));panels.get('data').append(tables);
+    if(context.children.length>1)panels.get('groups').append(context);
   }
-  if(context.children.length>1)panels.get('groups').append(context);
-  const queue=actionQueue('E',selectedMetric),form=queue.querySelector('.action-record');
+  if(legacy) {
+    const contextual=(node,key,label)=>{
+      const disclosure=element('details','workspace-context');
+      disclosure.append(element('summary','',label),node);panels.get(key).append(disclosure);
+    };
+    const hasSelectedHistory=Boolean(panels.get('change').querySelector('.detail-chart,.na-note'));
+    const mainIsTrend=legacy.specs.some(([box,spec])=>legacy.analysisMain.contains(box)&&isTimelineSpec(spec));
+    if(!hasSelectedHistory&&mainIsTrend&&[primaryTrendMetric[page],defaultFindingMetric[page]].includes(selectedMetric))
+      panels.get('change').prepend(legacy.analysisMain);
+    else contextual(legacy.analysisMain,mainIsTrend?'change':'groups','专题概况与主线对照');
+    const supplemental=node=>{
+      if(node.matches('.section-top'))return;
+      if(node.matches('.trial-readiness')){panels.get('change').append(node);return;}
+      if(node.matches('.entity-workspace,.structure-explorer')){panels.get('groups').append(node);return;}
+      if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
+      if(node.matches('.detail-chart-panel')) {
+        const spec=legacy.specs.find(([box])=>node.contains(box))?.[1];
+        if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
+        else panels.get('groups').append(node);
+        return;
+      }
+      panels.get('data').append(node);
+    };
+    [...legacy.evidence.children].forEach(supplemental);
+  }
+  const queue=actionQueue(page,selectedMetric),form=queue.querySelector('.action-record');
   const queueDetails=element('details','workspace-context');queueDetails.append(element('summary','','查看核查对象与演示行动清单'));
   queueDetails.append(queue);panels.get('data').append(queueDetails);
   const right=element('aside','income-context');right.setAttribute('aria-label','当前观察与问题登记');
   const rightControls=element('div','income-context-controls');
   const observationButton=element('button','','关键观察'),recordButton=element('button','','问题登记');
   observationButton.type=recordButton.type='button';
-  observationButton.setAttribute('aria-controls','E-workspace-observation');recordButton.setAttribute('aria-controls','E-workspace-record');
+  observationButton.setAttribute('aria-controls',`${page}-workspace-observation`);recordButton.setAttribute('aria-controls',`${page}-workspace-record`);
   rightControls.append(observationButton,recordButton);
-  finding.id='E-workspace-observation';
+  finding.id=`${page}-workspace-observation`;
   finding.querySelector('.insight-tag').textContent+=` · #${String(findingMetric).padStart(2,'0')}`;
-  if(metric(findingMetric).kind!=='na')finding.append(registerIssueButton('E',findingMetric));
+  if(metric(findingMetric).kind!=='na')finding.append(registerIssueButton(page,findingMetric));
   else finding.append(element('p','table-note','当前证据待补数据或不适用；补齐可核验数据后再登记。'));
-  const record=element('div','income-record');record.id='E-workspace-record';
+  const record=element('div','income-record');record.id=`${page}-workspace-record`;
   record.append(element('p','workspace-record-hint','当前范围的问题单 · 保存仅保留在此浏览器'),form);
   right.append(rightControls,finding,record);
   const showRight=mode=>{
@@ -2548,27 +2580,27 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
     recordButton.setAttribute('aria-pressed',String(mode==='record'));
   };
   observationButton.addEventListener('click',()=>showRight('observation'));
-  recordButton.disabled=metric(selectedMetric).kind==='na'&&!activeIssueMetrics.get(issueScopeKey('E'));
+  recordButton.disabled=metric(selectedMetric).kind==='na'&&!activeIssueMetrics.get(issueScopeKey(page));
   recordButton.addEventListener('click',()=>{
     const id=Number(form.querySelector('[name="issueMetric"]').value);
-    activeIssueMetrics.set(issueScopeKey('E'),id);
+    activeIssueMetrics.set(issueScopeKey(page),id);
     const params=new URLSearchParams(location.hash.split('?')[1]??'');params.set('issue',String(id));
-    history.replaceState(null,'',`#/E?${params}`);lastRenderedHash=location.hash;
-    syncIncomeLinks();showRight('record');
+    history.replaceState(null,'',`#/${page}?${params}`);lastRenderedHash=location.hash;
+    syncWorkspaceLinks();showRight('record');
   });
   const routeParams=new URLSearchParams(location.hash.split('?')[1]??'');
   showRight(routeParams.has('issue')?'record':'observation');
-  const initialView=routeParams.has('panel')?incomeWorkspaceView:
-    panels.get('change').querySelector('.detail-chart,.na-note')?'change':
-      panels.get('groups').querySelector(':scope > .detail-chart,:scope > .evidence-pair')?'groups':'data';
-  function syncIncomeLinks() {
+  const initialView=routeParams.has('panel')?diagnosticWorkspaceView:
+    panels.get('change').querySelector(':scope > .evidence-pair,:scope > .na-note,:scope > .analysis-main')?'change':
+      panels.get('groups').querySelector(':scope > .detail-chart,:scope > .evidence-pair,:scope > .detail-chart-panel,:scope > .entity-workspace')?'groups':'data';
+  function syncWorkspaceLinks() {
     for(const link of document.querySelectorAll('a[href]')) {
-      const href=link.getAttribute('href');if(!/^#\/E(?:\?|$)/.test(href))continue;
+      const href=link.getAttribute('href');if(href.split('?')[0]!==`#/${page}`)continue;
       const params=new URLSearchParams(href.split('?')[1]??'');
-      const issue=activeIssueMetrics.get(issueScopeKey('E'));
+      const issue=activeIssueMetrics.get(issueScopeKey(page));
       if(issue)params.set('issue',String(issue));else params.delete('issue');
-      if(incomeWorkspaceView==='change')params.delete('panel');else params.set('panel',incomeWorkspaceView);
-      link.href=`#/E${params.size?`?${params}`:''}`;
+      if(params.has('metric')||diagnosticWorkspaceView==='change')params.delete('panel');else params.set('panel',diagnosticWorkspaceView);
+      link.href=`#/${page}${params.size?`?${params}`:''}`;
     }
   }
   const drawVisible=()=>{
@@ -2580,10 +2612,17 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
       const existing=window.echarts?.getInstanceByDom(box);
       if(existing)existing.resize();else drawEvidenceChart(box,spec);
     }
+    const explorer=legacy?.explorer;
+    if(explorer&&!explorer.node.dataset.initialized&&explorer.node.getClientRects().length) {
+      let visible=true;
+      for(let node=explorer.node;node&&node!==workspace;node=node.parentElement)
+        if(node.hidden||node.tagName==='DETAILS'&&!node.open){visible=false;break;}
+      if(visible){explorer.init();explorer.node.dataset.initialized='true';}
+    }
     updateScrollableTables();
   };
   const activate=(key,{focus=false,push=false}={})=>{
-    incomeWorkspaceView=key;
+    diagnosticWorkspaceView=key;
     for(const [name,panel] of panels) {
       panel.hidden=name!==key;buttons.get(name).setAttribute('aria-selected',String(name===key));
       buttons.get(name).tabIndex=name===key?0:-1;
@@ -2591,10 +2630,10 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
     if(push) {
       const params=new URLSearchParams(location.hash.split('?')[1]??'');
       if(key==='change')params.delete('panel');else params.set('panel',key);
-      history.pushState(null,'',`#/E${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
+      history.pushState(null,'',`#/${page}${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
     }
     if(focus)buttons.get(key).focus({preventScroll:true});
-    syncIncomeLinks();
+    syncWorkspaceLinks();
     requestAnimationFrame(drawVisible);
   };
   for(const [key,button] of buttons) {
@@ -2610,12 +2649,12 @@ function renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingM
     panel.append(element('p','na-note',key==='change'?'当前指标没有可比历史；分组和完整值可在其他标签核对。':'当前筛选下没有可核验的分组数据。'));
   workspace.addEventListener('toggle',()=>requestAnimationFrame(drawVisible),true);
   layout.append(left,right);workspace.append(layout);body.append(workspace);
-  const inventory=metricInventory('E');inventory.id='E-catalog';
-  const catalogDetails=element('details','income-catalog');catalogDetails.append(element('summary','','展开本页全部 7 项指标'));
+  const inventory=metricInventory(page);inventory.id=`${page}-catalog`;
+  const catalogDetails=element('details','income-catalog');catalogDetails.append(element('summary','',`展开本页全部 ${dataset.catalog.filter(item=>item.page===page).length} 项指标`));
   catalogDetails.append(inventory.lastElementChild);inventory.append(catalogDetails);body.append(inventory);
-  overview.id='E-signals';
+  overview.id=`${page}-signals`;
   const navigation=element('nav','section-navigation');navigation.setAttribute('aria-label','本页章节');
-  for(const [label,target] of [['关键指标',overview],['付费诊断',workspace],['全部指标',inventory]]) {
+  for(const [label,target] of [['关键指标',overview],['诊断工作区',workspace],['全部指标',inventory]]) {
     const button=element('button','section-navigation-item',label);button.type='button';button.dataset.target=target.id;
     button.setAttribute('aria-controls',target.id);
     button.addEventListener('click',()=>{
@@ -2651,7 +2690,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
   const overviewMain=element('div','signals-main');
   const hero=element('div','detail-kpis');
   const inspector=element('aside','metric-inspector');
-  inspector.hidden=!showSelected;
+  inspector.hidden=true;
   inspector.setAttribute('aria-label','选中指标摘要');
   inspector.tabIndex=-1;
   const selectMetric=id=>{
@@ -2726,8 +2765,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     finding.append(element('p','finding-meta','跨页时仅保留目标页支持的筛选条件。'));
   overviewMain.append(hero);overviewGrid.append(overviewMain,inspector);
   overview.append(overviewGrid);body.append(overview);
-  if(showSelected&&page!=='E')selectMetric(selectedMetric);
-  if(page==='E'){renderIncomeWorkspace(top,body,overview,finding,selectedMetric,findingMetric);return;}
+  if(page==='E'){renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric);return;}
   const drawSpecs=[];
   const addChart=(container,spec)=>{
     spec=diagnosticChartFacts(page,spec);
@@ -2821,29 +2859,9 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(element('p','table-note','当前条件下没有额外的可比趋势；完整指标值与适用性见上方数据核对。'));
   }
   if(page==='D')evidence.insertBefore(trialReadinessPanel(),evidence.children[1]??null);
-  body.append(evidence,evidenceFor.node,actionQueue(page),metricInventory(page));
-  const navigation=element('nav','section-navigation');navigation.setAttribute('aria-label','本页章节');
-  const labels=['关键指标','趋势与观察','分组证据','数据核对','行动与复查','全部指标'];
-  body.querySelectorAll(':scope > .detail-section').forEach((section,index)=>{
-    if(!section.id)section.id=`${page}-section-${index}`;
-    const button=element('button','section-navigation-item',labels[index]);button.type='button';
-    button.dataset.target=section.id;button.setAttribute('aria-controls',section.id);
-    if(index===0)button.setAttribute('aria-current','location');
-    button.addEventListener('click',()=>{
-      const heading=section.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});
-      section.scrollIntoView({block:'start',behavior:chartAnimationDuration(1)?'smooth':'instant'});
-    });
-    navigation.append(button);
+  renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric,{
+    selectedEvidence:evidenceFor,analysisMain,evidence,specs:drawSpecs,explorer
   });
-  body.insertBefore(navigation,overview);
-  main.append(top,body);
-  document.querySelectorAll('.headline-sparkline').forEach(box=>{
-    const id=Number(box.dataset.metricId),history=metricHistory(id);
-    if(history)drawSparkline(box,history.values,id,history.labels,history.unit);
-  });
-  evidenceFor.specs.forEach(([box,spec])=>drawDetailChart(box,spec));
-  drawSpecs.forEach(([box,spec])=>drawEvidenceChart(box,spec));
-  if(!selectedFilters().length)explorer?.init();
 }
 function disposeCharts() {
   if (chart) {chart.dispose();chart=undefined;}
@@ -2860,7 +2878,7 @@ function renderRoute({preserveScroll=false}={}) {
     const requested=supportsPageMetric(route,metricId)?
       metricId:null;
     const observed=selectedFilters().length?filteredFinding(route)?.id:null;
-    const selected=requested??(observed&&metric(observed).kind!=='na'?observed:route==='E'?35:defaultFindingMetric[route]);
+    const selected=requested??(observed&&metric(observed).kind!=='na'?observed:route==='E'?35:route==='F'?48:defaultFindingMetric[route]);
     renderDetail(route,selected,Boolean(metricId)); document.title=`${pages[route].title} · Parallens`;
   } else {
     renderHome(); document.title='用户与设备经营总览 · Parallens';

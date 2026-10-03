@@ -23,7 +23,7 @@ async (page) => {
       for(const [topic,id,filters] of cases) {
         await p.goto(`${base}#/${topic}?metric=${id}${filters?`&${filters}`:''}`);
         const evidence=p.locator(`#metric-evidence-${id}`);await evidence.waitFor();
-        if(topic==='E') {
+        {
           await evidence.locator('.evidence-pair:visible svg').first().waitFor();
           for(const disclosure of await evidence.locator('.evidence-pair:visible .workspace-calculation').all())
             await disclosure.locator('summary').click();
@@ -74,7 +74,7 @@ async (page) => {
           check(qualityCharts===1,'Quality evidence duplicates the same daily trend elsewhere on the page');
         }
         for(const panel of panels) {
-          check((topic==='E'?panel.stacked:panel.sideBySide)&&panel.contained,`Evidence blocks overlap or escape at ${width}px: ${JSON.stringify(panel)}`);
+          check(panel.stacked&&panel.contained,`Evidence blocks overlap or escape at ${width}px: ${JSON.stringify(panel)}`);
           check(panel.tableFits,`Narrow evidence table loses columns at ${width}px: ${panel.title}`);
           check(panel.exact,`Chart and adjacent table disagree at ${width}px: ${panel.title}`);
           check(panel.finalLabel,`The latest chart value is truncated at ${width}px: ${panel.title}`);
@@ -88,11 +88,17 @@ async (page) => {
     // A 1440px desktop at 200% browser zoom has an effective 720px layout viewport.
     await p.setViewportSize({width:720,height:1000});
     await p.goto(`${base}#/D?metric=52`);await p.locator('#metric-evidence-52 svg').first().waitFor();
-    const enlarged=await p.locator('#metric-evidence-52 .evidence-pair').evaluateAll(nodes=>nodes.map(pair=>{
+    const enlarged=[];
+    for(const key of ['change','groups']) {
+      await p.locator(`#D-tab-${key}`).click();
+      await p.locator('#metric-evidence-52 .evidence-pair:visible svg').first().waitFor();
+      for(const disclosure of await p.locator('#metric-evidence-52 .evidence-pair:visible .workspace-calculation').all())await disclosure.locator('summary').click();
+      enlarged.push(...await p.locator('#metric-evidence-52 .evidence-pair:visible').evaluateAll(nodes=>nodes.map(pair=>{
       const plot=pair.querySelector('.evidence-plot').getBoundingClientRect(),table=pair.querySelector('.data-table-scroll').getBoundingClientRect();
       return {stacked:table.top>=plot.bottom-1,chartWidth:pair.querySelector('.detail-chart').clientWidth,
         inside:table.right<=pair.getBoundingClientRect().right+1};
-    }));
+    })));
+    }
     check(enlarged.length===2&&enlarged.every(panel=>panel.stacked&&panel.chartWidth>=400&&panel.inside),
       `Enlarged desktop view compresses the chart: ${JSON.stringify(enlarged)}`);
     results.push({effectiveWidth:720,enlarged});

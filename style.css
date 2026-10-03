@@ -563,7 +563,7 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .trial-sample-action {color:#965a1e;text-decoration:underline;text-underline-offset:.16rem;margin-top:auto}
 .action-record-fields button {grid-column:1/-1;justify-self:end}
 
-/* E-page pilot: one place to inspect evidence and register the next action. */
+/* Shared desktop diagnosis: evidence and its action remain in one workspace. */
 .income-workspace {scroll-margin-top:4rem;margin-top:1rem}
 .income-workspace-grid {display:grid;grid-template-columns:minmax(0,2fr) minmax(20rem,1fr);gap:1rem;align-items:start}
 .income-evidence {min-width:0;margin:0;background:#fffefa;border:1px solid var(--line);border-radius:var(--card-radius)}
@@ -619,4 +619,14 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 @media (max-width:1180px) {.trial-sample-list {grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:1180px) {
   .signals-layout:not(.inspector-open) .detail-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+.income-evidence {container-type:inline-size}
+.income-evidence .evidence-grid {grid-template-columns:minmax(0,1fr)}
+.income-evidence .analysis-main {height:auto;min-width:0}
+.income-evidence .detail-chart-panel {min-width:0}
+@container (max-width:52rem) {
+  .income-evidence .entity-workspace-grid,.income-evidence .structure-layout,.income-evidence .split-trends {grid-template-columns:minmax(0,1fr)}
+  .income-evidence .entity-sample-detail {position:static}
+  .income-evidence .trial-sample-list {grid-template-columns:repeat(2,minmax(0,1fr))}
 }
