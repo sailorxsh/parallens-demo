@@ -619,7 +619,7 @@ function metricHistory(id) {
   const estimated=effectiveFor(id).some(([key])=>key!=='week')&&id!==18?
     '当前筛选的整条历史序列采用同一模拟分片方法，不能用于真实经营判断。':'';
   return {labels,values,details,unit:history?.unit??([9,34].includes(id)?'人':'%'),
-    title:id===54?'事件丢失率':catalogItem(id).name,
+    title:metricCardLabels[id]??catalogItem(id).name,
     note:`${history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
 }
 function weeklyRateDetails(id) {
@@ -840,7 +840,7 @@ function metricValueRow(id,valueNode,trend) {
     if(label){
       const delta=Number(trend.dataset.delta);
       const adverseWhenHigh=new Set([15,29,42,52,53,54]);
-      const favorableWhenHigh=new Set([2,3,4,9,10,11,13,17,18,23,24,27,34,41,48,49]);
+      const favorableWhenHigh=new Set([2,3,4,9,10,11,13,17,18,23,24,27,34,41]);
       const direction=adverseWhenHigh.has(id)?-1:favorableWhenHigh.has(id)?1:0;
       label.className=`metric-delta${direction&&Math.abs(delta)>.05?delta*direction>0?' improving':' adverse':''}`;
       row.append(label);
@@ -1226,6 +1226,64 @@ function displayValue(id) {
   if(value.kind==='group'&&JSON.stringify(value).includes('"kind":"na"')) return '不适用';
   return value.kind==='group' ? (groupSummary[id]?.(value.value) ?? '查看分组值') : formatMetric(id);
 }
+const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU）',7:'累计注册用户',8:'累计首图激活设备',
+    9:'周新增注册用户',10:'注册后72小时绑定率',11:'首次绑定成功率',13:'观鸟7日价值激活率',
+    15:'绑定后未产首图设备',18:'成熟试用转正率',21:'有效订阅净增',25:'日活主账号（DAU）',
+    29:'季节阈值未使用率',34:'付费权益主账号',35:'订阅ARPPU',48:'多设备主账号占比',
+    49:'设备共享率',52:'流失高危主账号',53:'当日异常事件数',54:'事件丢失率'};
+function metricCardSummary(id) {
+  const value=metric(id),item=catalogItem(id);
+  const summary={label:metricCardLabels[id]??item.name,text:displayValue(id),unit:'',context:'',fields:[]};
+  if(value.kind==='na'||value.kind==='group'&&JSON.stringify(value).includes('"kind":"na"'))return summary;
+  if(value.kind==='count')summary.unit=({2:'人',4:'人',9:'人',15:'台',34:'人',52:'人',53:'条'})[id]??'';
+  const contexts={3:'月化经常性收入，非本月实际收款',4:'最近30天复合活跃主账号去重',
+    10:'已满72小时观察的新注册批次',13:'已满7日观察的观鸟注册批次',15:'绑定已超过3天，仍未产出首图',
+    34:'当前有效付费权益，含订阅或增值Pack',48:'绑定2台及以上的主账号占比',49:'至少共享给1人的主账号绑定设备占比',
+    52:'命中流失风险信号的主账号去重',53:'当日演示事件数，不代表受影响用户数'};
+  summary.context=contexts[id]??'';
+  if(id===3)summary.unit='/月';
+  if(value.kind==='group') {
+    const v=value.value;
+    if(id===7) {
+      summary.text=number(v.registered);summary.unit='人';
+      summary.fields=[['当前绑定主账号',`${number(v.boundOwners)}人`]];
+    } else if(id===8) {
+      summary.text=number(v.activatedCumulative);summary.unit='台';
+      summary.fields=[['当前绑定设备',`${number(v.boundCurrent)}台`]];
+      summary.context='累计激活与当前绑定是不同集合，不能直接相减';
+    } else if(id===21) {
+      const net=v.closing-v.opening;
+      summary.text=`${net>=0?'+':''}${number(net)}`;summary.unit='人';
+      summary.context=`${sourceData.subscriptionFlow.window} · 期末减期初`;
+    } else if(id===25) {
+      summary.text=number(v.DAU);summary.unit='人';
+      summary.fields=[['WAU',`${number(v.WAU)}人`],['MAU',`${number(v.MAU)}人`]];
+      summary.context='日、7日、30日分别去重，人数不可相加';
+    } else if(id===35) {
+      summary.unit='/人';summary.fields=[['月内订阅付款主账号',`${number(v.monthlySubscriptionPayers)}人`]];
+      summary.context=`${metricHistory(id)?.labels.at(-1)??'完整月'} · 订阅净收入÷当月付款主账号`;
+    } else if(id===39) {
+      const entries=Object.entries(v).sort((a,b)=>b[1].subscriptionRate-a[1].subscriptionRate);
+      const [name,part]=entries[0];
+      summary.label=entries.length===1?'所选型号订阅率':'型号订阅率最高';
+      summary.text=`${name} · ${percent(part.subscriptionRate)}`;
+      summary.fields=[['主账号样本',`${number(part.owners)}人`],['同型号活跃率',percent(part.activeRate)]];
+      summary.context='两项比率均以该型号主账号为分母';
+    } else if(id===54) {
+      summary.text=percent(v.eventLoss.value);
+      summary.fields=[['ID映射覆盖率',percent(v.idMapping.value)]];
+      summary.context='丢失率与映射覆盖率分别计算，不能相除';
+    }
+  } else if(id===29&&Number.isFinite(value.thresholdDays))summary.context=`连续${value.thresholdDays}天无复合活跃的主账号占比`;
+  return summary;
+}
+function metricSecondaryValues(summary) {
+  const list=element('dl','metric-secondary-values');
+  summary.fields.forEach(([label,value])=>{
+    const row=element('div','');row.append(element('dt','',label),element('dd','',value));list.append(row);
+  });
+  return list;
+}
 function groupText(value,key='') {
   if (typeof value==='boolean') return value?'是':'否';
   if (typeof value==='number') {
@@ -1602,7 +1660,7 @@ function metricEvidence(id,page) {
   };
   const history=metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
-  if(history&&id!==primaryId&&(id!==18||selectedFilters().length)) {
+  if(history&&(id!==primaryId||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {
     const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:history.details,
       series:[{name:history.title,values:history.values}],note:history.note};
     appendEvidencePair(spec,{title:`${history.title} · 趋势数据`,columns:['周期','值'],
@@ -1709,7 +1767,7 @@ function metricEvidence(id,page) {
       }),note:'不同维度切片为模拟估算，不能作为生产经营结论。'});
     }
   }
-  panel.append(dataTable({title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果'],rows:flattenMeasure(value.kind==='group'?value.value:value),
+  panel.append(dataTable({title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
     note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}));
   return {node:panel,specs};
 }
@@ -1725,9 +1783,12 @@ function metricInventory(page) {
   head.append(row);table.append(head);
   const body=element('tbody','');
   records.forEach(item=>{
+    const summary=metricCardSummary(item.id);
     const tr=element('tr','');
     const title=element('td','metric-heading');const link=element('a','metric-inventory-link',item.name);link.href=routeHref(page,item.id);title.append(link,definition(item.id,item.name));
-    tr.append(element('th','',String(item.id).padStart(2,'0')),title,element('td','',displayValue(item.id)),
+    const result=element('td','');result.append(element('span','',`${summary.label===item.name?'':`${summary.label}：`}${summary.text}${summary.unit}`));
+    summary.fields.forEach(([label,value])=>result.append(element('p','metric-table-context',`${label}：${value}`)));
+    tr.append(element('th','',String(item.id).padStart(2,'0')),title,result,
       element('td','',policyFor(item.id).businessDimensions.map(key=>`${filterLabels[key]}${policyFor(item.id).unavailableDimensions.includes(key)?'（待补明细）':''}`).join('、')||'仅总体'));
     body.append(tr);
   });
@@ -2032,13 +2093,16 @@ function findingCalculation(comparison) {
 }
 function metricInspector(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
+  const summary=metricCardSummary(id);
   const panel=element('div','metric-inspector-content');
   panel.append(element('p','inspector-kicker',`指标摘要 / #${String(id).padStart(2,'0')}`),
-    element('h3','',item.name),element('strong','inspector-value',displayValue(id)));
+    element('h3','',item.name),element('strong','inspector-value',`${summary.text}${summary.unit}`));
   const rows=element('dl','inspector-facts');
   const fact=(label,text)=>{
     const row=element('div','');row.append(element('dt','',label),element('dd','',text));rows.append(row);
   };
+  if(summary.label!==item.name)fact('当前主值',summary.label);
+  summary.fields.forEach(([label,text])=>fact(label,text));
   fact('统计对象',contract.entity);
   fact('时间窗口',contract.window);
   if(value.kind==='rate')fact('本期分子 / 分母',`${number(value.numerator)} / ${number(value.denominator)}`);
@@ -2155,17 +2219,20 @@ function renderDetail(page,selectedMetric,showSelected=false) {
   };
   const heroIds=primaryHeroIds[page];
   heroIds.forEach(id=>{
-    const item=catalogItem(id);
+    const item=catalogItem(id),summary=metricCardSummary(id);
     const card=element('article',`detail-kpi${showSelected&&id===selectedMetric?' selected':''}`);
     card.dataset.metricId=String(id);
-    const heading=element('div','metric-heading');heading.append(element('h3','',item.name),definition(id,item.name));
-    const select=element('button','detail-select',displayValue(id));select.type='button';
-    select.setAttribute('aria-label',`在右侧查看${item.name}摘要`);
+    const heading=element('div','metric-heading');heading.append(element('h3','',summary.label),definition(id,item.name));
+    const select=element('button','detail-select',summary.text);select.type='button';
+    if(summary.unit)select.append(element('span','metric-value-unit',summary.unit));
+    select.setAttribute('aria-label',`查看${summary.label}摘要：${summary.text}${summary.unit}`);
     select.setAttribute('aria-pressed',String(showSelected&&id===selectedMetric));
     select.addEventListener('click',()=>{selectMetric(id);inspector.focus({preventScroll:true});});
     const trend=headlineTrend(id);
     const link=element('a','detail-evidence-link','查看对应数据 ↓');link.href=routeHref(page,id);
     card.append(element('span','detail-kpi-id',`#${String(id).padStart(2,'0')}`),heading,metricValueRow(id,select,trend),link);
+    if(summary.fields.length)card.append(metricSecondaryValues(summary));
+    if(summary.context)card.append(element('p','metric-value-context',summary.context));
     if(trend)card.append(trend);
     if(id===21){const flow=netAddComparison();if(flow)card.append(flow);}
     if(metric(id).kind==='na')card.append(element('p','metric-na-reason',metric(id).reason));
