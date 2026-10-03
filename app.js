@@ -161,6 +161,8 @@ const selectedFor=page=>selectedFilters().filter(([key,value])=>relevantFilters(
   availableOptions(page,key).includes(value));
 const hasDataFilters=page=>selectedFor(page).some(([key])=>
   ['page','module','period'].includes(sourceData.filterPolicy.controls[key].scope));
+const supportsPageMetric=(page,id)=>Boolean(pages[page]&&id&&
+  (sourceData.diagnostics[page].heroIds.includes(id)||contractFor(id)?.page===page));
 function routeHref(page='',metricId) {
   const params=new URLSearchParams();
   selectedFor(page).forEach(([key,value])=>params.set(key,value));
@@ -177,7 +179,7 @@ function readRoute() {
   for (const key of relevantFilters(pages[page]?page:'')) if(params.has(key)&&
     availableOptions(pages[page]?page:'',key,filterState).includes(params.get(key)))filterState[key]=params.get(key);
   const issue=Number(params.get('issue'));
-  if(contractFor(issue)?.page===page)activeIssueMetrics.set(issueScopeKey(page),issue);
+  if(supportsPageMetric(page,issue))activeIssueMetrics.set(issueScopeKey(page),issue);
   else activeIssueMetrics.delete(issueScopeKey(page));
   return {page:pages[page]?page:'',metricId:Number(params.get('metric'))||null};
 }
@@ -2563,7 +2565,7 @@ function renderRoute({preserveScroll=false}={}) {
   projectDataset();
   closeDefinitionPopover();
   if (route && pages[route]) {
-    const requested=dataset.diagnostics[route].heroIds.includes(metricId)||contractFor(metricId)?.page===route?
+    const requested=supportsPageMetric(route,metricId)?
       metricId:null;
     const observed=selectedFilters().length?filteredFinding(route)?.id:null;
     const selected=requested??(observed&&metric(observed).kind!=='na'?observed:defaultFindingMetric[route]);

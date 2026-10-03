@@ -60,6 +60,13 @@ evaluate('location.hash="#/C?deviceModel=K6&firmware=2.8&metric=46&issue=46";rea
 assert.equal(evaluate('activeIssueMetrics.get(issueScopeKey("C"))'),46);
 evaluate('location.hash="#/C?deviceModel=K6&firmware=2.8&metric=46&issue=52";readRoute()');
 assert.equal(evaluate('activeIssueMetrics.get(issueScopeKey("C"))'),undefined,'Cross-page issue is invalid');
+for(const [page,info] of Object.entries(fixtures.diagnostics)) {
+  for(const id of info.heroIds) {
+    evaluate(`location.hash="#/${page}?metric=${id}&issue=${id}";readRoute()`);
+    assert.equal(evaluate(`activeIssueMetrics.get(issueScopeKey("${page}"))`),id,`Shared metric #${id} cannot be registered on ${page}`);
+  }
+}
+evaluate('activeIssueMetrics.clear()');
 project({});
 const searchIds=query=>Array.from(evaluate(`metricSearchMatches(${JSON.stringify(query)}).map(result=>result.item.id)`));
 assert.equal(searchIds('').length,53,'Search must retain the full metric catalog');
