@@ -399,6 +399,8 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .action-operation-feedback {font-size:.71rem;line-height:1.6;margin:.4rem 0;color:#365a43}
 .action-operation-feedback:empty {display:none}
 .action-evidence-link {display:block;color:#83521d;font-size:.69rem;text-decoration:underline;text-underline-offset:.16rem;margin-bottom:.45rem}
+.action-metric-link {color:#83521d;text-decoration:underline;text-underline-offset:.16rem}
+.action-metric-link:hover {color:#57360e}
 .action-record .insight-link {font-size:.72rem}
 @media (max-width:1500px) {
   .journey-rail {grid-template-columns:repeat(3,minmax(0,1fr))}

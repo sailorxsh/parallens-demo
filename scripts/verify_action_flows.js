@@ -104,7 +104,35 @@ async (page) => {
     await probe.setViewportSize({width:1920,height:1000});
     await form().screenshot({path:'output/playwright/action-review-1920.png'});
     check(!await probe.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Review layout overflows at desktop width');
+    for(const width of [1366,1920]) {
+      await probe.setViewportSize({width,height:1000});
+      await open('C?deviceModel=K6&firmware=2.8');
+      const technicalRow=probe.locator('.action-checks tr[data-metric-id="46"]');
+      const technicalSignal=await technicalRow.locator('td').first().innerText();
+      check(technicalSignal.includes('直播 · 91.3%')&&technicalSignal.includes('推送成功率：95.0%')&&technicalSignal.includes('上传成功率：97.0%'),
+        'Following a technical card into the action table hides the lower live rate');
+      const deviceSignal=await probe.locator('.action-checks tr[data-metric-id="8"] td').first().innerText();
+      check(deviceSignal.includes('19,611台')&&deviceSignal.includes('当前绑定设备：16,005台')&&!deviceSignal.includes(' / '),
+        'The action table combines cumulative and currently bound devices without names');
+      await input('note').fill('按链路核对请求失败，保留当前核查草稿');
+      const originalIssue=await form().locator('.action-record-header strong').innerText();
+      await technicalRow.locator('a').click();await probe.locator('#metric-evidence-46 svg').first().waitFor();
+      check(probe.url().includes('deviceModel=K6')&&probe.url().includes('firmware=2.8')&&probe.url().includes('metric=46'),
+        'Action evidence lost the metric or supported filter scope');
+      check(await input('note').inputValue()==='按链路核对请求失败，保留当前核查草稿','Action evidence navigation lost the current draft');
+      check(await form().locator('.action-record-header strong').innerText()===originalIssue,'Opening auxiliary evidence changed the current issue');
+      await probe.goto(`${base}#/E?country=US`);await probe.locator('.action-checks').waitFor();
+      const paymentCard=probe.locator('.detail-kpi[data-metric-id="35"]');
+      const paymentSignal=await probe.locator('.action-checks tr[data-metric-id="35"] td').first().innerText();
+      check(paymentSignal.includes(await paymentCard.locator('.detail-select').innerText())&&
+        paymentSignal.includes('月内订阅付款主账号：')&&paymentSignal.includes('8月'),
+        'Payment actions lose the per-payer unit, payer count, or complete month');
+      await probe.goto(`${base}#/F?country=US`);await probe.locator('.action-checks').waitFor();
+      check(await probe.locator('.action-checks tr[data-metric-id="48"] th').innerText()==='多设备主账号占比',
+        'Device-share actions are still labelled as device counts');
+      check(!await probe.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Filtered action evidence overflows at desktop width');
+    }
     check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
-    return {status:'PASS',checks:['metric-specific action evidence','mature-cohort baseline','draft survives evidence and page navigation','successful save and reload','storage failure preserves committed state and draft','action marking and undo','review required fields and future-date validation','sample-link dirty feedback','filter scope isolation','selected-week baseline','legacy baseline preservation'],screenshots:['action-review-1440.png','action-review-1920.png']};
+    return {status:'PASS',checks:['metric-specific action evidence','mature-cohort baseline','draft survives evidence and page navigation','successful save and reload','storage failure preserves committed state and draft','action marking and undo','review required fields and future-date validation','sample-link dirty feedback','filter scope isolation','selected-week baseline','legacy baseline preservation','card and action metric consistency','independent technical rates and device counts','scoped action evidence preserves issue and draft','payment units and periods in actions'],screenshots:['action-review-1440.png','action-review-1920.png']};
   } finally {await context.close();}
 }

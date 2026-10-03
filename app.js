@@ -1963,9 +1963,23 @@ function actionQueue(page) {
       E:'分开核对月内付款人数、净收入和ARPPU，确认收入口径。',
       F:'按主账号与设备分别比较结构，避免把相关性写成因果。',
       G:'先核对埋点丢失与ID映射，再研判业务异常事件。'};
-    section.append(dataTable({title:'所选范围的核对对象',columns:['指标','筛后信号','建议下一步'],rows:ids.map(id=>[
-      catalogItem(id).name,displayValue(id),metric(id).kind==='na'?metric(id).reason:next[page]]),
-      note:'当前为演示数据；行动建议依据本页业务问题生成，阈值需业务确认。'}));
+    const metricNext={8:'核对累计激活与当前绑定的交叉状态；分别统计已激活未绑定设备，不用两个存量相减解释解绑。',
+      41:'按设备活跃口径核对有效设备与活跃设备数，再按型号、固件比较。',
+      42:'核对触发事件与有效内容次数，按型号、固件和安装场景排查；变化不直接证明算法或安装原因。',
+      46:'分别核对上传、直播、推送失败次数和请求数，再按型号、固件查看错误码与失败记录。'};
+    const summaries=ids.map(id=>metricCardSummary(id));
+    const checks=dataTable({title:'所选范围的核对对象',columns:['指标','筛后信号','建议下一步'],rows:ids.map((id,index)=>[
+      summaries[index].label,`${summaries[index].text}${summaries[index].unit}`,
+      metric(id).kind==='na'?metric(id).reason:metricNext[id]??next[page]]),
+      note:'点击指标查看同范围证据；卡片与本表共用指标摘要。当前为演示数据，阈值需业务确认。'},'action-checks');
+    checks.querySelectorAll('tbody tr').forEach((row,index)=>{
+      const id=ids[index],summary=summaries[index];row.dataset.metricId=String(id);
+      const link=element('a','action-metric-link',summary.label);link.href=routeHref(page,id);
+      link.setAttribute('aria-label',`查看${summary.label}的数据依据`);row.firstElementChild.replaceChildren(link);
+      summary.fields.forEach(([label,value])=>row.children[1].append(element('p','metric-table-context',`${label}：${value}`)));
+      if(summary.context)row.children[1].append(element('p','metric-table-context',summary.context));
+    });
+    section.append(checks);
     section.append(actionRecord(page,findingId??info.heroIds[0]));
     return section;
   }
