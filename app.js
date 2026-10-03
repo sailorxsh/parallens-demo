@@ -11,7 +11,7 @@ const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
 const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
 const findingRuleVersion='demo-2026-10-02-v3';
-const findingSource=id=>({18:'合成试用明细交集重算',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
+const findingSource=id=>({18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 main?.addEventListener('toggle',()=>updateScrollableTables(),true);
 document.querySelector('.skip-link')?.addEventListener('click',event=>{
@@ -41,6 +41,8 @@ try {
   simulatedActionState=saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{};
 } catch { simulatedActionState={}; }
 const actionDrafts=new Map();
+const activeIssueMetrics=new Map();
+const issueScopeKey=page=>`${page}:${activeFilterDescription()||'默认演示范围'}`;
 const warnActionDrafts=event=>{event.preventDefault();event.returnValue='';};
 function updateActionDraftWarning() {
   window.removeEventListener('beforeunload',warnActionDrafts);
@@ -163,6 +165,8 @@ function routeHref(page='',metricId) {
   const params=new URLSearchParams();
   selectedFor(page).forEach(([key,value])=>params.set(key,value));
   if (metricId) params.set('metric',String(metricId));
+  const issue=activeIssueMetrics.get(issueScopeKey(page));
+  if(issue)params.set('issue',String(issue));
   return `#/${page}${params.size?`?${params}`:''}`;
 }
 function readRoute() {
@@ -172,6 +176,9 @@ function readRoute() {
   filterState={};
   for (const key of relevantFilters(pages[page]?page:'')) if(params.has(key)&&
     availableOptions(pages[page]?page:'',key,filterState).includes(params.get(key)))filterState[key]=params.get(key);
+  const issue=Number(params.get('issue'));
+  if(contractFor(issue)?.page===page)activeIssueMetrics.set(issueScopeKey(page),issue);
+  else activeIssueMetrics.delete(issueScopeKey(page));
   return {page:pages[page]?page:'',metricId:Number(params.get('metric'))||null};
 }
 function activeFilterDescription() {
@@ -247,6 +254,33 @@ const policyFor=id=>sourceData.filterPolicy.metrics.find(item=>item.id===id);
 const effectiveFor=(id,state=filterState)=>Object.entries(state).filter(([key,value])=>
   value&&value!=='All'&&policyFor(id).businessDimensions.includes(key));
 const trialState=(state=filterState)=>Object.fromEntries(effectiveFor(18,state));
+function deviceEventMetric(state=filterState,weekNumber=state.week??sourceData.weekly.at(-1).week,group='all') {
+  const scoped=Object.fromEntries(effectiveFor(42,state));
+  if(scoped.productLine==='Hunting'||scoped.deviceModel==='Hunt Pro')return na('空触发率仅定义观鸟线，狩猎线不适用');
+  if(scoped.deviceStatus==='Inactive')return na('非有效设备不属于触发事件分母');
+  const missing=Object.keys(scoped).find(key=>!['week','productLine','deviceModel','firmware','deviceStatus'].includes(key));
+  if(missing)return pending(`${filterLabels[missing]}适用，但合成触发数据缺少该维度明细`);
+  const rows=sourceData.weekly.find(week=>String(week.week)===String(weekNumber))?.deviceEventsBird.records;
+  if(!rows)return pending('指定周缺少合成触发事件明细');
+  const selected=rows.filter(row=>(!scoped.deviceModel||row.model===scoped.deviceModel)&&
+    (!scoped.firmware||row.firmware===scoped.firmware)&&
+    (group==='all'||(group==='k6Firmware28')===(row.model==='K6'&&row.firmware==='2.8')));
+  if(!selected.length)return na('该型号与固件组合没有观鸟触发样本');
+  const denominator=selected.reduce((sum,row)=>sum+row.triggers,0),numerator=selected.reduce((sum,row)=>sum+row.empty,0);
+  return denominator>=30?{kind:'rate',numerator,denominator,value:numerator/denominator}:na('筛选后触发样本少于30');
+}
+function deviceEventContributionTable() {
+  const rows=[];
+  for(const [group,label] of [['k6Firmware28','K6 固件2.8'],['others','其他设备'],['all','整体']]) {
+    for(const [start,end] of [[0,8],[8,12]]) {
+      const values=sourceData.weekly.slice(start,end).map(week=>deviceEventMetric({},week.week,group));
+      const n=values.reduce((sum,value)=>sum+value.numerator,0),d=values.reduce((sum,value)=>sum+value.denominator,0);
+      rows.push([`W${start+1}–W${end} · ${label}`,n,d,percent(n/d)]);
+    }
+  }
+  return {title:'空触发异常贡献',columns:['周期 / 分组','空触发（次）','触发（次）','合并空触发率'],rows,
+    note:'各周期汇总合成事件计数再计算比例。总体42%→58%；K6固件2.8每周增加1,600次空触发，占总体每周10,000次触发的16个百分点。其他型号拆分为构造样本，不作因果归因。'};
+}
 function weeklyMetric(id,w) {
   const rateValue=(n,d)=>({kind:'rate',numerator:n,denominator:d,value:d?n/d:0});
   const countValue=n=>({kind:'count',value:n});
@@ -258,7 +292,7 @@ function weeklyMetric(id,w) {
   if(id===17) return rateValue(w.registrationCohort.trialStarted7d,w.registrationCohort.registered);
   if(id===18) return rateValue(w.trialMaturity.converted,w.trialMaturity.completed);
   if(id===23) return rateValue(w.renewal.successful,w.renewal.due);
-  if(id===42) return rateValue(w.deviceEventsBird.empty,w.deviceEventsBird.triggers);
+  if(id===42) return deviceEventMetric({},w.week);
   return na('该指标没有完整的周度模拟事实');
 }
 function sharesFor(filters,metricId) {
@@ -389,6 +423,7 @@ function projectMetric(id,state=filterState) {
     return d>=30?{kind:'rate',numerator:n,denominator:d,value:n/d,thresholdDays:threshold}:na('可观察主账号少于30');
   }
   if(id===18)return trialMetric(scoped);
+  if(id===42)return deviceEventMetric(scoped);
   let raw=sourceData.metrics[`m${String(id).padStart(2,'0')}`];
   if(scoped.week&&contract.dimensions.includes('week')) {
     const weekly=sourceData.weekly.find(w=>String(w.week)===scoped.week);
@@ -572,6 +607,10 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
 }
 function trendValues(id) {
   if(id===27&&filterState.functionType)return null;
+  if(id===42) {
+    const values=sourceData.weekly.map(week=>{const value=deviceEventMetric(filterState,week.week);return value.kind==='rate'?value.value*100:null;});
+    return values.some(value=>value!==null)?values:null;
+  }
   if(id===18) {
     const values=sourceData.weekly.map(w=>{
       const result=trialRows(Object.fromEntries(effectiveFor(18,{...filterState,week:String(w.week)})));
@@ -636,13 +675,14 @@ function metricHistory(id) {
     const value=projectValue(raw,sharesFor(applicable,id),applicable,id);
     return value.kind==='rate'?value:null;
   }):[10,11,13,17,18,23,42].includes(id)?weeklyRateDetails(id):null;
-  const estimated=effectiveFor(id).some(([key])=>key!=='week')&&id!==18?
+  const estimated=effectiveFor(id).some(([key])=>key!=='week')&&![18,42].includes(id)?
     '当前筛选的整条历史序列采用同一模拟分片方法，不能用于真实经营判断。':'';
   return {labels,values,details,unit:history?.unit??([9,34].includes(id)?'人':'%'),
     title:metricCardLabels[id]??catalogItem(id).name,
-    note:`${history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
+    note:`${id===42?'周×型号×固件合成触发计数逐周汇总；保留原有总体及K6固件2.8分组，其他型号分配为构造样本。':history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
 }
 function weeklyRateDetails(id) {
+  if(id===42)return sourceData.weekly.map(week=>{const value=deviceEventMetric(filterState,week.week);return value.kind==='rate'?{...value,numeratorUnit:'次',denominatorUnit:'次'}:null;});
   if(id===18)return sourceData.weekly.map(week=>{
     const result=trialRows(Object.fromEntries(effectiveFor(id,{...filterState,week:String(week.week)})));
     return result.rows?{...trialAggregate(result.rows),numeratorUnit:'人',denominatorUnit:'人'}:null;
@@ -674,7 +714,7 @@ function weeklyRateComparison(id,split=id===18?9:8,respectWeek=true) {
     return `${firstWeek}–${lastWeek} · ${periodLabel(firstWeek).split(' · ')[1].split('–')[0]}–${periodLabel(lastWeek).split('–')[1]}`;
   };
   const beforeRate=before.numerator/before.denominator*100,afterRate=after.numerator/after.denominator*100;
-  const estimated=id!==18&&effectiveFor(id).some(([key])=>key!=='week'&&!(id===13&&key==='productLine'&&filterState.productLine==='Bird'));
+  const estimated=![18,42].includes(id)&&effectiveFor(id).some(([key])=>key!=='week'&&!(id===13&&key==='productLine'&&filterState.productLine==='Bird'));
   return {id,before,after,beforeRate,afterRate,delta:afterRate-beforeRate,split,series,
     selectedWeek:selected?Number(selected):null,
     beforeLabel:selected?`W${sourceData.weekly[index-1].week}`:`前${split}周合并率`,
@@ -682,7 +722,7 @@ function weeklyRateComparison(id,split=id===18?9:8,respectWeek=true) {
     beforeWindow:selected?window(index-1,index-1):window(0,split-1),
     afterWindow:selected?window(index,index):window(split,rows.length-1),
     unit:id===42?'次':'人',scope:id===42?'观鸟触发事件':id===13?'观鸟注册批次':'成熟试用批次',
-    source:estimated?'模拟分片估算':id===18?'合成试用明细汇总':id===42?'合成周度触发汇总':'合成周度注册批次'};
+    source:estimated?'模拟分片估算':id===18?'合成试用明细汇总':id===42?'周×型号×固件合成触发汇总':'合成周度注册批次'};
 }
 function paidPayersHistory() {
   const id=35,filters=effectiveFor(id),value=metric(id);
@@ -1404,10 +1444,11 @@ function diagnosticChartFacts(page,spec) {
       const raw=weeklyMetric(id,week),rate=id===12?raw.value.D7:raw;
       return {...rate,numeratorUnit:'人',denominatorUnit:'人'};
     }));
-    if(page==='C')details=[null,'k6Firmware28','others'].map(key=>sourceData.weekly.map(week=>{
-      const part=key?week.deviceEventsBird[key]:week.deviceEventsBird;
-      return {numerator:part.empty,denominator:part.triggers,numeratorUnit:'次',denominatorUnit:'次'};
-    }));
+    if(page==='C') {
+      details=['all','k6Firmware28','others'].map(group=>sourceData.weekly.map(week=>({
+        ...deviceEventMetric({},week.week,group),numeratorUnit:'次',denominatorUnit:'次'})));
+      spec={...spec,series:spec.series.map((line,index)=>({...line,values:details[index].map(value=>value.value*100)}))};
+    }
     if(page==='D')details=[weeklyRateDetails(18)];
   } else if(page==='E'&&spec.kind==='stacked100'&&spec.title===info.extraCharts?.[1]?.title) {
     const paid=metric(34),subscriptions=metric(2),packs=metric(36);
@@ -1687,13 +1728,14 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    id===18?'合成试用明细 · 逐条聚合':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
-  const dimensions=id===18?[...trialFactDimensions]:contract.dimensions;
+    id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+  const dimensions=id===18?[...trialFactDimensions]:id===42?policyFor(id).demonstrableDimensions:contract.dimensions;
   const intro=element('p','evidence-meta',`统计对象：${contract.entity} · 窗口：${contract.window} · 当前数据可筛选维度：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
   if(value.kind==='na') {panel.append(element('p','na-note',value.availability==='pending'?
     `待补数据：${value.reason}。该筛选有业务意义，当前原型不能可靠计算。`:
     `不适用：${value.reason}。${contract.unsupported}`));return {node:panel,specs:[]};}
+  panel.append(registerIssueButton(page,id));
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
   const specs=[];
   const appendEvidencePair=(spec,tableSpec)=>{
@@ -1729,7 +1771,7 @@ function metricEvidence(id,page) {
         ['合计',`$${number(sourceData.snapshot.totalMRR)}`]],
       note:'基础订阅与增值Pack按快照加总；月内实际付款人数使用另一个统计窗口。'}));
   }
-  if(id===42&&!selectedFilters().length)panel.append(dataTable(sourceData.diagnostics.C.tables[0]));
+  if(id===42&&!selectedFilters().length)panel.append(dataTable(deviceEventContributionTable()));
   if(id===18&&value.kind==='rate') {
     const periods=filterState.week?[[`所选W${filterState.week}`,trialRows(filterState)]]:
       [['前9个成熟周 · W1–9',trialRows(filterState,'previous')],['近3个成熟周 · W10–12',trialRows(filterState,'current')]];
@@ -1819,22 +1861,23 @@ function metricEvidence(id,page) {
       rows:entries.map(([name,part],index)=>[groupLabels[name],number(part.denominator),number(part.numerator),
         number(failures[index].numerator),percent(failures[index].numerator/part.denominator)]),note});
   } else if(['rate','count','usd'].includes(value.kind)) {
-    const dimension=selectedFilters().map(([key])=>key).find(key=>key!=='week'&&contract.dimensions.includes(key)&&sourceData.slices[key])
+    const dimension=id===42?'deviceModel':selectedFilters().map(([key])=>key).find(key=>key!=='week'&&contract.dimensions.includes(key)&&sourceData.slices[key])
       ??contract.dimensions.find(key=>key!=='week'&&sourceData.slices[key]);
     if(dimension) {
-      const options=Object.keys(sourceData.slices[dimension]);
+      const options=Object.keys(sourceData.slices[dimension]).filter(option=>id!==42||option!=='Hunt Pro');
       const projected=options.map(option=>projectMetric(id,{...filterState,[dimension]:option}));
       const labels=options.map(option=>optionLabels[option]??option);
       const vals=projected.map(part=>part.kind==='na'?null:part.kind==='rate'?part.value*100:part.value);
       const countUnit=/设备|固件/.test(contract.entity)?'台':/事件|异常/.test(contract.entity)?'条':'人';
-      const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,series:[{name:item.name,values:vals}],note:'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。'};
+      const groupNote=id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。';
+      const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote};
       appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
         const cells=flattenMeasure(part)[0]??[];return [labels[index],cells[1]??'—',cells[2]??'—',part.kind==='rate'?percent(part.value):part.kind==='na'?'不适用':part.kind==='usd'?`$${number(part.value)}`:number(part.value)];
-      }),note:'不同维度切片为模拟估算，不能作为生产经营结论。'});
+      }),note:groupNote});
     }
   }
   panel.append(dataTable({title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
-    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}));
+    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}));
   return {node:panel,specs};
 }
 function metricInventory(page) {
@@ -1862,6 +1905,7 @@ function metricInventory(page) {
   return section;
 }
 function trialSamplesPanel() {
+  const page='D';
   const week=filterState.week??String(sourceData.weekly.at(-1).week);
   const result=trialRows(trialState({...filterState,week}));
   if(!result.rows)return null;
@@ -1875,8 +1919,9 @@ function trialSamplesPanel() {
     const button=element('button','trial-sample-item');button.type='button';
     button.append(element('strong','',row.trial_id),element('span','',
       `${optionLabel('country',row.country)} · ${row.app_platform} · ${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · 观察至${row.outcome_observed_through}`),
-      element('span','trial-sample-action','关联到下方问题单 ↘'));
+      element('span','trial-sample-action','关联到试用转正问题单 ↘'));
     button.addEventListener('click',()=>{
+      if(activeIssueMetrics.get(issueScopeKey(page))&&activeIssueMetrics.get(issueScopeKey(page))!==18)registerIssue(page,18);
       const form=document.querySelector('.action-record');
       const linked=form?.querySelector('[name="linkedSample"]');
       if(!linked)return;
@@ -1892,7 +1937,25 @@ function trialSamplesPanel() {
   panel.append(list);
   return panel;
 }
+function registerIssue(page,id) {
+  activeIssueMetrics.set(issueScopeKey(page),id);
+  history.pushState(null,'',routeHref(page,id));
+  renderRoute({preserveScroll:true});
+  const form=document.querySelector('.action-record');
+  form?.scrollIntoView({block:'center',behavior:'instant'});
+  form?.querySelector('[name="owner"]')?.focus({preventScroll:true});
+  document.querySelector('#announcement').textContent=`已打开 #${id} ${catalogItem(id).name} 的当前范围问题单；填写后保存本地记录`;
+}
+function registerIssueButton(page,id) {
+  const button=element('button','issue-register','登记该指标问题');button.type='button';
+  button.dataset.metricId=String(id);
+  button.setAttribute('aria-label',`登记 #${id} ${catalogItem(id).name} 的当前范围问题`);
+  button.addEventListener('click',()=>registerIssue(page,id));
+  return button;
+}
 function actionRecord(page,evidenceId) {
+  const defaultId=evidenceId;
+  evidenceId=activeIssueMetrics.get(issueScopeKey(page))??evidenceId;
   const scope=activeFilterDescription()||'默认演示范围';
   const key=`record:${page}:${scope}:${evidenceId}`;
   const current=simulatedActionState[key]??{};
@@ -1906,6 +1969,13 @@ function actionRecord(page,evidenceId) {
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
   form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}；范围：${scope}。`));
+  const issueIds=[...new Set([defaultId,evidenceId,...sourceData.catalog.filter(item=>item.page===page&&
+    (simulatedActionState[`record:${page}:${scope}:${item.id}`]||actionDrafts.has(`record:${page}:${scope}:${item.id}`))).map(item=>item.id)])];
+  const switchLabel=element('label','issue-switch','本范围的问题单');
+  const switcher=element('select','');switcher.name='issueMetric';
+  issueIds.forEach(id=>{const option=element('option','',`#${id} ${catalogItem(id).name}${actionDrafts.has(`record:${page}:${scope}:${id}`)?' · 未保存草稿':simulatedActionState[`record:${page}:${scope}:${id}`]?' · 已保存':''}`);option.value=String(id);switcher.append(option);});
+  switcher.value=String(evidenceId);switcher.addEventListener('change',()=>registerIssue(page,Number(switcher.value)));
+  switchLabel.append(switcher);form.append(switchLabel);
   if(current.baselineAt&&current.baselineAt!==actionBaselineWindow(evidenceId))form.append(element('p','action-baseline-note',
     `沿用此前登记的基线时间；当前指标对应${actionBaselineWindow(evidenceId)}。请核对历史基线，保存记录不会更新指标数据。`));
   const stages=element('ol','action-stages');stages.setAttribute('aria-label','问题单处理进度');
@@ -2212,11 +2282,12 @@ function metricInspector(id,page) {
   }
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
-    id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
+    id===42?'周×型号×固件合成触发计数重算；缺少维度明细时显示待补数据。':id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
       id===46?`${technicalRequestSource(id)}按当前条件重算；各链路使用自身请求数。`:
       selectedFilters().length?'当前筛选结果含模拟分片估算；请结合下方数据核对。':'结果来自演示底表；趋势中的构造数据在图注中说明。'));
   const link=element('a','inspector-link','查看图表与完整数据 ↓');
   link.href=routeHref(page,id);panel.append(link);
+  if(value.kind!=='na')panel.append(registerIssueButton(page,id));
   return panel;
 }
 function entitySamplesPanel(page) {
@@ -2429,7 +2500,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(explorer.node);
     }
     const grids=element('div','evidence-grid');
-    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(spec));});
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'&&index===0?deviceEventContributionTable():spec));});
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));

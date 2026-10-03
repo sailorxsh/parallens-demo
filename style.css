@@ -348,6 +348,12 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .inspector-source {font-size:.75rem;color:#607567;line-height:1.55;margin:.8rem 0}
 .inspector-link {display:flex;justify-content:space-between;background:#214a34;border:1px solid #214a34;color:#fff;padding:.55rem .7rem;border-radius:.25rem;font-size:.77rem;font-weight:700}
 .inspector-link:hover {background:#163c29}
+.issue-register {border:1px solid #b6c9bb;background:#edf3ee;color:#214a34;border-radius:.3rem;padding:.5rem .75rem;font:inherit;font-size:.8rem;font-weight:650;cursor:pointer;margin:.35rem 0 .65rem}
+.issue-register:hover {background:#dfeae1;border-color:#6c8d76}
+.metric-inspector .issue-register {width:100%;margin-top:.65rem}
+.issue-switch {display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;color:#506455;font-size:.8rem;margin:.7rem 0}
+.issue-switch select {max-width:100%;min-width:16rem;padding:.4rem .55rem;border:1px solid #c3d0c5;border-radius:.3rem;background:#fff;color:#214a34;font:inherit}
+#metric-evidence-42 .evidence-pair td:nth-child(n+2) {white-space:nowrap;word-break:normal}
 .detail-evidence-link {margin-top:.35rem}
 .detail-finding {margin:.65rem 0;padding:.8rem .95rem}
 .detail-finding p {font-size:.82rem;line-height:1.55}

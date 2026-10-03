@@ -997,15 +997,16 @@
         "week"
       ],
       "demonstrableDimensions": [
-        "country",
         "deviceModel",
         "deviceStatus",
         "firmware",
         "productLine",
-        "season",
         "week"
       ],
-      "unavailableDimensions": []
+      "unavailableDimensions": [
+        "country",
+        "season"
+      ]
     },
     {
       "id": 43,

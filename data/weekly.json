@@ -42,7 +42,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 64400,
@@ -94,7 +132,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 64720,
@@ -146,7 +222,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 65040,
@@ -198,7 +312,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 65360,
@@ -250,7 +402,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 65680,
@@ -302,7 +492,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 66000,
@@ -354,7 +582,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 66320,
@@ -406,7 +672,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 1680
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 66640,
@@ -458,7 +762,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 3280
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 67040,
@@ -510,7 +852,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 3280
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 67360,
@@ -562,7 +942,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 3280
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 67680,
@@ -614,7 +1032,45 @@
       "others": {
         "triggers": 6000,
         "empty": 2520
-      }
+      },
+      "records": [
+        {
+          "model": "K6",
+          "firmware": "2.8",
+          "triggers": 4000,
+          "empty": 3280
+        },
+        {
+          "model": "K6",
+          "firmware": "Other",
+          "triggers": 1000,
+          "empty": 420
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 380
+        },
+        {
+          "model": "Bird Lite",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 600
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "2.8",
+          "triggers": 1000,
+          "empty": 460
+        },
+        {
+          "model": "Bird Pro",
+          "firmware": "Other",
+          "triggers": 1500,
+          "empty": 660
+        }
+      ]
     },
     "activity": {
       "compositeMAU": 68000,

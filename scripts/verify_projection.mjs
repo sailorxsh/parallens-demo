@@ -22,6 +22,45 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+for(const week of fixtures.weekly) {
+  const rows=week.deviceEventsBird.records;
+  assert.equal(rows.reduce((sum,row)=>sum+row.triggers,0),week.deviceEventsBird.triggers);
+  assert.equal(rows.reduce((sum,row)=>sum+row.empty,0),week.deviceEventsBird.empty);
+  assert.equal(new Set(rows.map(row=>`${row.model}:${row.firmware}`)).size,rows.length);
+  const k6=rows.find(row=>row.model==='K6'&&row.firmware==='2.8');
+  assert.equal(k6.empty,week.deviceEventsBird.k6Firmware28.empty);
+  assert.equal(k6.triggers,week.deviceEventsBird.k6Firmware28.triggers);
+  for(const row of rows)assert.ok(Number.isInteger(row.empty)&&row.empty>=0&&row.empty<=row.triggers);
+  for(const model of ['K6','Bird Lite','Bird Pro'])for(const firmware of ['2.8','Other']) {
+    const raw=rows.filter(row=>row.model===model&&row.firmware===firmware);
+    const value=project({deviceModel:model,firmware,week:String(week.week)}).m42;
+    assert.equal(value.numerator,raw.reduce((sum,row)=>sum+row.empty,0));
+    assert.equal(value.denominator,raw.reduce((sum,row)=>sum+row.triggers,0));
+    const history=evaluate('metricHistory(42)');
+    assert.equal(history.values[week.week-1],value.value*100);
+    assert.equal(history.details[week.week-1].numerator,value.numerator);
+  }
+}
+assert.equal(project({deviceModel:'K6',firmware:'2.8'}).m42.value,.82);
+assert.equal(evaluate('weeklyRateComparison(42).delta'),40);
+for(const dimension of [{country:'US'},{season:'Migration'},{deviceModel:'K6',firmware:'2.8',country:'US'}]) {
+  assert.equal(project(dimension).m42.availability,'pending');
+  assert.equal(evaluate('metricHistory(42)'),null);
+  assert.equal(evaluate('weeklyRateComparison(42)'),null);
+}
+assert.equal(project({deviceModel:'Hunt Pro'}).m42.kind,'na');
+assert.equal(project({deviceStatus:'Inactive'}).m42.kind,'na');
+evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.weekly.at(-1).deviceEventsBird.records=[{model:"K6",firmware:"2.8",triggers:10,empty:8}]');
+assert.equal(project({deviceModel:'K6',firmware:'2.8'}).m42.kind,'na','Small event samples must not draw a reliable percentage');
+evaluate('sourceData=__fixtures');
+project({deviceModel:'K6',firmware:'2.8'});
+evaluate('activeIssueMetrics.set(issueScopeKey("C"),42)');
+assert.match(evaluate('routeHref("C",46)'),/issue=42/,'Auxiliary evidence must retain explicitly registered issue');
+evaluate('location.hash="#/C?deviceModel=K6&firmware=2.8&metric=46&issue=46";readRoute()');
+assert.equal(evaluate('activeIssueMetrics.get(issueScopeKey("C"))'),46);
+evaluate('location.hash="#/C?deviceModel=K6&firmware=2.8&metric=46&issue=52";readRoute()');
+assert.equal(evaluate('activeIssueMetrics.get(issueScopeKey("C"))'),undefined,'Cross-page issue is invalid');
+project({});
 const searchIds=query=>Array.from(evaluate(`metricSearchMatches(${JSON.stringify(query)}).map(result=>result.item.id)`));
 assert.equal(searchIds('').length,53,'Search must retain the full metric catalog');
 for(const [query,id] of [['DAU',25],['dau',25],['日活',25],['WAU',25],['周活',25],['月活',25],
