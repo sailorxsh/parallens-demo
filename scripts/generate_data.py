@@ -71,7 +71,17 @@ for i, registrations_count in enumerate(registrations):
         "renewal": {"due": 500, "successful": 430},
         "deviceEventsBird": {"triggers": 10000, "empty": empty_k6 + empty_others,
                              "k6Firmware28": {"triggers": 4000, "empty": empty_k6},
-                             "others": {"triggers": 6000, "empty": empty_others}},
+                             "others": {"triggers": 6000, "empty": empty_others},
+                             # Preserve the audited group totals. Other model
+                             # splits are synthetic, not observed device facts.
+                             "records": [
+                                 {"model": "K6", "firmware": "2.8", "triggers": 4000, "empty": empty_k6},
+                                 {"model": "K6", "firmware": "Other", "triggers": 1000, "empty": 420},
+                                 {"model": "Bird Lite", "firmware": "2.8", "triggers": 1000, "empty": 380},
+                                 {"model": "Bird Lite", "firmware": "Other", "triggers": 1500, "empty": 600},
+                                 {"model": "Bird Pro", "firmware": "2.8", "triggers": 1000, "empty": 460},
+                                 {"model": "Bird Pro", "firmware": "Other", "triggers": 1500, "empty": 660},
+                             ]},
         "activity": {"compositeMAU": 64400 + 320 * i + (0 if i < 8 else 80),
                      "appMAU": 43500 + 300 * i,
                      "activeDevices": 82000 + 500 * i - (2222 if firmware_issue else 0)},
@@ -742,7 +752,8 @@ for item in catalog[1:]:
         "formula": item["formula"], "source": item["source"],
         "rateComponents": [],
         "unsupported": unsupported,
-        "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。",
+        "model": ("周×观鸟型号×固件的合成触发事件计数；从原有周总量及K6固件2.8分组拆分，其他分组为构造样本。国家与季节缺少明细，显示待补数据。"
+                  if mid == 42 else "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"),
     })
     def collect_rates(value, path=""):
         if isinstance(value, dict):

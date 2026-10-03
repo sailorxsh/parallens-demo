@@ -67,6 +67,10 @@ for item in contract:
     if mid in (18, 23, 32, 33, 34, 35):
         business.add("billingCycle")
     business.discard("userType")
+    if mid == 42:
+        # Business applicability remains; event facts have no geography/season
+        # fields, so rebuilding must not re-enable independent slice estimates.
+        demonstrable.difference_update({"country", "season"})
     metric_policy.append({
         "id": mid,
         "page": item["page"],
