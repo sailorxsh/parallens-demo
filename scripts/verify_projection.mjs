@@ -250,6 +250,35 @@ for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'}]) {
 }
 project({});
 const comparisons=evaluate('homeComparisons()');
+const income=evaluate('subscriptionIncomeChange()');
+assert.equal(income.before.numerator,49980);
+assert.equal(income.after.numerator,52000);
+assert.equal(income.before.denominator,9800);
+assert.equal(income.after.denominator,10000);
+assert.equal(income.delta,2020);
+assert.equal(income.payersContribution,1030);
+assert.equal(income.arppuContribution,990);
+for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'},{productLine:'Hunting',plan:'Starter'}]) {
+  project(filters);
+  const part=evaluate('subscriptionIncomeChange()');
+  if(!part)continue;
+  assert.equal(Math.round((part.payersContribution+part.arppuContribution)*100),part.delta*100);
+  const n0=part.before.denominator,n1=part.after.denominator,a0=part.before.numerator/n0,a1=part.after.numerator/n1;
+  const sequentialPayers=(n1-n0)*a0,sequentialARPPU=n1*(a1-a0);
+  assert.ok(Math.abs(sequentialPayers+sequentialARPPU-part.delta)<1e-6,'Independent product identity must reconcile');
+  assert.ok(Math.abs(part.payersContribution-(n1-n0)*(a0+a1)/2)<=.0051,'Symmetric allocation deviates from the exact midpoint');
+}
+project({});
+const incomeScenario=(n0,r0,n1,r1)=>evaluate(`subscriptionIncomeChange({labels:['7月','8月'],details:[{denominator:${n0},numerator:${r0}},{denominator:${n1},numerator:${r1}}]})`);
+for(const [n0,r0,n1,r1] of [[100,1000,100,800],[100,1000,200,1000],[31,101,32,97],[100,0,100,0]]) {
+  const part=incomeScenario(n0,r0,n1,r1);
+  assert.equal(Math.round((part.payersContribution+part.arppuContribution)*100),(r1-r0)*100);
+  const spec=evaluate(`subscriptionIncomeSpec(${JSON.stringify(part)})`);
+  assert.ok(spec.minY<=Math.min(0,part.payersContribution,part.arppuContribution),'Negative effects must not be clipped');
+  assert.ok(spec.maxY>Math.max(0,part.payersContribution,part.arppuContribution));
+}
+assert.equal(incomeScenario(29,100,30,105),null,'Low-sample prior month cannot generate an income driver claim');
+assert.equal(evaluate('subscriptionIncomeChange(null)'),null);
 const activationComparison=comparisons.find(item=>item.id===13);
 for(const [key,weeks] of [['before',fixtures.weekly.slice(0,8)],['after',fixtures.weekly.slice(8)]]) {
   const numerator=weeks.reduce((sum,week)=>sum+week.registrationCohort.valueActivated7dBird,0);
