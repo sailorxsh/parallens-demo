@@ -1253,6 +1253,24 @@ const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU
     15:'绑定后未产首图设备',18:'成熟试用转正率',21:'有效订阅净增',25:'日活主账号（DAU）',
     29:'季节阈值未使用率',34:'付费权益主账号',35:'订阅ARPPU',48:'多设备主账号占比',
     49:'设备共享率',52:'流失高危主账号',53:'当日异常事件数',54:'事件丢失率'};
+const metricSearchSubitems={
+  7:['当前绑定主账号'],8:['当前绑定设备'],
+  25:['WAU 周活主账号','MAU 月活主账号'],
+  35:['月内订阅付款主账号'],39:['型号订阅率最高','所选型号订阅率','同型号活跃率'],
+  46:['关键功能最低成功率','上传成功率','直播成功率','推送成功率'],54:['ID映射覆盖率']
+};
+function metricSearchMatches(query) {
+  const normalize=text=>String(text).normalize('NFKC').toLocaleLowerCase();
+  const terms=normalize(query).trim().split(/\s+/).filter(Boolean);
+  return sourceData.catalog.filter(item=>pages[item.page]).flatMap(item=>{
+    const original=`${item.id} #${String(item.id).padStart(2,'0')} ${item.name} ${pages[item.page].title} ${item.businessQuestion}`;
+    const aliases=[metricCardLabels[item.id],...(metricSearchSubitems[item.id]??[])].filter(Boolean);
+    const matches=text=>terms.every(term=>normalize(text).includes(term));
+    if(!matches(`${original} ${aliases.join(' ')}`))return [];
+    const matchingAliases=aliases.filter(alias=>terms.some(term=>normalize(alias).includes(term)));
+    return [{item,alias:terms.length&&!matches(original)?matchingAliases.join(' · '):''}];
+  });
+}
 function metricCardSummary(id) {
   const value=metric(id),item=catalogItem(id);
   const summary={label:metricCardLabels[id]??item.name,text:displayValue(id),unit:'',context:'',fields:[]};
@@ -2527,23 +2545,23 @@ function bindAppEvents() {
   const input=document.querySelector('#metric-search-input');
   const trigger=document.querySelector('#open-metric-search');
   const updateSearch=()=>{
-    const query=input.value.trim().toLocaleLowerCase();
-    const records=sourceData.catalog.filter(item=>pages[item.page]&&
-      (!query||`${item.id} #${String(item.id).padStart(2,'0')} ${item.name} ${pages[item.page].title} ${item.businessQuestion}`.toLocaleLowerCase().includes(query)));
+    const records=metricSearchMatches(input.value);
     const results=document.querySelector('#metric-search-results');
     results.replaceChildren();
     document.querySelector('#metric-search-count').textContent=`${records.length} 项指标`;
-    for(const item of records) {
+    for(const {item,alias} of records) {
       const row=element('li','');
       const link=element('a','metric-search-result');link.href=routeHref(item.page,item.id);
+      const copy=element('span','metric-search-copy');copy.append(element('span','metric-search-name',item.name));
+      if(alias)copy.append(element('span','metric-search-alias',`匹配项：${alias}`));
       link.append(element('span','metric-search-id',`#${String(item.id).padStart(2,'0')}`),
-        element('span','metric-search-name',item.name),element('span','metric-search-page',pages[item.page].title));
+        copy,element('span','metric-search-page',pages[item.page].title));
       link.addEventListener('click',()=>search.close());row.append(link);results.append(row);
     }
     if(!records.length)results.append(element('li','metric-search-empty','没有匹配的指标。换一个业务关键词试试。'));
   };
   const openSearch=()=>{if(search.open)return;closeDefinitionPopover();input.value='';updateSearch();search.showModal();input.focus();};
-  trigger.disabled=false;trigger.addEventListener('click',openSearch);
+  trigger.disabled=false;trigger.addEventListener('click',()=>{trigger.focus({preventScroll:true});openSearch();});
   document.querySelector('#close-metric-search').addEventListener('click',()=>search.close());
   input.addEventListener('input',updateSearch);
   input.addEventListener('keydown',event=>{

@@ -22,6 +22,20 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+const searchIds=query=>Array.from(evaluate(`metricSearchMatches(${JSON.stringify(query)}).map(result=>result.item.id)`));
+assert.equal(searchIds('').length,53,'Search must retain the full metric catalog');
+for(const [query,id] of [['DAU',25],['dau',25],['日活',25],['WAU',25],['周活',25],['月活',25],
+  ['多设备主账号占比',48],['当前绑定设备',8],['上传成功率',46],['直播成功率',46],['推送成功率',46],
+  ['ID映射覆盖率',54],['事件丢失率',54],['DAU 活跃',25],['＃２５',25]])
+  assert.ok(searchIds(query).includes(id),`Visible metric or subitem cannot be found: ${query}`);
+assert.deepEqual(searchIds('MRR'),[3],'Existing acronym lookup changed');
+assert.deepEqual(searchIds('DAU MRR'),[],'Multiple search terms must refer to the same metric');
+assert.deepEqual(searchIds('没有这个指标xyz'),[],'An unknown query must have no matches');
+for(const item of fixtures.catalog.filter(item=>/^[A-G]$/.test(item.page)))
+  assert.ok(searchIds(item.name).includes(item.id),`Original catalog name lost: ${item.name}`);
+const searchBeforeFilters=searchIds('直播成功率');project({country:'US',functionType:'Upload'});
+assert.deepEqual(searchIds('直播成功率'),searchBeforeFilters,'Metric search depends on the current data availability');
+project({});
 assert.equal(evaluate('metric(54).value.status'),'演示正常');
 for(const filters of [{country:'US'},{productLine:'Bird'},{appPlatform:'iOS'}]) {
   project(filters);
@@ -302,4 +316,4 @@ assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),
 assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
 evaluate('chart=null;drawTrend(null)');
 assert.equal(evaluate('window.__chartOptions.series.length'),2);
-console.log(`PASS indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+console.log(`PASS metric names and subitem search, indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

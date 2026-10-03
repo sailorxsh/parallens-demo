@@ -194,6 +194,8 @@ kbd {font:500 .65rem/1.2 'DM Sans',sans-serif;letter-spacing:.02em;color:inherit
 .metric-search-id,.metric-search-page {font-size:.7rem;color:var(--ink-soft)}
 .metric-search-id {font-variant-numeric:tabular-nums}
 .metric-search-name {font-weight:600}
+.metric-search-copy {min-width:0}
+.metric-search-alias {display:block;color:var(--ink-soft);font-size:.75rem;line-height:1.6;margin-top:.2rem;overflow-wrap:anywhere}
 .metric-search-empty {padding:1rem .6rem;color:var(--ink-soft);font-size:.85rem}
 .metric-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:.35rem}
 .metric-heading h3 {margin:0}
