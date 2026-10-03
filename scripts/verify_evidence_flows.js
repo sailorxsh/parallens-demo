@@ -7,7 +7,7 @@ async (page) => {
   const p=await context.newPage(),errors=[],results=[];
   p.on('pageerror',error=>errors.push(error.message));
   const cases=[['D',52,''],['A',11,''],['B',24,''],['C',41,''],['C',46,''],
-    ['C',46,'deviceModel=K6&firmware=2.8&functionType=Live'],['E',3,''],['G',53,''],['D',23,'country=US']];
+    ['C',46,'deviceModel=K6&firmware=2.8&functionType=Live'],['E',3,''],['G',53,''],['G',54,''],['D',23,'country=US']];
   try {
     for(const width of [1366,1600,1920]) {
       await p.setViewportSize({width,height:1000});
@@ -50,6 +50,23 @@ async (page) => {
             axis:{min:option.yAxis[0].min,max:option.yAxis[0].max}};
         }));
         check(panels.length>0,`Missing paired evidence for #${id} at ${width}px`);
+        if(id===54) {
+          const quality=await evidence.locator('.evidence-pair').evaluate(node=>{
+            const option=echarts.getInstanceByDom(node.querySelector('.detail-chart')).getOption();
+            return {values:option.series[0].data,rows:[...node.querySelectorAll('tbody tr')].map(row=>[...row.children].map(cell=>cell.textContent)),
+              tip:option.tooltip[0].formatter([{dataIndex:6,seriesIndex:0,value:option.series[0].data[6],marker:''}])};
+          });
+          check(quality.rows.length===7&&Math.abs(quality.values.at(-1)-2.2)<1e-9,'Quality evidence lost its seven-day history or current value');
+          for(const [index,row] of quality.rows.entries()) {
+            const loss=Number(row[2].replaceAll(',','')),expected=Number(row[3].replaceAll(',',''));
+            check(Math.abs(loss/expected*100-quality.values[index])<.001,'Quality history and daily event evidence disagree');
+          }
+          check(quality.tip.includes('220次 / 10,000次'),'Quality tooltip lacks the daily event denominator');
+          check((await evidence.innerText()).includes('ID映射覆盖率仅有当前快照'),'Quality evidence fabricates mapping coverage history');
+          const qualityCharts=await p.locator('.detail-chart').evaluateAll(nodes=>nodes.filter(node=>
+            echarts.getInstanceByDom(node)?.getOption().series.some(series=>series.name==='事件丢失率')).length);
+          check(qualityCharts===1,'Quality evidence duplicates the same daily trend elsewhere on the page');
+        }
         for(const panel of panels) {
           check(panel.sideBySide&&panel.contained,`Evidence blocks overlap or escape at ${width}px: ${JSON.stringify(panel)}`);
           check(panel.tableFits,`Narrow evidence table loses columns at ${width}px: ${panel.title}`);

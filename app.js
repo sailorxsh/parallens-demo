@@ -1709,14 +1709,19 @@ function metricEvidence(id,page) {
   };
   const history=metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
-  if(history&&(id!==primaryId||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {
-    const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:history.details,
+  if(history&&(id!==primaryId||id===54||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {
+    const qualityDetails=id===54?history.details?.map(detail=>detail?{...detail,
+      basisLabel:'丢失事件 / 预期事件',numeratorUnit:'次',denominatorUnit:'次'}:null):null;
+    const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:qualityDetails??history.details,
       series:[{name:history.title,values:history.values}],note:history.note};
-    appendEvidencePair(spec,{title:`${history.title} · 趋势数据`,columns:['周期','值'],
-      rows:history.labels.map((label,index)=>[label,history.values[index]==null?'不适用':
+    const rows=history.labels.map((label,index)=>[label,history.values[index]==null?'不适用':
         history.unit==='%'?`${history.values[index].toFixed(1)}%`:history.unit==='美元/人'?`$${history.values[index].toFixed(2)}`:
-          history.unit==='美元'?`$${number(history.values[index])}`:`${number(history.values[index])}${history.unit}`]),
+          history.unit==='美元'?`$${number(history.values[index])}`:`${number(history.values[index])}${history.unit}`]);
+    if(qualityDetails)rows.forEach((row,index)=>row.push(qualityDetails[index]?number(qualityDetails[index].numerator):'—',
+      qualityDetails[index]?number(qualityDetails[index].denominator):'—'));
+    appendEvidencePair(spec,{title:`${history.title} · 趋势数据`,columns:qualityDetails?['日期','丢失率','丢失事件（次）','预期事件（次）']:['周期','值'],rows,
       note:history.note});
+    if(id===54)panel.append(element('p','table-note','ID映射覆盖率仅有当前快照，暂无可比历史；当前分子、分母见下方完整值。'));
   }
   if(id===3&&!selectedFilters().length) {
     panel.append(dataTable({title:'MRR组成 · 当前演示快照',columns:['收入组成','MRR'],
@@ -2412,7 +2417,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     if(technical){addChart(evidence,technical.spec);evidence.append(dataTable(technical.table));}
     const ranking=page==='E'?modelSubscriptionRanking():null;
     if(ranking){addChart(evidence,ranking.spec);evidence.append(dataTable(ranking.table));}
-    const extraCharts=info.extraCharts??[];
+    const extraCharts=(info.extraCharts??[]).filter((_,index)=>!(page==='G'&&selectedMetric===54&&index===0));
     if(extraCharts.length) {
       const chartGrid=element('div','evidence-charts-grid');
       extraCharts.forEach(spec=>addChart(chartGrid,spec));evidence.append(chartGrid);

@@ -71,6 +71,7 @@ async (page) => {
         check(p.url().includes(filters)&&p.url().includes('metric=54'),'Quality evidence lost supported filter scope');
         check((await p.locator('#metric-evidence-54 .na-note').innerText()).startsWith('待补数据：'),
           'Filtered quality evidence is presented as a measured result');
+        check(await p.locator('#metric-evidence-54 .detail-chart').count()===0,'Missing quality data retained the overall trend');
         await p.locator('.sidebar-nav a[data-page=""]').click();await p.locator('.quality-status').waitFor();
         if(!await p.locator('.filter-bar').evaluate(node=>node.open))await p.locator('.filter-bar summary').click();
         await p.getByRole('button',{name:'重置全部',exact:true}).click();
