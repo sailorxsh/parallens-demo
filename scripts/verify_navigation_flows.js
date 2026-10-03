@@ -53,7 +53,33 @@ async (page) => {
     check(rapid.length>=1&&rapid.length<=3&&new Set(rapid).size===rapid.length&&rapid.at(-1)==='#/D?week=2',
       `Rapid navigation repeated a view or failed to reach its final state: ${rapid.join(', ')}`);
     check((await p.locator('.finding-title').innerText()).startsWith('W2'),'Rapid navigation rendered a stale observation');
+    for(const width of [1366,1920]) {
+      await p.setViewportSize({width,height:1000});
+      await p.goto(`${base}#/`);await p.locator('.quality-status').waitFor();
+      check(await p.locator('.quality-status').innerText()==='数据质量：演示正常 ↗','Overall quality lacks its demo qualification');
+      await p.locator('.quality-status').focus();await p.keyboard.press('Enter');
+      await p.locator('#metric-evidence-54').waitFor();
+      check(p.url().endsWith('#/G?metric=54'),'Quality badge opens a different evidence metric');
+      const threshold=await p.locator('.quality-threshold-note').innerText();
+      check(threshold.includes('≤3.0%')&&threshold.includes('≥95.0%')&&threshold.includes('生产达标标准'),
+        'Quality evidence does not explain its demonstration thresholds');
+      for(const filters of ['country=US','appPlatform=iOS','productLine=Bird']) {
+        await p.goto(`${base}#/?${filters}`);await p.locator('.quality-status').waitFor();
+        check(await p.locator('.quality-status').innerText()==='数据质量：待补数据 ↗','Unavailable filtered quality retained a normal badge');
+        check((await p.locator('#quality-status-description').innerText()).includes('缺少同范围明细'),'Missing quality data lacks its explanation');
+        await p.locator('.quality-status').click();await p.locator('#metric-evidence-54 .na-note').waitFor();
+        check(p.url().includes(filters)&&p.url().includes('metric=54'),'Quality evidence lost supported filter scope');
+        check((await p.locator('#metric-evidence-54 .na-note').innerText()).startsWith('待补数据：'),
+          'Filtered quality evidence is presented as a measured result');
+        await p.locator('.sidebar-nav a[data-page=""]').click();await p.locator('.quality-status').waitFor();
+        if(!await p.locator('.filter-bar').evaluate(node=>node.open))await p.locator('.filter-bar summary').click();
+        await p.getByRole('button',{name:'重置全部',exact:true}).click();
+        check(await p.locator('.quality-status').innerText()==='数据质量：演示正常 ↗','Reset did not restore overall quality');
+      }
+      check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Quality header overflows at desktop width');
+    }
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
-    return {status:'PASS',checks:['one render per navigation','same-view preservation','filter and reset focus','back and forward','direct evidence URL','rapid navigation final state'],results};
+    return {status:'PASS',checks:['one render per navigation','same-view preservation','filter and reset focus','back and forward','direct evidence URL','rapid navigation final state',
+      'quality badge matches available filter scope','keyboard quality evidence with demo thresholds','quality filter reset at two desktop widths'],results};
   } finally {await context.close();}
 }

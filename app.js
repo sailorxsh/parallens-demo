@@ -446,7 +446,22 @@ function projectMetric(id,state=filterState) {
     v.subscriptionNetIncome=allocatedCount(raw.value.subscriptionNetIncome,applicable,id,'numerator',shares);
     v.ARPPU=v.subscriptionNetIncome/v.monthlySubscriptionPayers;
   }
+  if(id===54&&result.kind==='group')result.value.status=dataQualityState(result).label;
   return result;
+}
+function dataQualityState(value) {
+  if(value.kind==='na')return {label:value.availability==='pending'?'待补数据':'不适用',reason:value.reason};
+  const {eventLoss,idMapping}=value.value??{};
+  const thresholds=sourceData.snapshot.quality?.thresholds;
+  const validRate=part=>part?.kind==='rate'&&Number.isFinite(part.numerator)&&Number.isFinite(part.denominator)&&
+    part.denominator>=30&&part.numerator>=0&&part.numerator<=part.denominator&&
+    Number.isFinite(part.value)&&Math.abs(part.value-part.numerator/part.denominator)<1e-9;
+  const validThreshold=limit=>Number.isFinite(limit)&&limit>=0&&limit<=1;
+  if(!validRate(eventLoss)||!validRate(idMapping)||!validThreshold(thresholds?.eventLossMax)||!validThreshold(thresholds?.idMappingMin))
+    return {label:'待核验',reason:'质量指标缺少可核验的分子、分母或演示阈值，不能判定正常。'};
+  const warning=eventLoss.value>thresholds.eventLossMax||idMapping.value<thresholds.idMappingMin;
+  return {label:warning?'演示预警':'演示正常',
+    reason:`演示阈值：事件丢失率≤${percent(thresholds.eventLossMax)}，ID映射覆盖率≥${percent(thresholds.idMappingMin)}；尚未确认生产达标标准。`};
 }
 function projectDataset() {
   dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>[`m${String(c.id).padStart(2,'0')}`,projectMetric(c.id)]))};
@@ -969,8 +984,11 @@ function intro() {
               element('p','heading-sub','从新客接入到付费留存，沿经营主线观察变化；异常进入对应诊断页。'));
   const tags=element('div','heading-meta');
   tags.append(element('span','meta-tag',`快照 ${s.asOf}`),element('span','meta-tag accent',s.season));
-  const quality=element('a','meta-tag',`数据质量：${s.quality.status} ↗`);
-  quality.href=routeHref('G'); tags.append(quality);
+  const qualityState=dataQualityState(metric(54));
+  const quality=element('a','meta-tag quality-status',`数据质量：${qualityState.label} ↗`);
+  quality.href=routeHref('G',54);quality.setAttribute('aria-describedby','quality-status-description');
+  const qualityDescription=element('span','visually-hidden',qualityState.reason);qualityDescription.id='quality-status-description';
+  tags.append(quality,qualityDescription);
   header.append(text,tags);
   return header;
 }
@@ -1657,6 +1675,7 @@ function metricEvidence(id,page) {
   if(value.kind==='na') {panel.append(element('p','na-note',value.availability==='pending'?
     `待补数据：${value.reason}。该筛选有业务意义，当前原型不能可靠计算。`:
     `不适用：${value.reason}。${contract.unsupported}`));return {node:panel,specs:[]};}
+  if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
   const specs=[];
   const appendEvidencePair=(spec,tableSpec)=>{
     const pair=element('div','evidence-pair');
@@ -2142,6 +2161,9 @@ function metricInspector(id,page) {
   summary.fields.forEach(([label,text])=>fact(label,text));
   fact('统计对象',contract.entity);
   fact('时间窗口',contract.window);
+  if(id===54&&value.kind==='group') {
+    const quality=dataQualityState(value);fact('演示判定',quality.label);fact('判定依据',quality.reason);
+  }
   if(value.kind==='rate')fact('本期分子 / 分母',`${number(value.numerator)} / ${number(value.denominator)}`);
   else if(value.kind==='na')fact('当前状态',value.reason);
   else if(id===46&&value.kind==='group') {

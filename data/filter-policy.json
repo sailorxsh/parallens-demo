@@ -44,7 +44,7 @@
     "appPlatform": {
       "label": "App平台",
       "scope": "module",
-      "pages": "ABDEF",
+      "pages": "ABDEFG",
       "options": [
         "iOS",
         "Android"

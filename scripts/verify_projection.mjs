@@ -21,6 +21,27 @@ vm.runInContext(source,context,{filename:'app.js'});
 vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
+project({});
+assert.equal(evaluate('metric(54).value.status'),'演示正常');
+for(const filters of [{country:'US'},{productLine:'Bird'},{appPlatform:'iOS'}]) {
+  project(filters);
+  assert.equal(evaluate('dataQualityState(metric(54)).label'),'待补数据',JSON.stringify(filters));
+}
+for(const key of evaluate('policyFor(54).businessDimensions'))
+  assert.ok(fixtures.filterPolicy.controls[key].pages.includes('G'),`Quality evidence has no filter control for its business dimension ${key}`);
+project({});
+const qualityFixture=(loss,mapping)=>({kind:'group',value:{
+  eventLoss:{kind:'rate',numerator:loss,denominator:10000,value:loss/10000},
+  idMapping:{kind:'rate',numerator:mapping,denominator:10000,value:mapping/10000},status:'正常'}});
+for(const [loss,mapping,label] of [[300,9500,'演示正常'],[301,9500,'演示预警'],[220,9499,'演示预警']])
+  assert.equal(evaluate(`dataQualityState(${JSON.stringify(qualityFixture(loss,mapping))}).label`),label);
+const invalidQuality=qualityFixture(220,9650);invalidQuality.value.eventLoss.denominator=0;
+assert.equal(evaluate(`dataQualityState(${JSON.stringify(invalidQuality)}).label`),'待核验');
+invalidQuality.value.eventLoss.denominator=10000;invalidQuality.value.eventLoss.value=.01;
+assert.equal(evaluate(`dataQualityState(${JSON.stringify(invalidQuality)}).label`),'待核验','Inconsistent quality facts must not be called normal');
+evaluate('sourceData={...__fixtures,snapshot:{...__fixtures.snapshot,quality:{...__fixtures.snapshot.quality,thresholds:{}}}}');
+assert.equal(evaluate(`dataQualityState(${JSON.stringify(qualityFixture(220,9650))}).label`),'待核验','Missing thresholds must not default to a normal classification');
+evaluate('sourceData=__fixtures');
 assert.equal(evaluate('chartValue(0,"人")'),'0人');
 assert.equal(evaluate('chartValue(5.2,"美元/人")'),'$5.20/人');
 assert.equal(evaluate('chartValue(null,"%")'),'无值');

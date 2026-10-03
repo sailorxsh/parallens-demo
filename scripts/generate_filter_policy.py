@@ -34,7 +34,7 @@ controls = {
     "country": {"label": "国家/市场", "scope": "page", "pages": "ABCDEFG", "options": ["US", "UK", "DE", "Other"]},
     "productLine": {"label": "产品线", "scope": "page", "pages": "ABCDEFG", "options": ["Bird", "Hunting"]},
     "deviceModel": {"label": "设备型号", "scope": "module", "pages": "ABCDEFG", "options": ["K6", "Bird Lite", "Bird Pro", "Hunt Pro"]},
-    "appPlatform": {"label": "App平台", "scope": "module", "pages": "ABDEF", "options": ["iOS", "Android"]},
+    "appPlatform": {"label": "App平台", "scope": "module", "pages": "ABDEFG", "options": ["iOS", "Android"]},
     "deviceStatus": {"label": "设备状态", "scope": "module", "pages": "ACFG", "options": ["Effective", "Inactive"]},
     "salesChannel": {"label": "自报销售渠道", "scope": "module", "pages": "ACE", "options": ["Amazon", "Shopify"]},
     "subscriptionPlatform": {"label": "订阅平台", "scope": "module", "pages": "DE", "options": ["App Store", "Google Play", "Web"]},
