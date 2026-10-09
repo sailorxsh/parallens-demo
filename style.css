@@ -598,6 +598,12 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .income-context .detail-finding {border:0;border-top:3px solid var(--orange);margin:0;padding:1rem;background:transparent}
 .income-context .finding-title {font-size:1.05rem;line-height:1.65;margin:.7rem 0 .6rem}
 .income-context .finding-context {font-size:.8rem;color:#405a48}
+.finding-income-drivers {border-block:1px solid #d5dfce;padding:.6rem 0;margin:.6rem 0;font-variant-numeric:tabular-nums}
+.income-context .income-driver-period {font-size:.75rem;color:#52694f;margin:0 0 .4rem}
+.income-driver-values {margin:0;display:grid;gap:.55rem}
+.income-driver-values dt {font-size:.75rem;color:#52694f;margin-bottom:.15rem}
+.income-driver-values dd {display:flex;flex-wrap:wrap;gap:.2rem .6rem;margin:0;font-size:.82rem;color:#203c2b;line-height:1.5}
+.income-driver-delta {font-size:.75rem;color:#405a48}
 .income-context .detail-finding .finding-meta {font-size:.72rem;line-height:1.6}
 .income-context .detail-finding .issue-register {display:block;margin-top:1rem}
 .income-record {padding:.65rem}

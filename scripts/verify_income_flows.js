@@ -13,6 +13,13 @@ async(page)=>{
       const finding=p.locator('.detail-finding');
       const text=await finding.innerText();
       for(const value of ['$2,020','$49,980','$52,000','$1,030','$990','算术拆分不代表价格或经营原因'])check(text.includes(value),`Observation omits ${value}`);
+      const drivers=finding.locator('.finding-income-drivers');
+      check(await drivers.isVisible(),'Income drivers require opening a disclosure');
+      check((await drivers.locator('[data-driver="payers"]').innerText()).includes('9,800 → 10,000 人')&&
+        (await drivers.locator('[data-driver="payers"]').innerText()).includes('+200 人'),'Payer change is confused with its dollar contribution');
+      check((await drivers.locator('[data-driver="arppu"]').innerText()).includes('$5.10 → $5.20/人')&&
+        (await drivers.locator('[data-driver="arppu"]').innerText()).includes('+$0.10/人'),'ARPPU change is confused with its dollar contribution');
+      check(await drivers.evaluate(node=>node.scrollWidth<=node.clientWidth+1),'Income driver summary overflows the observation rail');
       check((await finding.boundingBox()).y<height-60,'Priority income observation falls below first viewport');
       await finding.locator('.finding-basis summary').click();
       const rows=finding.getByRole('table').getByRole('row');
@@ -59,6 +66,7 @@ async(page)=>{
     await open('E?country=US&metric=35&issue=35');
     check((await p.locator('.detail-finding').innerText()).includes('模拟分片估算'),'Filtered attribution masquerades as observed facts');
     check(!((await p.locator('.detail-finding').innerText()).includes('增加 $2,020')),'Country selection retains total income change');
+    check(!(await p.locator('.finding-income-drivers').innerText()).includes('9,800 → 10,000 人'),'Filtered drivers retain overall payer counts');
     check((await baseline().innerText()).includes('订阅净收入：')&&!(await baseline().innerText()).includes('$52,000'),
       'Filtered issue records overall revenue instead of its current scope');
     await pair().waitFor();check(await pair().locator('svg').count()===1,'Filtered contribution chart missing');
@@ -66,6 +74,7 @@ async(page)=>{
     check(p.url().includes('country=US'),'Refresh loses income scope');
     await open('E?deviceModel=K6&metric=35');
     check(await pair().count()===0,'Unsupported metric scope invents an income attribution');
+    check(await p.locator('.finding-income-drivers').count()===0,'Missing income facts retain driver comparisons');
     check((await p.locator('#metric-evidence-35').innerText()).includes('待补数据'),'Missing model income facts lack explanation');
     await p.route('**/data/diagnostics.json',async route=>{
       const response=await route.fetch(),json=await response.json();
@@ -87,7 +96,23 @@ async(page)=>{
     await pair().screenshot({path:'output/playwright/v55-income-negative.png'});
     check(!negative.clipped.length&&negative.text.includes('$-2,000'),`Negative contribution label is missing or clipped: ${JSON.stringify(negative)}`);
     check((await p.locator('.detail-finding').innerText()).includes('减少 $2,000'),'Income decrease reported as improvement');
+    check((await p.locator('[data-driver="payers"]').innerText()).includes('持平')&&
+      (await p.locator('[data-driver="arppu"]').innerText()).includes('−$0.20/人'),'Negative ARPPU or unchanged payer count is mislabeled');
+    await p.unroute('**/data/diagnostics.json');
+    for(const [previousPayers,previousARPPU] of [[10200,5.2],[10000,5.2],[10000,5.201]]) {
+      await p.route('**/data/diagnostics.json',async route=>{
+        const response=await route.fetch(),json=await response.json();
+        json.E.chart.series[0].values[1]=previousPayers;
+        json.E.extraCharts[0].series[0].values[1]=previousARPPU;
+        json.E.tables[1].rows[1]=['2026-07',previousPayers,`$${previousPayers*previousARPPU}`,`$${previousARPPU.toFixed(2)}`];
+        await route.fulfill({response,json});
+      });
+      await open('E?metric=35');await p.reload();await pair().locator('svg').waitFor();
+      check((await p.locator('[data-driver="payers"]').innerText()).includes(previousPayers===10200?'−200 人':'持平'),'Payer decline or unchanged count is mislabeled');
+      check((await p.locator('[data-driver="arppu"]').innerText()).includes(previousARPPU===5.2?'持平':'下降不足 $0.01/人'),'Rounded ARPPU hides a real small change or invents a movement');
+      await p.unroute('**/data/diagnostics.json');
+    }
     check(errors.length===0,errors.join('; '));
-    return {status:'PASS',sizes,checks:['visible income comparison','symmetric amounts reconcile','calculation disclosure','observation to income chart','complete issue baseline saved and reloaded','historical baseline preserved on edit','filtered issue baseline','country recomputation and reload','missing scope suppressed','negative contribution and labels','no browser errors or page overflow']};
+    return {status:'PASS',sizes,checks:['visible income comparison and driver values','positive negative and unchanged drivers','symmetric amounts reconcile','calculation disclosure','observation to income chart','complete issue baseline saved and reloaded','historical baseline preserved on edit','filtered issue baseline','country recomputation and reload','missing scope suppressed','negative contribution and labels','no browser errors or page overflow']};
   } finally {await context.close();}
 }

@@ -827,6 +827,25 @@ function subscriptionIncomeCalculationSpec(change) {
 function subscriptionIncomeCalculation(change) {
   return dataTable(subscriptionIncomeCalculationSpec(change));
 }
+function incomeDriverSummary(change) {
+  const wrap=element('div','finding-income-drivers');
+  wrap.append(element('p','income-driver-period',`${change.beforeLabel} → ${change.afterLabel} · 指标本身的变化`));
+  const values=element('dl','income-driver-values');
+  const countDelta=change.after.denominator-change.before.denominator;
+  const arppuDelta=change.afterARPPU-change.beforeARPPU;
+  const signed=(value,format)=>Math.abs(value)<1e-10?'持平':`${value>0?'+':'−'}${format(Math.abs(value))}`;
+  const arppuDeltaLabel=Math.abs(arppuDelta)>=1e-10&&Math.abs(arppuDelta)<.005?
+    `${arppuDelta>0?'上升':'下降'}不足 $0.01/人`:signed(arppuDelta,value=>`$${value.toFixed(2)}/人`);
+  for(const [key,label,before,after,delta] of [
+    ['payers','月内订阅付款主账号',number(change.before.denominator),`${number(change.after.denominator)} 人`,signed(countDelta,value=>`${number(value)} 人`)],
+    ['arppu','订阅ARPPU',`$${change.beforeARPPU.toFixed(2)}`,`$${change.afterARPPU.toFixed(2)}/人`,arppuDeltaLabel]
+  ]) {
+    const row=element('div','');row.dataset.driver=key;
+    const value=element('dd','');value.append(element('strong','',`${before} → ${after}`),element('span','income-driver-delta',delta));
+    row.append(element('dt','',label),value);values.append(row);
+  }
+  wrap.append(values);return wrap;
+}
 function trialFailureHistory() {
   const details=sourceData.weekly.map(w=>{
     const result=trialRows(Object.fromEntries(effectiveFor(18,{...filterState,week:String(w.week)})));
@@ -2849,6 +2868,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     const end=text.indexOf('。');
     finding.append(element('h3','finding-title',end>=0?text.slice(0,end):text));
     if(observation?.comparison)finding.append(findingComparison(observation.comparison));
+    if(observation?.incomeChange)finding.append(incomeDriverSummary(observation.incomeChange));
     if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
   };
   let findingMetric=defaultFindingMetric[page];
