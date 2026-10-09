@@ -1291,6 +1291,10 @@ function trendAxisNote(axis,unit) {
   return `纵轴 ${format(axis.min)}–${format(axis.max)}${axis.min>0?'，为观察趋势采用非零起点':''}；精确值见数据表。`;
 }
 function chartScaleNote(spec) {
+  if(spec.kind==='periodComparison') {
+    const axis=trendAxisDomain(spec.series,spec.unit);
+    return axis?trendAxisNote(axis,spec.unit).replace('纵轴','横轴').replace('为观察趋势采用非零起点','点图使用局部范围比较两批次；不表示人数规模'):'';
+  }
   const axis=!spec.kind&&isTimelineSpec(spec)?trendAxisDomain(spec.series,spec.unit):null;
   return axis?trendAxisNote(axis,spec.unit):'';
 }
@@ -1599,7 +1603,7 @@ function chartTable(spec) {
   }
   const details=element('details','chart-data');
   const table=dataTable({title:spec.title,columns,rows});
-  if(!spec.kind||spec.kind==='stacked100')spec.labels.forEach((_,index)=>{
+  if(!spec.kind||spec.kind==='stacked100'||spec.kind==='periodComparison')spec.labels.forEach((_,index)=>{
     const cells=table.querySelectorAll('tbody tr')[index].querySelectorAll('td');
     spec.series.forEach((line,seriesIndex)=>{
       if(!Number.isFinite(line.values[index]))return;
@@ -1686,6 +1690,27 @@ function drawDetailChart(box,spec) {
   detailCharts.push(instance);
   const isTimeline=isTimelineSpec(spec);
   const colors=['#bf762b','#356d51','#7593a0'];
+  if(spec.kind==='periodComparison') {
+    const line=spec.series[0],axis=trendAxisDomain(spec.series,spec.unit);
+    instance.setOption({animationDuration:chartAnimationDuration(350),
+      grid:{left:184,right:62,top:35,bottom:42},
+      xAxis:{type:'value',min:axis?.min,max:axis?.max,interval:axis?.step,
+        axisLabel:{color:'#58695b',formatter:value=>chartValue(value,spec.unit)},
+        splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false},axisTick:{show:false}},
+      yAxis:{type:'category',inverse:true,data:spec.labels,
+        axisLabel:{color:'#506455',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
+      tooltip:{...chartTooltipStyle,trigger:'item',formatter:params=>{
+        const index=params.dataIndex,basis=chartBasis(chartPointDetail(spec,line,index));
+        return `${spec.labels[index]}：${chartValue(line.values[index],spec.unit)}${basis?`<br>${basis}`:''}`;
+      }},
+      series:[{name:line.name,type:'scatter',symbolSize:12,
+        data:line.values.map((value,index)=>Number.isFinite(value)?{value:[value,index],
+          itemStyle:{color:index?'#356d51':'#8a9f8e'}}:{value:[null,index]}),
+        label:{show:true,position:'right',distance:9,formatter:params=>chartValue(params.value[0],spec.unit),
+          color:'#315540',fontSize:12,fontWeight:600}}],
+    });
+    return instance;
+  }
   if(spec.kind==='waterfall') {
     const v=spec.flow;
     const lower=Math.max(0,Math.floor((Math.min(v.opening,v.closing)-800)/250)*250);
@@ -1880,10 +1905,11 @@ function metricEvidence(id,page) {
     const periods=filterState.week?[[`所选W${filterState.week}`,trialRows(filterState)]]:
       [['前9个成熟周 · W1–9',trialRows(filterState,'previous')],['近3个成熟周 · W10–12',trialRows(filterState,'current')]];
     const summaries=periods.map(([label,result])=>[label,result.rows?trialAggregate(result.rows):null]);
-    const spec={title:'成熟试用转正率 · 可比批次',unit:'%',labels:summaries.map(([label])=>label),
+    const spec={title:'成熟试用转正率 · 可比批次',kind:summaries.length===2?'periodComparison':undefined,unit:'%',labels:summaries.map(([label])=>label),
+      details:summaries.map(([,item])=>item?.denominator>=30?{...item,basisLabel:'转正 / 成熟试用',numeratorUnit:'人',denominatorUnit:'人'}:null),
       series:[{name:'转正率',values:summaries.map(([,item])=>item?.denominator>=30?item.value*100:null)}],
       note:'前9周与近3周分别汇总分子、分母后计算；小于30人的批次不绘制比例。'};
-    const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
+    const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
     panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
     panel.append(dataTable({title:'试用明细聚合 · 转正与支付',
       columns:['批次','成熟试用','转正','转正率','支付尝试','支付失败'],
@@ -2030,7 +2056,9 @@ function trialSamplesPanel() {
       `${optionLabel('country',row.country)} · ${row.app_platform} · ${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · 观察至${row.outcome_observed_through}`),
       element('span','trial-sample-action','关联到试用转正问题单 ↘'));
     button.addEventListener('click',()=>{
-      registerIssue(page,18);
+      const side=document.querySelector('.income-context');
+      const alongside=side&&side.getBoundingClientRect().left>=panel.getBoundingClientRect().right;
+      registerIssue(page,18,{preserveEvidence:Boolean(alongside)});
       const form=document.querySelector('.action-record');
       const linked=form?.querySelector('[name="linkedSample"]');
       if(!linked)return;
@@ -2038,7 +2066,13 @@ function trialSamplesPanel() {
       const note=form.querySelector('[name="note"]');
       if(note&&!note.value.trim())note.value=`核对${row.trial_id}的支付失败记录与重试结果`;
       linked.dispatchEvent(new Event('input',{bubbles:true}));
-      form.scrollIntoView({block:'center',behavior:chartAnimationDuration(1)?'smooth':'instant'});linked.focus({preventScroll:true});
+      if(alongside) {
+        const rail=form.closest('.income-context'),bounds=rail.getBoundingClientRect(),field=linked.getBoundingClientRect();
+        const visibleTop=bounds.top+rail.querySelector('.income-context-controls').offsetHeight+12;
+        if(field.top<visibleTop)rail.scrollTop+=field.top-visibleTop;
+        else if(field.bottom>bounds.bottom-12)rail.scrollTop+=field.bottom-bounds.bottom+12;
+      } else form.scrollIntoView({block:'center',behavior:chartAnimationDuration(1)?'smooth':'instant'});
+      linked.focus({preventScroll:true});
       document.querySelector('#announcement').textContent=`已将${row.trial_id}关联到问题单，保存后生效`;
     });
     list.append(button);
@@ -2046,8 +2080,19 @@ function trialSamplesPanel() {
   panel.append(list);
   return panel;
 }
-function registerIssue(page,id) {
+function registerIssue(page,id,{preserveEvidence=false}={}) {
   activeIssueMetrics.set(issueScopeKey(page),id);
+  const side=preserveEvidence&&document.querySelector('.income-context');
+  if(side) {
+    const viewport={left:scrollX,top:scrollY,behavior:'instant'};
+    const params=new URLSearchParams(location.hash.split('?')[1]??'');
+    params.set('issue',String(id));
+    history.pushState(null,'',`#/${page}?${params}`);lastRenderedHash=location.hash;
+    side.dispatchEvent(new Event('register-issue'));
+    // Replacing a sticky form can move Safari's viewport even though the evidence DOM is retained.
+    scrollTo(viewport);
+    return;
+  }
   const target=new URL(routeHref(page,id),location.href);
   const params=new URLSearchParams(target.hash.split('?')[1]??'');
   if(diagnosticWorkspaceView!=='change')params.set('panel',diagnosticWorkspaceView);
@@ -2485,10 +2530,19 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       node.matches('.table-note')?previousKind:'data');
     previousKind=kind;
     if(node.matches('.detail-chart')) {
-      const title=specs.find(([box])=>box===node)?.[1].title;
-      if(title)panels.get(kind).append(element('h3','workspace-chart-title',title));
+      const spec=specs.find(([box])=>box===node)?.[1];
+      const chartPanel=element('section','detail-chart-panel workspace-chart-panel');
+      if(spec?.kind==='periodComparison')chartPanel.classList.add('period-comparison');
+      if(spec)chartPanel.append(element('h3','workspace-chart-title',spec.title));
+      chartPanel.append(node);
+      const scale=spec&&chartScaleNote(spec);if(scale)chartPanel.append(element('p','chart-scale-note',scale));
+      if(spec?.kind==='periodComparison')chartPanel.append(chartTable(spec));
+      panels.get(kind).append(chartPanel);
+      continue;
     }
-    panels.get(kind).append(node);
+    const preceding=panels.get(kind).lastElementChild;
+    if(node.matches('.table-note')&&preceding?.matches('.workspace-chart-panel'))preceding.append(node);
+    else panels.get(kind).append(node);
   }
   // Keep the full calculation adjacent but reveal it on demand at desktop widths.
   for(const pair of left.querySelectorAll('.evidence-pair')) {
@@ -2558,7 +2612,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     };
     [...legacy.evidence.children].forEach(supplemental);
   }
-  const queue=actionQueue(page,selectedMetric),form=queue.querySelector('.action-record');
+  const queue=actionQueue(page,selectedMetric);
+  let form=queue.querySelector('.action-record');
   const queueDetails=element('details','workspace-context');queueDetails.append(element('summary','','查看核查对象与演示行动清单'));
   queueDetails.append(queue);panels.get('data').append(queueDetails);
   const right=element('aside','income-context');right.setAttribute('aria-label','当前观察与问题登记');
@@ -2586,6 +2641,13 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     activeIssueMetrics.set(issueScopeKey(page),id);
     const params=new URLSearchParams(location.hash.split('?')[1]??'');params.set('issue',String(id));
     history.replaceState(null,'',`#/${page}?${params}`);lastRenderedHash=location.hash;
+    syncWorkspaceLinks();showRight('record');
+  });
+  right.addEventListener('register-issue',()=>{
+    const replacement=actionRecord(page,selectedMetric);
+    if(form.contains(document.activeElement))document.activeElement.blur();
+    form.replaceWith(replacement);form=replacement;
+    recordButton.disabled=false;
     syncWorkspaceLinks();showRight('record');
   });
   const routeParams=new URLSearchParams(location.hash.split('?')[1]??'');
@@ -2647,6 +2709,34 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   }
   for(const [key,panel] of panels)if(!panel.children.length)
     panel.append(element('p','na-note',key==='change'?'当前指标没有可比历史；分组和完整值可在其他标签核对。':'当前筛选下没有可核验的分组数据。'));
+  const groupPanel=panels.get('groups');
+  const destinations=[...groupPanel.children].filter(node=>node.matches('.evidence-pair,.detail-chart-panel,.entity-workspace,.workspace-context'));
+  if(destinations.length>1) {
+    const navigation=element('nav','workspace-locations');navigation.setAttribute('aria-label','分组证据定位');
+    navigation.append(element('span','workspace-location-label','定位证据'));
+    const list=element('ul','workspace-location-list');
+    destinations.forEach((target,index)=>{
+      target.id=`${page}-group-evidence-${index}`;
+      const heading=target.tagName==='DETAILS'?target.querySelector('summary'):target.querySelector('h3');
+      const title=heading?.textContent??`证据 ${index+1}`;
+      const button=element('button','workspace-location',title);button.type='button';
+      button.title=title;button.setAttribute('aria-controls',target.id);
+      button.addEventListener('click',()=>{
+        if(target.tagName==='DETAILS')target.open=true;
+        const focus=heading??target;focus.tabIndex=-1;focus.focus({preventScroll:true});
+        const offset=navigation.offsetHeight+parseFloat(getComputedStyle(navigation).top)+16;
+        target.style.scrollMarginTop=`${offset}px`;
+        target.scrollIntoView({block:'start',behavior:'instant'});
+        if(getComputedStyle(right).position==='sticky') {
+          const top=parseFloat(getComputedStyle(right).top),position=right.getBoundingClientRect().top;
+          if(position<top)scrollBy({top:position-top,behavior:'instant'});
+        }
+        requestAnimationFrame(drawVisible);
+      });
+      const item=element('li','');item.append(button);list.append(item);
+    });
+    navigation.append(list);groupPanel.prepend(navigation);
+  }
   workspace.addEventListener('toggle',()=>requestAnimationFrame(drawVisible),true);
   layout.append(left,right);workspace.append(layout);body.append(workspace);
   const inventory=metricInventory(page);inventory.id=`${page}-catalog`;

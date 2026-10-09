@@ -630,3 +630,16 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
   .income-evidence .entity-sample-detail {position:static}
   .income-evidence .trial-sample-list {grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+.workspace-locations {position:sticky;top:3.2rem;z-index:2;display:flex;align-items:center;gap:.55rem;background:#fffefa;border-bottom:1px solid #dce5d7;padding:.55rem 0;margin-bottom:.65rem}
+.workspace-location-label {color:#627761;font-size:.7rem;white-space:nowrap}
+.workspace-location-list {display:flex;flex-wrap:wrap;gap:.35rem;margin:0;padding:0;list-style:none;min-width:0}
+.workspace-location-list li {min-width:0;max-width:100%}
+.workspace-location {display:block;max-width:100%;border:1px solid #d5e1cf;border-radius:.3rem;background:#f4f7ef;color:#385e43;padding:.4rem .6rem;font:inherit;font-size:.72rem;line-height:1.4;text-align:left;cursor:pointer;overflow-wrap:anywhere}
+.workspace-location:hover {background:#e9f0e2;border-color:#a9c29f}
+.workspace-location:focus-visible,.income-panel h3:focus-visible {outline:2px solid var(--orange);outline-offset:3px}
+.income-panel [id*="group-evidence"] {scroll-margin-top:9rem}
+
+.income-evidence .period-comparison .detail-chart {height:10.5rem}
+/* Empty live feedback remains available without reserving a blank chart row. */
+.chart-selection:empty {margin:0;padding:0;border:0;min-height:0}
