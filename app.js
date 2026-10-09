@@ -577,8 +577,9 @@ function projectDataset() {
     }
   }
   if(flow.kind==='group'&&subscribers.kind==='count') {
-    const v=flow.value;v.closing=subscribers.value;
-    v.lost=v.opening+v.trialPaid+v.directPaid+v.recovered-v.closing;
+    const v=flow.value,lost=v.opening+v.trialPaid+v.directPaid+v.recovered-subscribers.value;
+    if(lost<0)dataset.metrics.m21=na('同范围订阅存量与流转人数不闭合：期末超过期初加全部新增；请核对来源，暂不计算净增。');
+    else {v.closing=subscribers.value;v.lost=lost;}
   }
 }
 const catalogItem = id => dataset.catalog.find(metric => metric.id === id);
@@ -872,7 +873,7 @@ function subscriptionBridgeSpec() {
   const steps=[v.opening,v.trialPaid,v.directPaid,v.recovered,-v.lost,v.closing];
   return {kind:'waterfall',title:'有效订阅人数流转 · 9/1–9/24',unit:'人',labels,
     series:[{name:'人数变化',values:steps}],flow:v,
-    note:`期初 + 试用转正 + 直接首付 + 恢复 − 失去权益 = 期末（${number(v.closing)}人）。纵轴局部放大；筛选后各项为模拟分片流转估算。`};
+    note:`${number(v.opening)} + ${number(v.trialPaid)} + ${number(v.directPaid)} + ${number(v.recovered)} − ${number(v.lost)} = ${number(v.closing)} 人；净增 ${v.closing-v.opening>=0?'+':''}${number(v.closing-v.opening)} 人。${effectiveFor(21).some(([key])=>!['productLine','week'].includes(key))?'筛后各项为模拟分片流转估算。':'各项与当前演示订阅流水闭合。'}`};
 }
 function trialContributionBreakdown() {
   if(filterState.week)return null;
@@ -1050,14 +1051,17 @@ function subscriptionDetails() {
   details.append(box);
   const table=element('table','');table.append(element('caption','','分产品线状态人数'));
   const head=element('thead','');const row=element('tr','');
-  ['产品线','Free或无权益','试用中','付费中','已取消未到期','支付失败','已过期','合计'].forEach(label=>row.append(element('th','',label)));
+  ['产品线','Free或无权益','试用中','付费中','已取消未到期','支付失败','已过期','合计'].forEach(label=>{
+    const header=element('th','',label);header.scope='col';row.append(header);
+  });
   head.append(row);table.append(head);
   const body=element('tbody','');
   for (const [key,label] of [['bird','观鸟'],['hunting','狩猎']]) {
     const item=metric(5).value[key];
     if(!item) continue;
     const values=[item.free??item.noEntitlement,item.trialEarly+item.trialNearExpiry,item.paidCurrent,item.cancelledButEntitled,item.paymentFailed,item.expired??0,Object.values(item).reduce((a,b)=>a+b,0)];
-    const tr=element('tr','');tr.append(element('th','',label));values.forEach(value=>tr.append(element('td','',number(value))));body.append(tr);
+    const tr=element('tr',''),header=element('th','',label);header.scope='row';tr.append(header);
+    values.forEach(value=>tr.append(element('td','',number(value))));body.append(tr);
   }
   table.append(body);
   const tableWrap=element('div','data-table-scroll status-table');tableWrap.append(table);details.append(tableWrap);
@@ -1290,7 +1294,18 @@ function trendAxisNote(axis,unit) {
       unit==='美元'?`$${number(value)}`:`${number(value)}${unit}`;
   return `纵轴 ${format(axis.min)}–${format(axis.max)}${axis.min>0?'，为观察趋势采用非零起点':''}；精确值见数据表。`;
 }
+function waterfallLevels(spec) {
+  let running=0;
+  return spec.series[0].values.map((step,index)=>{
+    running=index===0||index===spec.labels.length-1?step:running+step;
+    return running;
+  });
+}
 function chartScaleNote(spec) {
+  if(spec.kind==='waterfall') {
+    const axis=trendAxisDomain([waterfallLevels(spec)],spec.unit);
+    return `点表示期初/期末存量，柱表示各环节增减；${trendAxisNote(axis,spec.unit).replace('为观察趋势采用非零起点','局部范围展示流转')}`;
+  }
   if(spec.kind==='periodComparison') {
     const axis=trendAxisDomain(spec.series,spec.unit);
     return axis?trendAxisNote(axis,spec.unit).replace('纵轴','横轴').replace('为观察趋势采用非零起点','点图使用局部范围比较两批次；不表示人数规模'):'';
@@ -1593,12 +1608,11 @@ function chartTable(spec) {
         ...spec.series[0].values[index].map(value=>`${Number(value).toFixed(1)}%`)]));
   }
   if(spec.kind==='waterfall') {
-    columns=['流转环节','人数变化','累计有效订阅'];
-    let running=0;
+    columns=['流转环节','存量 / 人数变化','累计有效订阅'];
+    const levels=waterfallLevels(spec);
     rows.splice(0,rows.length,...spec.labels.map((label,index)=>{
       const step=spec.series[0].values[index];
-      if(index===0||index===spec.labels.length-1)running=step;else running+=step;
-      return [label,index===0||index===spec.labels.length-1?number(step):`${step>=0?'+':''}${number(step)}`,number(running)];
+      return [label,index===0||index===spec.labels.length-1?number(step):`${step>=0?'+':''}${number(step)}`,number(levels[index])];
     }));
   }
   const details=element('details','chart-data');
@@ -1712,22 +1726,31 @@ function drawDetailChart(box,spec) {
     return instance;
   }
   if(spec.kind==='waterfall') {
-    const v=spec.flow;
-    const lower=Math.max(0,Math.floor((Math.min(v.opening,v.closing)-800)/250)*250);
+    const v=spec.flow,levels=waterfallLevels(spec),axis=trendAxisDomain([levels],spec.unit);
     instance.setOption({animationDuration:chartAnimationDuration(350),
       tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
         const index=params[0]?.dataIndex;
-        return index===undefined?'':`${spec.labels[index]}：${index===0||index===5?number(spec.series[0].values[index]):
-          `${spec.series[0].values[index]>=0?'+':''}${number(spec.series[0].values[index])}`} 人`;
+        if(index===undefined)return '';
+        const stock=index===0||index===5,step=spec.series[0].values[index];
+        return `${spec.labels[index]}：${stock?'':step>=0?'+':''}${number(step)} 人${stock?'':`<br>流转后有效订阅：${number(levels[index])} 人`}`;
       }},
-      grid:{left:65,right:22,top:24,bottom:44},
+      grid:{left:65,right:22,top:38,bottom:44},
       xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455',interval:0},axisTick:{show:false}},
-      yAxis:{type:'value',min:lower,axisLabel:{color:'#58695b',formatter:value=>number(value)},splitLine:{lineStyle:{color:'#e7ede6'}}},
+      yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{color:'#58695b',formatter:value=>number(value)},splitLine:{lineStyle:{color:'#e7ede6'}}},
       series:[
-        {type:'bar',stack:'flow',silent:true,itemStyle:{color:'transparent'},data:[0,v.opening,v.opening+v.trialPaid,v.opening+v.trialPaid+v.directPaid,v.closing,0]},
-        {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#356d51'},data:[
-          {value:v.opening,itemStyle:{color:'#234f37'}},v.trialPaid,v.directPaid,v.recovered,0,{value:v.closing,itemStyle:{color:'#234f37'}}]},
-        {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#c16952'},data:[0,0,0,0,v.lost,0]},
+        {type:'bar',stack:'flow',silent:true,itemStyle:{color:'transparent'},data:[0,levels[0],levels[1],levels[2],levels[4],0]},
+        {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#356d51'},data:[0,v.trialPaid,v.directPaid,v.recovered,0,0],
+          label:{show:true,position:'top',color:'#315540',fontSize:12,fontWeight:600,
+            formatter:params=>params.dataIndex>=1&&params.dataIndex<=3?`${params.value>0?'+':''}${number(params.value)}`:''}},
+        {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#c16952'},data:[0,0,0,0,v.lost,0],
+          label:{show:true,position:'bottom',color:'#913e2b',fontSize:12,fontWeight:600,
+            formatter:params=>params.dataIndex===4?`${params.value>0?'−':''}${number(params.value)}`:''}},
+        {type:'scatter',symbolSize:12,itemStyle:{color:'#234f37'},
+          data:levels.map((value,index)=>[index,index===0||index===5?value:null]),
+          label:{show:true,position:'top',distance:8,color:'#315540',fontSize:12,fontWeight:600,
+            formatter:params=>number(params.value[1])},
+          markLine:{silent:true,symbol:'none',label:{show:false},lineStyle:{color:'#98ac9a',type:'dashed',width:1},
+            data:levels.slice(0,-1).map((value,index)=>[{coord:[index,value]},{coord:[index+1,value]}])}},
       ],
     });
     return instance;

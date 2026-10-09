@@ -154,10 +154,12 @@ async (parent) => {
     check(await probe.locator('.detail-kpi').count()===4,'Retry did not restore complete dashboard');
   } finally {await probe.close();}
   check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
-  await page.setViewportSize({width:1440,height:1000});
+  await page.setViewportSize({width:720,height:1000});
   await page.locator('.nav-link[data-page=""]').click();
+  await page.evaluate(()=>{document.documentElement.style.fontSize='20px';updateScrollableTables();});
   const statusTable=page.locator('.status-table');
-  check(await statusTable.getAttribute('tabindex')==='0','Homepage status table is not keyboard-focusable');
+  await page.waitForFunction(()=>document.querySelector('.status-table')?.hasAttribute('data-scrollable'));
+  check(await statusTable.getAttribute('tabindex')==='0','Overflowing homepage status table is not keyboard-focusable');
   await statusTable.focus();
   await page.keyboard.press('ArrowRight');
   await page.waitForFunction(()=>document.querySelector('.status-table').scrollLeft>0);

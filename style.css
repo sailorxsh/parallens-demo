@@ -316,7 +316,10 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .home-comparison-context .insight-link {font-size:.67rem;line-height:1.5}
 .lower-grid {grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.8rem;margin-top:1.4rem;align-items:start}
 .lower-grid .status-details {margin:0;min-width:0}
-.lower-grid .status-details table {min-width:47rem}
+.lower-grid .status-details table {width:100%;min-width:32rem;table-layout:fixed}
+.lower-grid .status-details thead th {white-space:normal;overflow-wrap:anywhere;text-wrap:balance;vertical-align:bottom;line-height:1.5}
+.lower-grid .status-details th,.lower-grid .status-details td {padding:.45rem .35rem;text-align:right;font-variant-numeric:tabular-nums}
+.lower-grid .status-details th:first-child {text-align:left;width:3.1rem}
 .home-alerts {margin-top:1.3rem}
 .home-alerts .alert-grid {grid-template-columns:repeat(4,minmax(0,1fr))}
 .mini-card {min-height:6.5rem;padding:.7rem .8rem}
