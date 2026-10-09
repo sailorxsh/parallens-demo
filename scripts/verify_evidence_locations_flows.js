@@ -40,7 +40,10 @@ async(page)=>{
       await p.getByRole('navigation',{name:'分组证据定位',exact:true}).getByRole('button',{name:'成熟试用记录 · 支付失败样本',exact:true}).click();
       const sampleNode=await p.locator('.trial-samples').elementHandle();
       const before=await p.locator('.trial-samples').boundingBox();
-      await p.locator('.trial-sample-item').first().click();
+      const sampleButton=await p.locator('.trial-sample-item').first().boundingBox();
+      check(sampleButton.y>=0&&sampleButton.y+sampleButton.height<=height,'Sample button is not fully visible before the mouse interaction');
+      // Click the visible sample without the automation driver's preliminary scrolling.
+      await p.mouse.click(sampleButton.x+sampleButton.width/2,sampleButton.y+sampleButton.height/2);
       await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       const after=await p.locator('.trial-samples').boundingBox();
       if(Math.abs(after.y-before.y)>=2)await p.screenshot({path:'output/playwright/v59-anchor-failure.png'});
@@ -54,6 +57,12 @@ async(page)=>{
       await p.locator('.income-context-controls').getByRole('button',{name:'关键观察',exact:true}).click();
       await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
       check(await field('issueMetric').inputValue()==='18'&&Boolean(await field('linkedSample').inputValue()),'Reopening registration loses the replacement issue form');
+      await p.locator('.trial-sample-item').first().evaluate(node=>node.focus({preventScroll:true}));
+      const beforeKeyboard=await p.locator('.trial-samples').boundingBox();
+      await p.locator('.trial-sample-item').first().press('Enter');
+      await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const afterKeyboard=await p.locator('.trial-samples').boundingBox();
+      check(Math.abs(afterKeyboard.y-beforeKeyboard.y)<2&&await field('linkedSample').evaluate(node=>document.activeElement===node),'Keyboard sample linkage moves evidence or loses field focus');
       await field('issueMetric').selectOption('52');
       check(await field('note').inputValue()==='保留风险核查草稿','Sample linkage destroys the previous issue draft');
       for(const query of ['', 'country=US&appPlatform=Android&plan=Plus&billingCycle=monthly']) {
