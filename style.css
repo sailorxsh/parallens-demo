@@ -419,6 +419,10 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .action-registration {border:0;padding:0;margin:0;min-width:0}
 .action-registration legend {font-size:.75rem;font-weight:700;padding:0;margin-bottom:.45rem}
 .action-record .table-note {margin:.15rem 0 .6rem}
+.action-scope {display:grid;grid-template-columns:4rem minmax(0,1fr);gap:.3rem .5rem;margin:.25rem 0 .65rem;padding:.5rem 0;border-block:1px solid var(--line);font-size:.68rem;line-height:1.55}
+.action-scope dt {font-weight:700}
+.action-scope dd {margin:0;overflow-wrap:anywhere}
+.action-scope-ignored {display:block;color:var(--muted)}
 .action-record-fields {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:start;gap:.55rem}
 .action-record-fields label {display:flex;flex-direction:column;gap:.2rem;font-size:.71rem;font-weight:600;color:#4b6551;min-width:0}
 .action-record-fields input,.action-record-fields select,.action-record-fields textarea {min-width:0;width:100%;border:1px solid #bdcdbd;border-radius:.25rem;background:#fffefa;color:#20372b;padding:.46rem .55rem;font:inherit;font-size:.76rem;height:2.15rem}

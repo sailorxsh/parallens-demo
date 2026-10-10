@@ -2337,22 +2337,30 @@ function actionRecord(page,evidenceId) {
   const draft=actionDrafts.get(key),initial=draft??current;
   const hash=[...key].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7).toString(36).toUpperCase();
   const issueId=`DEMO-${page}-${evidenceId}-${hash}`;
-  const baseline=draft?.baseline??current.baseline??actionBaselineValue(evidenceId);
-  const baselineAt=draft?.baselineAt??current.baselineAt??actionBaselineWindow(evidenceId);
+  const currentBaseline=actionBaselineValue(evidenceId),currentWindow=actionBaselineWindow(evidenceId);
+  const baseline=draft?.baseline??current.baseline??currentBaseline;
+  const baselineAt=draft?.baselineAt??current.baselineAt??currentWindow;
   const form=element('form','action-record');
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}；范围：${scope}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}。`));
+  const filterContext=metricFilterContext(evidenceId),scopeDetails=element('dl','action-scope');
+  const calculationScope=filterContext.applied.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'总体 · 默认业务对象';
+  const calculationDescription=element('dd','',calculationScope);
+  if(filterContext.ignored.length)calculationDescription.append(element('span','action-scope-ignored',
+    `未参与计算：${filterContext.ignoredText}（不适用于本指标）。`));
+  scopeDetails.append(element('dt','','计算范围'),calculationDescription,element('dt','','界面条件'),element('dd','',scope));
+  scopeDetails.id=`scope-${issueId}`;form.setAttribute('aria-describedby',scopeDetails.id);form.append(scopeDetails);
   const issueIds=[...new Set([defaultId,evidenceId,...sourceData.catalog.filter(item=>item.page===page&&
     (simulatedActionState[`record:${page}:${scope}:${item.id}`]||actionDrafts.has(`record:${page}:${scope}:${item.id}`))).map(item=>item.id)])];
-  const switchLabel=element('label','issue-switch','本范围的问题单');
+  const switchLabel=element('label','issue-switch','同一界面条件下的问题单');
   const switcher=element('select','');switcher.name='issueMetric';
   issueIds.forEach(id=>{const option=element('option','',`#${id} ${catalogItem(id).name}${actionDrafts.has(`record:${page}:${scope}:${id}`)?' · 未保存草稿':simulatedActionState[`record:${page}:${scope}:${id}`]?' · 已保存':''}`);option.value=String(id);switcher.append(option);});
   switcher.value=String(evidenceId);switcher.addEventListener('change',()=>registerIssue(page,Number(switcher.value)));
   switchLabel.append(switcher);form.append(switchLabel);
-  if(current.baselineAt&&current.baselineAt!==actionBaselineWindow(evidenceId))form.append(element('p','action-baseline-note',
-    `沿用此前登记的基线时间；当前指标对应${actionBaselineWindow(evidenceId)}。请核对历史基线，保存记录不会更新指标数据。`));
+  if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note',
+    `当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
   const stages=element('ol','action-stages');stages.setAttribute('aria-label','问题单处理进度');
   ['待处理','核查中','待复查','人工确认'].forEach(label=>stages.append(element('li','',label)));form.append(stages);
   const registration=element('fieldset','action-registration');registration.append(element('legend','','核查登记'));
@@ -2874,7 +2882,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   if(metric(findingMetric).kind!=='na')finding.append(registerIssueButton(page,findingMetric));
   else finding.append(element('p','table-note','当前证据待补数据或不适用；补齐可核验数据后再登记。'));
   const record=element('div','income-record');record.id=`${page}-workspace-record`;
-  record.append(element('p','workspace-record-hint','当前范围的问题单 · 保存仅保留在此浏览器'),form);
+  record.append(element('p','workspace-record-hint','本地问题单 · 保存仅保留在此浏览器'),form);
   right.append(rightControls,finding,record);
   const showRight=mode=>{
     finding.hidden=mode==='record';record.hidden=mode!=='record';
