@@ -35,6 +35,23 @@ let homeTrendFocus=13;
 let statusChart;
 const sparklines=[];
 const detailCharts=[];
+const chartSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(entries=>requestAnimationFrame(()=>{
+  for(const {target:box} of entries) {
+    if(!box.isConnected||!box.clientWidth||!box.clientHeight)continue;
+    const instance=window.echarts?.getInstanceByDom(box);
+    if(!instance||instance.isDisposed())continue;
+    if(Math.abs(instance.getWidth()-box.clientWidth)<1&&Math.abs(instance.getHeight()-box.clientHeight)<1)continue;
+    instance.resize();
+    if(box.parentElement.classList.contains('chart-legend-frame'))fitChartLegend(box.parentElement,instance);
+  }
+})):null;
+function createChart(box) {
+  const instance=window.echarts.init(box,null,{renderer:'svg'});
+  chartSizeObserver?.observe(box);return instance;
+}
+function destroyChart(instance) {
+  chartSizeObserver?.unobserve(instance.getDom());instance.dispose();
+}
 const ACTION_STORAGE_KEY='parallens-demo-actions-v1';
 let simulatedActionState={};
 try {
@@ -1082,7 +1099,7 @@ function drawSparkline(box,values,id,labels=dataset.weekly.map(w=>`W${w.week}`),
   if (!window.echarts) {
     box.removeAttribute('role'); box.textContent='图表不可用；上方保留环比。'; return;
   }
-  const instance=window.echarts.init(box,null,{renderer:'svg'});
+  const instance=createChart(box);
   sparklines.push(instance);
   instance.setOption({
     animation:false,grid:{left:2,right:2,top:5,bottom:5},
@@ -1123,7 +1140,7 @@ function subscriptionDetails() {
 function drawStatus(box) {
   box.dataset.drawn='1';
   if (!window.echarts) {box.removeAttribute('role');box.textContent='图表不可用；下方保留完整状态人数表。';return;}
-  statusChart=window.echarts.init(box,null,{renderer:'svg'});
+  statusChart=createChart(box);
   const s=metric(5).value;
   const keys=Object.keys(s);
   const totals=Object.fromEntries(keys.map(key=>[key,Object.values(s[key]).reduce((a,b)=>a+b,0)]));
@@ -1479,8 +1496,8 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
     node.textContent='趋势图暂未加载。下方“查看趋势数据表”保留完整数据。';
     return;
   }
-  if (chart) chart.dispose();
-  chart=window.echarts.init(node,null,{renderer:'svg'});
+  if (chart) destroyChart(chart);
+  chart=createChart(node);
   const weeks=dataset.weekly;
   const selected=comparison??homeComparisons().find(item=>item.id===focusId);
   const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:'#b87021',pattern:'solid',details:weeklyRateDetails(13)},
@@ -1831,7 +1848,7 @@ function structureExplorer(views) {
     });
     const view=views[index];panel.setAttribute('aria-labelledby',buttons[index].id);
     if (currentChart) {
-      currentChart.dispose();
+      destroyChart(currentChart);
       const position=detailCharts.indexOf(currentChart);
       if (position>=0) detailCharts.splice(position,1);
     }
@@ -1863,7 +1880,7 @@ function drawDetailChart(box,spec) {
     box.className='detail-chart chart-fallback'; box.removeAttribute('role');
     box.textContent='图表未加载；下方保留完整数据表。'; return undefined;
   }
-  const instance=window.echarts.init(box,null,{renderer:'svg'});
+  const instance=createChart(box);
   detailCharts.push(instance);
   if(box.parentElement?.classList.contains('chart-legend-frame'))box.parentElement.querySelector('.chart-legend')?.remove();
   const isTimeline=isTimelineSpec(spec);
@@ -3216,10 +3233,11 @@ function renderDetail(page,selectedMetric,showSelected=false) {
   });
 }
 function disposeCharts() {
-  if (chart) {chart.dispose();chart=undefined;}
-  if (statusChart) {statusChart.dispose();statusChart=undefined;}
-  while (sparklines.length) sparklines.pop().dispose();
-  while (detailCharts.length) detailCharts.pop().dispose();
+  chartSizeObserver?.disconnect();
+  if (chart) {destroyChart(chart);chart=undefined;}
+  if (statusChart) {destroyChart(statusChart);statusChart=undefined;}
+  while (sparklines.length) destroyChart(sparklines.pop());
+  while (detailCharts.length) destroyChart(detailCharts.pop());
 }
 function renderRoute({preserveScroll=false}={}) {
   document.querySelector('#metric-search')?.close();
