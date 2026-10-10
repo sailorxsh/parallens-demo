@@ -2573,10 +2573,11 @@ function entitySamplesPanel(page) {
   const detail=element('aside','entity-sample-detail');detail.id=`${page}-sample-detail`;
   detail.setAttribute('aria-label',page==='C'?'选中设备样本':'选中异常事件');
   const buttons=[];
-  function select(record,index) {
+  function select(record,index,announce=false) {
+    const viewport={left:scrollX,top:scrollY,behavior:'instant'};
     buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
-    detail.replaceChildren(element('p','inspector-kicker',`${page==='C'?'设备':'事件'}样本 / ${record.id}`),
-      element('h4','',record.signal),element('p','entity-sample-disclosure','模拟记录 · 不代表分组总体'));
+    const header=[element('p','inspector-kicker',`${page==='C'?'设备':'事件'}样本 / ${record.id}`),
+      element('h4','',record.signal),element('p','entity-sample-disclosure','模拟记录 · 不代表分组总体')];
     const facts=element('dl','inspector-facts');
     const fact=(label,value)=>{const row=element('div','');row.append(element('dt','',label),element('dd','',value));facts.append(row);};
     fact('观测时间',record.observedAt);fact('研判状态',record.status);
@@ -2584,17 +2585,24 @@ function entitySamplesPanel(page) {
       for(const key of ['deviceModel','firmware','country','appPlatform','functionType'])
         fact(filterLabels[key],optionLabels[record.dimensions[key]]??record.dimensions[key]);
     } else {fact('所属领域',record.domain);fact('关联范围',record.scope);}
-    detail.append(facts,element('p','entity-sample-context',record.detail??'该条是演示异常信号，不能替代原始事件或总体数据。'),
-      element('p','entity-sample-review',`建议核对：${record.review}`));
     const link=element('a','inspector-link','查看关联指标证据 ↗');
-    link.href=routeHref(record.evidence.page,record.evidence.metricId);detail.append(link);
+    link.href=routeHref(record.evidence.page,record.evidence.metricId);
+    // Build the complete detail before replacing the sticky panel's content.
+    detail.replaceChildren(...header,facts,
+      element('p','entity-sample-context',record.detail??'该条是演示异常信号，不能替代原始事件或总体数据。'),
+      element('p','entity-sample-review',`建议核对：${record.review}`),link);
+    if(announce) {
+      // Safari can move the viewport when sticky content is replaced (as with issue forms).
+      scrollTo(viewport);
+      document.querySelector('#announcement').textContent=`已选择 ${record.id}：${record.signal}；详情已更新。`;
+    }
   }
   records.forEach((record,index)=>{
     const button=element('button','entity-sample-item');button.type='button';
     button.setAttribute('aria-controls',detail.id);
     button.append(element('span','entity-sample-id',record.id),element('strong','',record.signal),
       element('span','entity-sample-meta',`${record.observedAt} · ${record.status}`));
-    button.addEventListener('click',()=>select(record,index));
+    button.addEventListener('click',()=>select(record,index,true));
     buttons.push(button);list.append(button);
   });
   grid.append(list,detail);panel.append(grid);select(records[0],0);
