@@ -3181,6 +3181,26 @@ async function fetchDataPart(name) {
     await new Promise(resolve=>setTimeout(resolve,150));
   }
 }
+async function loadDataParts(onReady) {
+  const parts=new Array(dataParts.length);
+  let nextIndex=0;
+  let failure;
+  async function worker() {
+    while(!failure&&nextIndex<dataParts.length) {
+      const index=nextIndex++;
+      try {
+        parts[index]=await fetchDataPart(dataParts[index]);
+        onReady();
+      } catch(error) {
+        failure??=error;
+      }
+    }
+  }
+  // Drain in-flight requests before the error view or a retry can replace progress.
+  await Promise.all(Array.from({length:Math.min(dataBatchSize,dataParts.length)},worker));
+  if(failure)throw failure;
+  return parts;
+}
 function bindAppEvents() {
   if(appEventsBound)return;
   appEventsBound=true;
@@ -3257,19 +3277,11 @@ async function start() {
     showLoadingState();
     main.setAttribute('aria-busy','true');
     document.querySelector('#announcement').textContent='正在准备经营数据';
-    const parts=[];
-    for(let offset=0;offset<dataParts.length;offset+=dataBatchSize) {
-      const results=await Promise.allSettled(dataParts.slice(offset,offset+dataBatchSize).map(async name=>{
-        const part=await fetchDataPart(name);
-        ready++;
-        document.querySelector('#load-meter').value=ready;
-        document.querySelector('#load-status').textContent=`已准备 ${ready} / ${dataParts.length} 组数据`;
-        return part;
-      }));
-      const failure=results.find(result=>result.status==='rejected');
-      if(failure)throw failure.reason;
-      parts.push(...results.map(result=>result.value));
-    }
+    const parts=await loadDataParts(()=>{
+      ready++;
+      document.querySelector('#load-meter').value=ready;
+      document.querySelector('#load-status').textContent=`已准备 ${ready} / ${dataParts.length} 组数据`;
+    });
     sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name,parts[index]]));
     dataLoaded=true;
     bindAppEvents();

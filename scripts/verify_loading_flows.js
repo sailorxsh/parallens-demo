@@ -22,7 +22,7 @@ async(page)=>{
    check(before.y===0,`Loading margins push main down at ${width}`);
    check(await p.locator('#main').getAttribute('aria-busy')==='true','Loading omitted busy state');
    check(await p.locator('.site-foot').evaluate(node=>node.getBoundingClientRect().top>=innerHeight),'Footer appears before dashboard is ready');
-   if(width===1366)await p.screenshot({path:'output/playwright/v53-loading-stable.png'});
+   if(width===1366)await p.screenshot({path:'output/playwright/v65-loading-stable.png'});
    await p.locator('#statusChart svg').waitFor();await p.waitForTimeout(100);
    const after=await rect(),startup=await p.evaluate(()=>window.__startup);
    check(Math.abs(before.x-after.x)<1&&Math.abs(before.y-after.y)<1,`Main jumps when loaded at ${width}`);
@@ -31,6 +31,23 @@ async(page)=>{
    check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Startup causes horizontal overflow');
    results.push({width,height,...startup});
   }
+  await p.unroute('**/data/*.json');
+  let releaseSlow,notifyLast;
+  const slowGate=new Promise(resolve=>{releaseSlow=resolve;}),lastStarted=new Promise(resolve=>{notifyLast=resolve;});
+  await p.route('**/data/*.json',async route=>{
+   if(route.request().url().endsWith('/trial-facts.json'))await slowGate;
+   if(route.request().url().endsWith('/subscription-flow.json'))notifyLast();
+   await route.continue();
+  });
+  try {
+   await p.goto(base,{waitUntil:'domcontentloaded'});
+   let timer;
+   try {await Promise.race([lastStarted,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Slow file blocks later datasets')),10000);})]);}
+   finally {clearTimeout(timer);}
+   check(await p.locator('#main').getAttribute('aria-busy')==='true','Partial data presents a ready dashboard');
+   check(await p.locator('#load-meter').evaluate(node=>node.value<17),'Progress falsely completes while a required file is pending');
+  } finally {releaseSlow();}
+  await p.locator('#statusChart svg').waitFor();
   await p.unroute('**/data/*.json');
   await p.route('**/data/weekly.json',route=>route.abort());
   await p.goto(`${base}#/D?country=US&metric=18&issue=18`,{waitUntil:'domcontentloaded'});
@@ -52,10 +69,10 @@ async(page)=>{
   progress.push(...await p.evaluate(()=>window.__progress??[]));
   check(progress.includes(17),'Retry progress does not reach all 17 datasets');
   check(progress.every((value,index)=>!index||value>=progress[index-1]),'Retry progress goes backwards');
-  check(peak===6,'Startup does not use the intended bounded request batch');
+  check(peak===6,'Startup does not use the intended bounded concurrency');
   check((await p.locator('.action-record-header').innerText()).includes('DEMO-D-18-'),'Retry opens another issue');
   check(p.url().includes('country=US')&&p.url().includes('metric=18')&&p.url().includes('issue=18'),'Retry loses direct URL');
   check(errors.length===0,errors.join('; '));
-  return {status:'PASS',results,peakRequests:peak,progress,checks:['stable main and footer at 3 desktop sizes','CLS below .05 where observable','busy state','bounded concurrency','failed fetch and retry','monotonic progress','direct filter, metric and issue URL preserved']};
+  return {status:'PASS',results,peakRequests:peak,progress,checks:['stable main and footer at 3 desktop sizes','CLS below .05 where observable','busy state','bounded concurrency','slow file does not block later requests or present partial data','failed fetch and retry','monotonic progress','direct filter, metric and issue URL preserved']};
  }finally{await context.close();}
 }

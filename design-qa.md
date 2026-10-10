@@ -113,3 +113,16 @@ final result: passed
 - 最终本地检查：Chrome、WebKit各通过12项检查、24个页面/尺寸状态、9组交互图例；输出为output/playwright/v64-legend-chromium-results.json与v64-legend-webkit-results.json。草稿/历史基线和隐藏图表在缩放后重新打开的间距均保留。线上结果另存发布检查文件，不以本地通过代替上线验证。
 
 - 发布后检查：9391aab对应的Pages部署成功；线上app.js/style.css/index.html与本地逐字节一致。Chrome及WebKit线上各通过12项检查、24个状态。Chrome首次在异步resize处理前断言曾报告短暂溢出；测试改为等待应用自身的SVG尺寸与容器同步（10秒超时），再验证溢出和标签间距，没有手动重绘或取消断言。
+
+# 首次加载与筛选响应复查（2026-10-10）
+
+final result: passed（本轮加载调度与恢复行为）
+
+- 基线为87801ad。独立Chrome浏览器、1366×900、减少动态效果、冷缓存；正常网络与150ms延迟/1.6Mbps下载/4倍CPU减速各三个样本。线上首页准备耗时分别为2.524/3.685/3.052秒与5.989/25.124/21.716秒；保留慢样本，不将网络波动隐藏为异常剔除。压缩后的trial-facts传输约139KB，本地5.2MB大小不能代表线上传输。
+- D、E页18次国家切换的自动化操作到两帧绘制耗时，中位数正常47.1ms、受限74.5ms；导航/展开的Event Timing最大正常88ms、受限152ms。这些是指定操作的实验观察，包含自动化开销，既不是完整INP计算，也不是生产用户第75百分位。可观测布局偏移约0.0000155；WebKit不支持该条目，不能把返回0当成验证通过。
+- [P2 / 等待] 17组数据原来按6个一批：批内有空闲并发位时，仍等最慢文件才发下一批。改为最多6个并发的连续队列。按原索引收集数据，全部到齐才呈现；发生失败时停止领取新任务，并等已发请求结束后显示错误，避免旧请求写入重试进度。
+- 控制实验在本地同一资源、同一桌面条件下进行：trial-facts额外延迟1500ms，其余JSON延迟100ms；通过隔离路由恢复基线app.js，不回退工作树。每版三个样本。首个数据请求至首页SVG出现的中位耗时1831ms→1701ms，最后一组请求启动约1645ms→214ms。仅证明批次屏障被消除与此延迟配置下约7.1%的改善，不能推定线上整站提速。
+- 已保存并打开线上首页截图output/playwright/v65-home-current.png；加载布局截图为v65-loading-stable.png。本轮不改变图表、字体、颜色、图片、文案或已批准的首页四层结构。
+- verify_loading_flows.js新增“卡住trial-facts时最后一组仍开始请求，页面保持busy且进度未完成”回归，保留失败重试、最大并发6、三种桌面尺寸、单调进度和直接URL的筛选/指标/问题单检查。Chrome/WebKit本地各通过8项检查；首页四层交互13项、数据/投影、语法和静态打包检查通过。
+- 证据：output/playwright/v65-performance-baseline.json、v65-loader-comparison.json、v65-loading-chromium-results.json、v65-loading-webkit-results.json、v65-home-chromium-results.json。性能实验脚本在/tmp/parallens-v65-perf.cjs、/tmp/parallens-v65-loader.cjs，基线源码在/tmp/parallens-v65-before-app.js；它们是本轮临时测量材料，不是生产依赖。
+- 实际限制：线上受限样本在数据请求前已有12–18秒等待，CDN/链路波动占显著部分；本轮没有解决或声称解决所有冷启动延迟。没有新增生产遥测或外部数据访问。全站获奖品质仍未被证明，本轮只完成上述范围。
