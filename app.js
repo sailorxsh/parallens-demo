@@ -74,6 +74,7 @@ window.addEventListener('resize',()=>{
     if(instance)fitChartLegend(frame,instance);
   });
   updateScrollableTables();
+  updateSectionNavigation();
 },{passive:true});
 const number = value => Number(value).toLocaleString('zh-CN');
 const percent = value => `${(value * 100).toFixed(1)}%`;
@@ -1150,7 +1151,11 @@ function sectionTitle(kicker,title,note='') {
 }
 function intro() {
   const s=dataset.snapshot;
-  const header=element('div','page-heading');
+  const header=element('div','page-heading home-field-heading');
+  const landscape=element('img','field-landscape');
+  landscape.src='./assets/field-mark.webp';landscape.alt='';
+  landscape.width=384;landscape.height=224;landscape.decoding='async';
+  landscape.setAttribute('fetchpriority','low');landscape.setAttribute('aria-hidden','true');
   const text=element('div','');
   text.append(element('p','eyebrow','BUSINESS FIELD NOTES  /  01'),
               element('h1','','经营简报'),
@@ -1162,7 +1167,7 @@ function intro() {
   quality.href=routeHref('G',54);quality.setAttribute('aria-describedby','quality-status-description');
   const qualityDescription=element('span','visually-hidden',qualityState.reason);qualityDescription.id='quality-status-description';
   tags.append(quality,qualityDescription);
-  header.append(text,tags);
+  header.append(text,landscape,tags);
   return header;
 }
 function homeComparisons() {
@@ -2700,6 +2705,24 @@ function entitySamplesPanel(page) {
   grid.append(list,detail);panel.append(grid);select(records[0],0);
   return panel;
 }
+function updateSectionNavigation() {
+  const navigation=document.querySelector('.section-navigation');
+  if(!navigation)return;
+  const entries=[...navigation.querySelectorAll('.section-navigation-item')].map(button=>({
+    button,rect:document.getElementById(button.dataset.target)?.getBoundingClientRect()
+  })).filter(item=>item.rect);
+  if(!entries.length)return;
+  const visibleTop=Math.max(0,navigation.getBoundingClientRect().bottom);
+  const readingLine=visibleTop+Math.max(16,Math.min(160,(innerHeight-visibleTop)*0.15));
+  let current=entries[0];
+  for(const item of entries)if(item.rect.top<=readingLine)current=item;
+  if(scrollY>0&&innerHeight+scrollY>=document.documentElement.scrollHeight-2) {
+    // A short collapsed catalog at the bottom does not represent the main visible section.
+    const visibleHeight=item=>Math.max(0,Math.min(innerHeight,item.rect.bottom)-Math.max(visibleTop,item.rect.top));
+    current=entries.reduce((best,item)=>visibleHeight(item)>visibleHeight(best)?item:best);
+  }
+  for(const {button} of entries)if(button===current.button)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
+}
 function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric,legacy) {
   body.classList.add('income-page');
   const evidence=legacy?.selectedEvidence??metricEvidence(selectedMetric,page),specs=[...evidence.specs,...(legacy?.specs??[])];
@@ -2820,7 +2843,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   observationButton.setAttribute('aria-controls',`${page}-workspace-observation`);recordButton.setAttribute('aria-controls',`${page}-workspace-record`);
   rightControls.append(observationButton,recordButton);
   finding.id=`${page}-workspace-observation`;
-  finding.querySelector('.insight-tag').textContent+=` · #${String(findingMetric).padStart(2,'0')}`;
+  const findingTag=finding.querySelector('.insight-tag');
+  findingTag.textContent=`${selectedMetric!==findingMetric?'本页':''}${findingTag.textContent} · #${String(findingMetric).padStart(2,'0')} ${catalogItem(findingMetric).name}`;
   if(metric(findingMetric).kind!=='na')finding.append(registerIssueButton(page,findingMetric));
   else finding.append(element('p','table-note','当前证据待补数据或不适用；补齐可核验数据后再登记。'));
   const record=element('div','income-record');record.id=`${page}-workspace-record`;
@@ -2882,6 +2906,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(visible){explorer.init();explorer.node.dataset.initialized='true';}
     }
     updateScrollableTables();
+    updateSectionNavigation();
   };
   const activate=(key,{focus=false,push=false}={})=>{
     diagnosticWorkspaceView=key;
@@ -3184,6 +3209,7 @@ function renderRoute({preserveScroll=false}={}) {
   if(!preserveScroll)main.focus({preventScroll:true});
   if(metricId&&route&&!preserveScroll) requestAnimationFrame(()=>document.querySelector(`#metric-evidence-${metricId}`)?.scrollIntoView({block:'start'}));
   else if(!preserveScroll)scrollTo({top:0,behavior:'instant'});
+  requestAnimationFrame(updateSectionNavigation);
   document.querySelector('#announcement').textContent=route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
   lastRenderedHash=location.hash;
 }
@@ -3288,11 +3314,7 @@ function bindAppEvents() {
     if(scrollFrame)return;
     scrollFrame=requestAnimationFrame(()=>{
       scrollFrame=null;
-      const buttons=[...document.querySelectorAll('.section-navigation-item')];
-      const atBottom=innerHeight+scrollY>=document.documentElement.scrollHeight-2;
-      let current=atBottom?buttons.at(-1):buttons[0];
-      if(!atBottom)for(const button of buttons)if(document.getElementById(button.dataset.target).getBoundingClientRect().top<=100)current=button;
-      for(const button of buttons)if(button===current)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
+      updateSectionNavigation();
     });
   },{passive:true});
     window.addEventListener('hashchange',handleRouteChange);

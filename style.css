@@ -272,6 +272,13 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .eyebrow {margin-bottom:.25rem}
 .heading-sub {font-size:.78rem}
 .heading-meta {max-width:45rem}
+.home-field-heading {grid-template-columns:minmax(0,1fr) 9rem auto}
+.field-landscape {display:block;width:9rem;height:4.5rem;object-fit:contain;pointer-events:none;color:transparent}
+.home-field-heading .eyebrow,.home-field-heading .heading-sub {color:#d5dfd4}
+@media(max-width:1200px) {
+  .home-field-heading {grid-template-columns:minmax(0,1fr) auto}
+  .home-field-heading .field-landscape {display:none}
+}
 .meta-tag {padding:.25rem .45rem}
 .detail-period {margin:.45rem 0 0;font-size:.7rem}
 .dashboard,.detail-shell {border-radius:.8rem .8rem 0 0;padding-top:1.15rem;margin-inline:calc(-1 * clamp(1rem,2.5vw,2.7rem));padding-inline:clamp(1rem,2.5vw,2.7rem)}
