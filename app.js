@@ -654,7 +654,9 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   link.href = routeHref(page,id);
   link.setAttribute('aria-label',`${label} ${value}，查看${pages[page]?.title??'诊断'}数据`);
   const trend=kind==='snapshot'?headlineTrend(id):null;
-  link.append(metricValueRow(id,element('div','metric-value',value),trend));
+  const valueNode=element('div','metric-value',value);
+  if(kind==='journey'&&[9,34].includes(id)&&metric(id).kind!=='na')valueNode.append(element('span','metric-value-unit','人'));
+  link.append(metricValueRow(id,valueNode,trend));
   if (status) {
     const statusLine = element('div',kind==='journey'?'node-status':'card-foot');
     const dot = element('span',`status-dot ${severity}`);
@@ -1136,7 +1138,7 @@ function intro() {
   const header=element('div','page-heading');
   const text=element('div','');
   text.append(element('p','eyebrow','BUSINESS FIELD NOTES  /  01'),
-              element('h1','','用户与设备经营总览'),
+              element('h1','','经营简报'),
               element('p','heading-sub','从新客接入到付费留存，沿经营主线观察变化；异常进入对应诊断页。'));
   const tags=element('div','heading-meta');
   tags.append(element('span','meta-tag',`快照 ${s.asOf}`),element('span','meta-tag accent',s.season));
@@ -1158,22 +1160,57 @@ function homeComparisons() {
 function homeComparisonChange(comparison) {
   return Math.abs(comparison.delta)<0.05?'基本持平':`${comparison.delta>0?'+':'−'}${Math.abs(comparison.delta).toFixed(1)} 个百分点`;
 }
+function homeResult({id,label,value,page,status}) {
+  const article=element('article','home-result');article.dataset.metricId=String(id);
+  const heading=element('div','metric-heading');heading.append(element('h3','metric-label',label),definition(id,label));
+  const link=element('a','home-result-link');link.href=routeHref(page,id);
+  link.setAttribute('aria-label',`${label} ${value}${metric(id).kind==='na'?'':id===3?'美元每月':'人'}，查看${pages[page].title}数据`);
+  const valueNode=element('div','metric-value',value);
+  if(metric(id).kind!=='na')valueNode.append(element('span','metric-value-unit',id===3?'/ 月':'人'));
+  link.append(valueNode);article.append(heading,link);
+  const compare=element('div','home-result-comparison');
+  const history=metricHistory(id);
+  let delta=null,change='暂无可比值',period='';
+  if(id===21&&metric(id).kind==='group') {
+    const {opening,closing}=metric(id).value;
+    if(opening>0&&Number.isFinite(closing)) {
+      delta=closing-opening;change=`${delta>=0?'+':''}${(delta/opening*100).toFixed(1)}%`;
+      period='9/24 较 9/1';
+    }
+  } else if(history) {
+    const index=history.values.length-1,current=history.values[index],previous=history.values[index-1];
+    if(Number.isFinite(current)&&Number.isFinite(previous)) {
+      delta=current-previous;
+      change=Math.abs(delta)<.05?'持平':`${delta>0?'+':'−'}${number(Math.round(Math.abs(delta)))}${history.unit}`;
+      period=`${history.labels[index]} 较 ${history.labels[index-1]}`;
+    }
+  }
+  if(metric(id).kind==='na')change=metric(id).availability==='pending'?'待补数据':'当前范围不适用';
+  compare.append(element('span',`home-result-delta${delta==null||Math.abs(delta)<.05?' neutral':delta<0?' adverse':' improving'}`,change),
+    element('span','home-result-period',period));
+  compare.setAttribute('aria-label',`${change}${period?`，${period}`:''}${id===21?'；变化比例以期初存量为基准':''}`);
+  article.append(compare);
+  if(id===21&&metric(id).kind!=='na') {const flow=netAddComparison();if(flow)article.append(flow);}
+  else article.append(element('p','home-result-context',metric(id).kind==='na'?metric(id).reason:status));
+  return article;
+}
 function renderHome() {
   disposeCharts();
   const s=dataset.snapshot;
-  main.replaceChildren(intro(),filterBar());
-  const dash=element('div','dashboard');
-  dash.append(sectionTitle('01  /  RESULT','经营结果','有效订阅是规模结果；净增按状态流转核对'));
-  const snap=element('div','snapshot-grid');
+  main.replaceChildren(intro());
+  const dash=element('div','dashboard home-dashboard');
+  const resultHead=element('div','home-result-head');
+  resultHead.append(sectionTitle('01  /  RESULT','经营结果'),filterBar());dash.append(resultHead);
+  const snap=element('div','home-results');
   [
     {id:2,label:'有效订阅用户',value:displayValue(2),page:'D',status:'当前有效付费权益'},
-    {id:21,label:'9月截至24日净增',value:metric(21).kind==='na'?'不适用':`${metric(21).value.closing-metric(21).value.opening>=0?'+':''}${number(metric(21).value.closing-metric(21).value.opening)}`,page:'D',status:'9/1期初 → 9/24期末'},
+    {id:21,label:'9月截至24日净增',value:metric(21).kind==='na'?displayValue(21):`${metric(21).value.closing-metric(21).value.opening>=0?'+':''}${number(metric(21).value.closing-metric(21).value.opening)}`,page:'D',status:'9/1期初 → 9/24期末'},
     {id:3,label:'MRR',value:displayValue(3),page:'D',status:'基础订阅 + 增值Pack'},
     {id:4,label:'复合活跃主账号',value:displayValue(4),page:'B',status:'最近30天去重'},
-  ].forEach(item=>snap.append(card(item)));
+  ].forEach(item=>snap.append(homeResult(item)));
   dash.append(snap);
 
-  const journeyTitle=sectionTitle('02  /  VALUE JOURNEY','六节点经营主线','连接线表示调查顺序；各节点的率按自身批次与分母计算');
+  const journeyTitle=sectionTitle('03  /  VALUE JOURNEY','六节点经营主线','调查顺序 · 各自批次与分母，不能相乘');
   const rail=element('div','journey-rail');
   [
     {id:9,label:'周新增注册',value:formatMetric(9),page:'A',detail:1,status:'周增幅在演示区间',severity:'ok'},
@@ -1181,7 +1218,7 @@ function renderHome() {
     {id:13,label:'7日价值激活率',value:formatMetric(13),page:'A',detail:3,status:'观鸟线 · 低于演示阈值',severity:'warn',star:true},
     {id:18,label:'试用→转正率',value:formatMetric(18),page:'D',detail:4,status:'连续3周低于前期',severity:'warn',star:true},
     {id:23,label:'续订率',value:formatMetric(23),page:'D',detail:5,status:'到期应续用户',severity:'ok',star:true},
-    {id:34,label:'付费用户',value:formatMetric(34),page:'E',detail:6,status:'健康阈值待校准',severity:'neutral'},
+    {id:34,label:'付费权益主账号',value:formatMetric(34),page:'E',detail:6,status:'健康阈值待校准',severity:'neutral'},
   ].forEach(item=>rail.append(card({...item,kind:'journey',status:selectedFilters().length?'筛后模拟值':item.status})));
 
   const story=element('div','story-panel');
@@ -1191,7 +1228,7 @@ function renderHome() {
   if(homeTrendFocus&&!comparisons.some(item=>item.id===homeTrendFocus))homeTrendFocus=comparisons[0]?.id??null;
   const heading=element('h3','');
   const period=element('p','panel-sub',`${periodLabel('W1').split(' · ')[1].split('–')[0]}–${periodLabel('W12').split('–')[1]} · 12个观察周${filterState.week?` · 已选W${filterState.week}，保留完整趋势`:''}`);
-  const labels=element('div','trend-heading');labels.append(element('p','section-kicker','CHANGE / 变化线索'),heading,period);
+  const labels=element('div','trend-heading');labels.append(element('p','section-kicker','02 / CHANGE · 变化线索'),heading,period);
   const overview=element('button','trend-overview','并列对照');overview.type='button';overview.setAttribute('aria-controls','trendChart');
   panelHeader.append(labels,overview);
   trend.append(panelHeader);
@@ -1200,19 +1237,25 @@ function renderHome() {
   const scaleNote=element('p','chart-scale-note');trend.append(scaleNote);
   trend.append(createTrendTable());
   const insight=element('aside','insight-panel');
-  insight.append(element('h3','signal-heading','选择一条线索，查看变化'),element('p','panel-sub','各自比较前期；合并分子与分母后重算。'));
+  insight.append(element('h3','signal-heading','变化解读与行动建议'));
   const signals=element('div','home-signals');
   comparisons.forEach(item=>{
     const button=element('button',`home-signal signal-${item.id}`);button.type='button';button.dataset.metricId=item.id;
     button.setAttribute('aria-controls','trendChart home-comparison-context');
-    const title=element('span','home-signal-title');title.append(element('strong','',item.name),element('span',`signal-delta ${item.delta<-.05?'adverse':item.delta>.05?'improving':'neutral'}`,homeComparisonChange(item)));
-    const values=element('span','home-signal-values');values.append(element('span','',`${item.beforeRate.toFixed(1)}%`),element('span','signal-arrow','→'),element('strong','',`${item.afterRate.toFixed(1)}%`));
-    button.append(title,values,element('span','home-signal-period',`${item.beforeLabel} → ${item.afterLabel}`));
+    const title=element('span','home-signal-title');title.append(element('strong','',item.name));
+    const values=element('span','home-signal-values');values.append(element('span','',`${item.beforeRate.toFixed(1)}%`),element('span','signal-arrow','→'),element('strong','',`${item.afterRate.toFixed(1)}%`),
+      element('span',`signal-delta ${item.delta<-.05?'adverse':item.delta>.05?'improving':'neutral'}`,homeComparisonChange(item)));
+    const windows=element('span','home-signal-windows');
+    for(const [label,window] of [[item.beforeLabel,item.beforeWindow],[item.afterLabel,item.afterWindow]]) {
+      const column=element('span','');column.append(element('span','',label),element('span','',window));windows.append(column);
+    }
+    button.append(title,values,element('span','home-signal-period',`${item.beforeLabel} → ${item.afterLabel}`),windows);
     button.addEventListener('click',()=>selectSignal(item.id));signals.append(button);
   });
   insight.append(signals);
   const context=element('div','home-comparison-context');context.id='home-comparison-context';context.setAttribute('aria-live','polite');
   insight.append(context);
+  insight.append(element('p','home-signal-guardrail','两条线各自计算，不构成连续漏斗；变化提供排查线索。'));
   if(!comparisons.length)signals.append(element('p','','当前范围缺少可用于前后期趋势比较的样本；可查看下方数据表中的可用趋势。'));
   function selectSignal(id,redraw=true) {
     homeTrendFocus=id;
@@ -1228,9 +1271,21 @@ function renderHome() {
       const basis=element('details','home-comparison-basis');basis.append(element('summary','','查看比较依据'));
       basis.append(element('p','',`${selected.beforeLabel}：${number(selected.before.numerator)} / ${number(selected.before.denominator)}；${selected.afterLabel}：${number(selected.after.numerator)} / ${number(selected.after.denominator)}。分母为${selected.scope}中的主账号。来源：${selected.source}。`));
       if(selected.series.some(value=>!Number.isFinite(value)))basis.append(element('p','','样本少于30的周在折线上留空；合并率仍按全周期合格人数计算。'));
-      const link=element('a','insight-link',`进入${pages[selected.page].title}，核对分组证据 ↗`);link.href=routeHref(selected.page,selected.id);
-      context.append(element('p','signal-explanation',`图中虚线为${selected.beforeLabel}，色带为${selected.afterLabel.replace('合并率','')}。变化是排查线索，不代表原因。`),basis,link);
+      const link=element('a','insight-link','核对分组证据 ↗');link.href=routeHref(selected.page,selected.id);
+      link.setAttribute('aria-label',`进入${pages[selected.page].title}，核对${selected.name}分组证据`);
+      const action=element('div','home-signal-actions');action.append(link,basis);
+      const movement=Math.abs(selected.delta)<.05?'基本持平':`较前期${selected.delta>0?'上升':'下降'} ${Math.abs(selected.delta).toFixed(1)} 个百分点`;
+      const advice=selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。';
+      context.append(element('strong','home-observation-label','观察'),
+        element('p','signal-explanation',`近期合并率${movement}。${advice}`),
+        element('strong','home-observation-label','建议优先行动'),action);
+      const selectedButton=signals.querySelector(`[data-metric-id="${selected.id}"]`);
+      const keepFocus=document.activeElement===selectedButton;
+      if(signals.firstElementChild!==selectedButton)signals.prepend(selectedButton);
+      selectedButton.after(context);
+      if(keepFocus)selectedButton.focus({preventScroll:true});
     } else context.append(element('p','signal-explanation','两条线使用各自批次和分母；不构成连续漏斗。选择线索可查看基准、近期区间与专题证据。'));
+    if(!selected)signals.after(context);
     if(redraw)drawTrend(homeTrendFocus,selected);
   }
   overview.addEventListener('click',()=>selectSignal(null));
@@ -1238,7 +1293,7 @@ function renderHome() {
   story.append(trend,insight); dash.append(story,journeyTitle,rail);
 
   const lower=element('div','lower-grid');
-  const foundation=element('section',''); foundation.append(sectionTitle('03  /  FOUNDATION','设备与用户结构'));
+  const foundation=element('section',''); foundation.append(sectionTitle('04  /  FOUNDATION','设备与用户结构'));
   const foundationCards=element('div','foundation-grid');
   [
     {id:41,label:'设备活跃率',page:'C',value:formatMetric(41),note:'有效设备行为；心跳不计活跃'},
@@ -1248,7 +1303,7 @@ function renderHome() {
   ].forEach(item=>foundationCards.append(miniCard({...item,note:selectedFilters().length?'按当前筛选模拟分片':item.note})));
   foundation.append(foundationCards);
   lower.append(subscriptionDetails(),foundation);dash.append(lower);
-  const alert=element('section','home-alerts'); alert.append(sectionTitle('04  /  ACTION QUEUE','预警与行动入口'));
+  const alert=element('section','home-alerts'); alert.append(sectionTitle('05  /  ACTION QUEUE','预警与行动入口'));
   const alertCards=element('div','alert-grid');
   [
     {id:15,label:'绑定未激活设备',page:'A',value:displayValue(15),note:'已绑定超过3天，仍无首图',alert:true,critical:true},
