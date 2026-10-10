@@ -211,3 +211,7 @@ final result: passed（下述经营核查流程与本轮修复）
 - 已打开检查等待库的真实截图 v68-waiting-for-library.png、库失败且趋势表展开截图 v68-library-fallback.png、正常就绪截图 v68-after-ready.png；完整首页布局和日期轴保留。
 
 线上重新测量需使用部署到相同 GitHub Pages 链接的实际提交，并核对线上源码；本地受控结果不能替代线上性能结果。整体获奖品质仍未验收，尤其真实用户性能、整体辨识度和完整任务评估仍缺证据。
+
+线上 543a037（Pages 工作流 38043339713）源码 app/style/index 与本地逐字节一致。Chrome / WebKit 线上加载回归各通过 11 类检查。首次与其他回归同时进行的慢网三次为 4.55 / 4.54 / 5.43 秒，保留原始记录，不删除较慢样本。随后仅运行性能浏览器的独立复测：常规 1.93 / 0.52 / 0.51 秒，慢网 4.47 / 4.48 / 4.48 秒；慢网中位数较原 4.70 秒减少约 4.7%，数据首请求约 1.38 秒，图表库结束约 4.09 秒。并行下载竞争带宽，所以线上改善明显小于受控串行延迟场景。三次小样本不证明真实用户 Core Web Vitals 或长期 CDN 稳定性。
+
+原始结果：v68-performance-after.json（并行回归期间）、v68-performance-dedicated.json（独立复测）、v68-loading-online-chromium-results.json、v68-loading-online-webkit-results.json，汇总在 v68-release-check.json。完整加载后布局保持；本轮解决依赖串行等待，未宣称解决全部慢网／CDN 长尾。
