@@ -94,7 +94,12 @@ async(page)=>{
       (await panel('groups').locator('svg').first().textContent()).includes('美国（当前）'),
       'Cross-country comparison masquerades as data wholly inside the selected country');
     await open('E?deviceModel=K6&metric=35');
-    check((await panel('change').innerText()).includes('待补数据'),'Missing income data is hidden behind a generic empty trend');
+    const missingIncome=p.locator('#metric-evidence-35 > .na-note');
+    for(const key of ['change','groups','data']) {
+      await tab(key).click();
+      check(await missingIncome.isVisible()&&(await missingIncome.innerText()).startsWith('待补数据：'),
+        `Missing income reason disappears in ${key}`);
+    }
     check(await p.locator('#metric-evidence-35 .issue-register').count()===0,'Missing facts still offer a new issue baseline');
     await open('E');await p.getByRole('button',{name:'全部指标',exact:true}).click();
     check(await p.locator('.income-catalog').evaluate(node=>node.open),'Catalog navigation does not reveal the full catalog');

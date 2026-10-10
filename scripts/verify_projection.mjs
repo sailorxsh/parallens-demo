@@ -219,6 +219,36 @@ assert.ok(result.m39.value.K6.subscriptionRate>0);
 const usK6=fixtures.modelMarket.records.find(row=>row.country==='US'&&row.model==='K6');
 assert.equal(result.m39.value.K6.owners,usK6.owners);
 assert.equal(Math.round(result.m39.value.K6.subscriptionRate*usK6.owners),usK6.subscribedOwners);
+// Model percentages and complete values must retain the same source counts at every scope.
+for(const filters of [{},{country:'US'},{country:'UK'},{country:'DE'},{country:'Other'},
+  {productLine:'Bird'},{productLine:'Hunting'},{country:'US',productLine:'Bird',deviceModel:'Bird Pro'}]) {
+  const model=project(filters).m39;
+  const records=fixtures.modelMarket.records.filter(row=>(!filters.country||row.country===filters.country)&&
+    (!filters.productLine||row.productLine===filters.productLine)&&(!filters.deviceModel||row.model===filters.deviceModel));
+  for(const [name,part] of Object.entries(model.value)) {
+    const source=records.filter(row=>row.model===name);
+    for(const key of ['owners','activeOwners','subscribedOwners'])assert.equal(part[key],source.reduce((sum,row)=>sum+row[key],0));
+    assert.equal(part.activeRate,part.activeOwners/part.owners);
+    assert.equal(part.subscriptionRate,part.subscribedOwners/part.owners);
+  }
+}
+assert.equal(evaluate("groupText(0,'subscriptionRate')"),'0.0%');
+assert.equal(evaluate("groupText(1,'activeRate')"),'100.0%');
+assert.equal(evaluate("groupText(0.25,'ARPPU')"),'$0.25/人');
+assert.equal(evaluate("groupText(0.25,'subscriptionNetIncome')"),'$0.25');
+assert.equal(evaluate("flattenMeasure({countryShare:{US:1,UK:0}})[0][3]"),'100.0%');
+assert.equal(evaluate("flattenMeasure({countryShare:{US:1,UK:0}})[1][3]"),'0.0%');
+assert.equal(evaluate("flattenMeasure({activeRate:.62})[0][1]"),'—');
+assert.equal(evaluate("flattenMeasure({activeRate:.62})[0][3]"),'62.0%');
+assert.match(evaluate("flattenMeasure({kind:'na',availability:'pending',reason:'缺少明细'})[0][3]"),/^待补数据：/);
+const originalModelCounts={activeOwners:usK6.activeOwners,subscribedOwners:usK6.subscribedOwners};
+evaluate('sourceData.modelMarket.records[0].activeOwners=undefined');
+assert.equal(project({}).m39.availability,'pending');
+evaluate(`sourceData.modelMarket.records[0].activeOwners=${originalModelCounts.activeOwners}`);
+evaluate('sourceData.modelMarket.records[0].subscribedOwners=sourceData.modelMarket.records[0].owners+1');
+assert.equal(project({country:'US'}).m39.availability,'pending');
+evaluate(`sourceData.modelMarket.records[0].subscribedOwners=${originalModelCounts.subscribedOwners}`);
+assert.equal(project({}).m39.kind,'group');
 
 result=project({subscriptionPlatform:'App Store'});
 const appStore=fixtures.trialFacts.records.filter(row=>row.week===12&&row.subscription_platform==='App Store');

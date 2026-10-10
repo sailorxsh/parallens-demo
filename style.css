@@ -165,6 +165,8 @@ th:first-child,td:first-child {text-align:left}
 .diagnostic-table thead th {font-size:.7rem;color:#596c5d;background:#f1f5ec;border-top:1px solid #dce5db;white-space:nowrap}
 .diagnostic-table tbody th {color:#304738;font-weight:600}
 .diagnostic-table tbody tr:hover {background:#fafbf5}
+.model-calculation .diagnostic-table td,.model-calculation .diagnostic-table thead th:not(:first-child) {text-align:right;white-space:nowrap}
+.metric-filter-scope {display:block;font-size:.72rem;line-height:1.5;color:#5b6d60;margin:.35rem 0}
 .table-note {font-size:.73rem;color:#58695b;margin:.55rem 0 0;max-width:70rem;line-height:1.6}
 .chart-scale-note {display:table;margin:.45rem 0 .55rem;padding:.3rem .55rem;border-left:2px solid #73987b;background:#f0f5ec;color:#355b42;font-size:.74rem;font-weight:600;line-height:1.5}
 .action-section .data-table-scroll,.metric-inventory .data-table-scroll {padding:1rem 1.2rem}
