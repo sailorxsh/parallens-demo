@@ -30,6 +30,24 @@ async (parent) => {
       check(state.imageLoaded&&!state.collision&&!state.overflow&&state.qualityClickable,`Header collision: ${JSON.stringify(state)}`);
       check(state.decorationVisible===(width>1200),'Narrow desktop does not preserve room for content');
       results.push({kind:'header',...state});
+      const definition=p.locator('.home-result .definition-trigger').first();
+      await definition.click();
+      check(await p.locator('#metric-definition-popover').evaluate(node=>{
+        const r=node.getBoundingClientRect(),close=node.querySelector('button'),c=close.getBoundingClientRect();
+        return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&
+          node.contains(document.elementFromPoint((r.left+r.right)/2,(r.top+r.bottom)/2))&&
+          close.contains(document.elementFromPoint((c.left+c.right)/2,(c.top+c.bottom)/2));
+      }),`Header or another layer covers the metric definition at ${width}`);
+      await p.keyboard.press('Escape');
+      check(await definition.evaluate(node=>document.activeElement===node),'Definition dismissal loses its trigger');
+      await p.locator('.metric-search-trigger').click();
+      check(await p.locator('#metric-search').evaluate(node=>{
+        const r=node.getBoundingClientRect(),close=node.querySelector('#close-metric-search'),c=close.getBoundingClientRect();
+        return node.open&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&
+          close.contains(document.elementFromPoint((c.left+c.right)/2,(c.top+c.bottom)/2));
+      }),`Search dialog is clipped or covered at ${width}`);
+      await p.keyboard.press('Escape');
+      results.push({kind:'overlay',width,definition:'visible and clickable',search:'visible and clickable'});
     }
     await p.setViewportSize({width:1366,height:768});await open();
     await p.evaluate(()=>document.documentElement.style.fontSize='24px');await settle();
@@ -72,7 +90,7 @@ async (parent) => {
     await p.getByRole('tab',{name:'完整数据',exact:true}).click();await settle();
     check(await current()==='诊断工作区','Panel reflow leaves the section state stale');
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
-    return {status:'PASS',checks:['four desktop header widths','enlarged text and keyboard quality action',
+    return {status:'PASS',checks:['four desktop header widths','definition and search top-layer hit testing','enlarged text and keyboard quality action',
       'E deep-link collapsed-catalog regression','page observation registration identity','keyboard section destinations',
       'A–G diagnosis at three widths','panel reflow synchronization'],results};
   } finally {await context.close();}

@@ -354,6 +354,65 @@ function filterBar(page='') {
   bar.append(content);
   return bar;
 }
+// Reading state belongs to a browser history entry, separate from business filters and issue data.
+const readingViews=new Map();
+let currentReadingEntry;
+let readingRevision=0;
+function selectReadingEntry() {
+  currentReadingEntry=history.state?.parallensReadingEntry;
+  if(!currentReadingEntry) {
+    currentReadingEntry=crypto.randomUUID();
+    history.replaceState({...history.state,parallensReadingEntry:currentReadingEntry},'');
+  }
+}
+function readingControls(selector='details') {
+  const occurrences=new Map();
+  return [...main.querySelectorAll(selector)].map(node=>{
+    const scope=node.closest('[id]')?.id??'main';
+    const label=node.getAttribute('aria-label')??node.querySelector(':scope > summary')?.textContent.trim()??'';
+    const caption=node.querySelector('caption')?.textContent.trim()??'';
+    const identity=JSON.stringify([scope,label,caption]),occurrence=occurrences.get(identity)??0;
+    occurrences.set(identity,occurrence+1);
+    return [node,`${identity}:${occurrence}`];
+  });
+}
+function rememberReadingView() {
+  if(!currentReadingEntry||lastRenderedHash===undefined||!main.querySelector('h1'))return;
+  readingViews.set(currentReadingEntry,{hash:lastRenderedHash,left:scrollX,top:scrollY,
+    disclosures:readingControls().map(([node,key])=>[key,node.open]),
+    legends:readingControls('.chart-legend').map(([node,key])=>[key,[...node.querySelectorAll('button')].map(button=>[button.textContent,button.getAttribute('aria-pressed')])])});
+}
+function pushRoute(href) {
+  rememberReadingView();
+  currentReadingEntry=crypto.randomUUID();
+  history.pushState({parallensReadingEntry:currentReadingEntry},'',href);
+}
+function restoreReadingView(view) {
+  const revision=++readingRevision,entry=currentReadingEntry;
+  const current=()=>revision===readingRevision&&entry===currentReadingEntry&&view.hash===location.hash;
+  const disclosures=new Map(view.disclosures),legends=new Map(view.legends);
+  const apply=()=>{
+    for(const [node,key] of readingControls()) {
+      if(disclosures.has(key)&&node.open!==disclosures.get(key))node.open=disclosures.get(key);
+    }
+    for(const [node,key] of readingControls('.chart-legend')) {
+      const selected=new Map(legends.get(key));
+      for(const button of node.querySelectorAll('button')) {
+        if(selected.has(button.textContent)&&button.getAttribute('aria-pressed')!==selected.get(button.textContent))button.click();
+      }
+    }
+  };
+  apply();
+  // Disclosure toggles can lazily create nested chart tables; restore them before positioning.
+  requestAnimationFrame(()=>{
+    if(!current())return;apply();
+    requestAnimationFrame(()=>{
+      if(!current())return;apply();
+      main.focus({preventScroll:true});scrollTo({left:view.left,top:view.top,behavior:'instant'});
+      updateScrollableTables();updateSectionNavigation();
+    });
+  });
+}
 function changeFilter(page,key,value) {
   const previousBar=document.querySelector('.filter-bar');
   if(previousBar)filterDisclosure.set(page,previousBar.open);
@@ -366,7 +425,7 @@ function changeFilter(page,key,value) {
       !availableOptions(page,dependent).includes(filterState[dependent]))delete filterState[dependent];
   }
   const next=routeHref(page,currentMetric,diagnosticWorkspaceView==='change'?undefined:diagnosticWorkspaceView);
-  history.pushState(null,'',next);
+  pushRoute(next);
   renderRoute({preserveScroll:true});
   const nextBar=document.querySelector('.filter-bar');
   const nextControl=nextBar?.querySelector(key?`select[name="${key}"]`:'.filter-reset');
@@ -2352,7 +2411,7 @@ function registerIssue(page,id,{preserveEvidence=false}={}) {
     const viewport={left:scrollX,top:scrollY,behavior:'instant'};
     const params=new URLSearchParams(location.hash.split('?')[1]??'');
     params.set('issue',String(id));
-    history.pushState(null,'',`#/${page}?${params}`);lastRenderedHash=location.hash;
+    pushRoute(`#/${page}?${params}`);lastRenderedHash=location.hash;
     side.dispatchEvent(new Event('register-issue'));
     // Replacing a sticky form can move Safari's viewport even though the evidence DOM is retained.
     scrollTo(viewport);
@@ -2361,7 +2420,7 @@ function registerIssue(page,id,{preserveEvidence=false}={}) {
   const target=new URL(routeHref(page,id),location.href);
   const params=new URLSearchParams(target.hash.split('?')[1]??'');
   if(diagnosticWorkspaceView!=='change')params.set('panel',diagnosticWorkspaceView);
-  history.pushState(null,'',`#/${page}?${params}`);
+  pushRoute(`#/${page}?${params}`);
   renderRoute({preserveScroll:true});
   const form=document.querySelector('.action-record');
   document.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
@@ -2942,7 +3001,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     const id=Number(form.querySelector('[name="issueMetric"]').value);
     activeIssueMetrics.set(issueScopeKey(page),id);
     const params=new URLSearchParams(location.hash.split('?')[1]??'');params.set('issue',String(id));
-    history.replaceState(null,'',`#/${page}?${params}`);lastRenderedHash=location.hash;
+    history.replaceState(history.state,'',`#/${page}?${params}`);lastRenderedHash=location.hash;
     syncWorkspaceLinks();showRight('record');
   });
   right.addEventListener('register-issue',()=>{
@@ -2998,7 +3057,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     if(push) {
       const params=new URLSearchParams(location.hash.split('?')[1]??'');
       if(key==='change')params.delete('panel');else params.set('panel',key);
-      history.pushState(null,'',`#/${page}${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
+      pushRoute(`#/${page}${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
     }
     if(focus)buttons.get(key).focus({preventScroll:true});
     syncWorkspaceLinks();
@@ -3270,6 +3329,7 @@ function disposeCharts() {
   while (detailCharts.length) destroyChart(detailCharts.pop());
 }
 function renderRoute({preserveScroll=false}={}) {
+  selectReadingEntry();readingRevision++;
   document.querySelector('#metric-search')?.close();
   const {page:route,metricId}=readRoute();
   projectDataset();
@@ -3297,9 +3357,15 @@ function renderRoute({preserveScroll=false}={}) {
   document.querySelector('#announcement').textContent=route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
   lastRenderedHash=location.hash;
 }
-function handleRouteChange() {
-  // History traversal can emit both popstate and hashchange for one view.
-  if(location.hash!==lastRenderedHash)renderRoute();
+function handleRouteChange(event) {
+  // A traversal can emit both events; only popstate restores an existing reading entry.
+  const traversal=event?.type==='popstate',changed=location.hash!==lastRenderedHash;
+  if(!changed&&!traversal)return;
+  const view=traversal?readingViews.get(history.state?.parallensReadingEntry):null;
+  rememberReadingView();selectReadingEntry();
+  const restore=view?.hash===location.hash?view:null;
+  if(changed)renderRoute({preserveScroll:Boolean(restore)});
+  if(restore)restoreReadingView(restore);
 }
 const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow'];
 const dataBatchSize=6;
