@@ -68,6 +68,11 @@ function actionBaselineWindow(id) {
 }
 window.addEventListener('resize',()=>{
   chart?.resize(); statusChart?.resize(); sparklines.forEach(item=>item.resize()); detailCharts.forEach(item=>item.resize());
+  document.querySelectorAll('.chart-legend-frame').forEach(frame=>{
+    const box=frame.querySelector('.detail-chart,#trendChart');
+    const instance=box&&window.echarts?.getInstanceByDom(box);
+    if(instance)fitChartLegend(frame,instance);
+  });
   updateScrollableTables();
 },{passive:true});
 const number = value => Number(value).toLocaleString('zh-CN');
@@ -1390,6 +1395,49 @@ function chartScaleNote(spec) {
 function chartNote(spec) {
   return [spec.note,chartScaleNote(spec)].filter(Boolean).join(' ');
 }
+function fitChartLegend(frame,instance) {
+  const controls=frame.querySelector('.chart-legend');
+  if(controls?.offsetHeight)instance.setOption({animationDurationUpdate:chartAnimationDuration(200),
+    grid:{bottom:controls.offsetHeight+Number(frame.dataset.legendPadding)}});
+}
+function interactiveChartLegend(box,instance,lines,title,axisPadding=28) {
+  let frame=box.parentElement;
+  if(!frame)return;
+  if(frame.classList.contains('chart-legend-frame'))frame.querySelector('.chart-legend')?.remove();
+  if(lines.length<2)return;
+  if(!frame.classList.contains('chart-legend-frame')) {
+    frame=element('div','chart-legend-frame');box.before(frame);frame.append(box);
+  }
+  frame.dataset.legendPadding=String(axisPadding);
+  const controls=element('div','chart-legend');controls.setAttribute('role','group');
+  controls.setAttribute('aria-label',`${title}图例；选择显示或隐藏系列`);
+  const buttons=lines.map((line,index)=>{
+    const button=element('button','chart-legend-button');button.type='button';
+    const mark=element('span','chart-legend-mark');mark.setAttribute('aria-hidden','true');
+    mark.style.setProperty('--series-color',line.color);
+    mark.dataset.pattern=line.pattern??['solid','dashed','dotted'][index%3];
+    button.append(mark,element('span','',line.name));
+    button.addEventListener('click',()=>instance.dispatchAction({type:'legendToggleSelect',name:line.name}));
+    controls.append(button);return button;
+  });
+  const empty=element('p','chart-legend-empty','未选择系列；点击图例恢复显示。');empty.hidden=true;
+  controls.append(empty);frame.append(controls);
+  const label=(box.getAttribute('aria-label')??title).split('；当前显示：')[0];
+  function update(announce=false) {
+    const selected=instance.getOption().legend[0].selected??{},visible=[];
+    lines.forEach((line,index)=>{
+      const shown=selected[line.name]!==false;
+      buttons[index].setAttribute('aria-pressed',String(shown));
+      buttons[index].title=`${shown?'隐藏':'显示'}${line.name}；完整数据表保留全部系列`;
+      if(shown)visible.push(line.name);
+    });
+    empty.hidden=visible.length>0;
+    box.setAttribute('aria-label',`${label}；当前显示：${visible.join('、')||'无系列'}。完整数据表保留全部系列。`);
+    fitChartLegend(frame,instance);
+    if(announce)document.querySelector('#announcement').textContent=`${title}，当前显示：${visible.join('、')||'无系列'}。完整数据表保留全部系列。`;
+  }
+  instance.on('legendselectchanged',()=>update(true));update();
+}
 function drawTrend(focusId=homeTrendFocus,comparison) {
   const node=document.querySelector('#trendChart');
   const activation=trendValues(13),conversion=trendValues(18);
@@ -1404,8 +1452,8 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
   chart=window.echarts.init(node,null,{renderer:'svg'});
   const weeks=dataset.weekly;
   const selected=comparison??homeComparisons().find(item=>item.id===focusId);
-  const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:'#b87021',details:weeklyRateDetails(13)},
-    {id:18,name:'试用→转正率',values:conversion,color:'#356d51',details:weeklyRateDetails(18)}].filter(item=>item.values&&(!selected||item.id===selected.id));
+  const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:'#b87021',pattern:'solid',details:weeklyRateDetails(13)},
+    {id:18,name:'试用→转正率',values:conversion,color:'#356d51',pattern:'dashed',details:weeklyRateDetails(18)}].filter(item=>item.values&&(!selected||item.id===selected.id));
   const axis=trendAxisDomain([...lines.map(item=>item.values),...(selected?[[selected.beforeRate,selected.afterRate]]:[])],'%');
   chart.setOption({
     color:lines.map(item=>item.color),
@@ -1418,11 +1466,12 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
         return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br><small>${basis}</small>`:''}`;
       }).join('<br>')}`;
     }},
-    legend:{bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
+    legend:{show:lines.length<2,selectedMode:lines.length>1,bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
     grid:{left:48,right:52,top:28,bottom:48},
     xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},axisLabel:{color:'#58695b'}},
     yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{formatter:value=>`${Number(value).toFixed(axis.step<.1?2:1)}%`,color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
-    series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:5,lineStyle:{width:2.5},
+    series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:5,
+      symbol:item.id===18?'rect':'circle',lineStyle:{width:2.5,type:item.pattern},
       data:item.values.map(value=>Number.isFinite(value)?Number(value.toFixed(1)):null),
       endLabel:{show:true,formatter:params=>`${Number(params.value).toFixed(1)}%`,color:chartLabelColor(item.color),fontSize:11,fontWeight:600},
       ...(selected?{
@@ -1435,6 +1484,7 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
       }:{}),
     })),
   });
+  interactiveChartLegend(node,chart,lines,'激活与转正周度趋势');
 }
 const groupLabels={
   bird:'观鸟',hunting:'狩猎',free:'Free',noEntitlement:'无权益',trialEarly:'试用前期',trialNearExpiry:'试用临期',paidCurrent:'付费中',cancelledButEntitled:'已取消未到期',paymentFailed:'支付失败',expired:'已过期',
@@ -1776,6 +1826,7 @@ function drawDetailChart(box,spec) {
   }
   const instance=window.echarts.init(box,null,{renderer:'svg'});
   detailCharts.push(instance);
+  if(box.parentElement?.classList.contains('chart-legend-frame'))box.parentElement.querySelector('.chart-legend')?.remove();
   const isTimeline=isTimelineSpec(spec);
   const colors=['#bf762b','#356d51','#7593a0'];
   if(spec.kind==='periodComparison') {
@@ -1919,7 +1970,7 @@ function drawDetailChart(box,spec) {
       })];
       return lines.join('<br>');
     }},
-    legend:spec.series.length>1?{bottom:0,itemWidth:13,textStyle:{fontSize:11,color:'#506455'}}:{show:false},
+    legend:{show:false},
     grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32):76},
     xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#58695b',
       interval:isTimeline?timelineLabelInterval:0,
@@ -1929,7 +1980,8 @@ function drawDetailChart(box,spec) {
       ...(trendAxis?{interval:trendAxis.step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
       axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
     series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',data:line.values,smooth:false,symbolSize:5,
-      barMaxWidth:52,lineStyle:{width:2.5},itemStyle:{color:line.color??colors[index%colors.length]},
+      barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
+      lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
       endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
         color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:11,fontWeight:600,width:rightReserve-12,overflow:'truncate'},
       label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
@@ -1937,6 +1989,8 @@ function drawDetailChart(box,spec) {
       labelLayout:{hideOverlap:true,moveOverlap:'shiftY'},
     })),
   });
+  interactiveChartLegend(box,instance,spec.series.map((line,index)=>({...line,color:line.color??colors[index%colors.length],
+    pattern:isTimeline?['solid','dashed','dotted'][index%3]:'bar'})),spec.title,isTimeline?28:55);
   return instance;
 }
 function flattenMeasure(value,path='',rows=[],field='') {
@@ -2777,7 +2831,10 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
         if(ancestor.hidden||ancestor.tagName==='DETAILS'&&!ancestor.open){closed=true;break;}
       if(closed||!box.isConnected||!box.getClientRects().length||!box.clientWidth)continue;
       const existing=window.echarts?.getInstanceByDom(box);
-      if(existing)existing.resize();else drawEvidenceChart(box,spec);
+      if(existing) {
+        existing.resize();
+        if(box.parentElement.classList.contains('chart-legend-frame'))fitChartLegend(box.parentElement,existing);
+      } else drawEvidenceChart(box,spec);
     }
     const explorer=legacy?.explorer;
     if(explorer&&!explorer.node.dataset.initialized&&explorer.node.getClientRects().length) {
