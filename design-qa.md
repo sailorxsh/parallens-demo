@@ -126,3 +126,37 @@ final result: passed（本轮加载调度与恢复行为）
 - verify_loading_flows.js新增“卡住trial-facts时最后一组仍开始请求，页面保持busy且进度未完成”回归，保留失败重试、最大并发6、三种桌面尺寸、单调进度和直接URL的筛选/指标/问题单检查。Chrome/WebKit本地各通过8项检查；首页四层交互13项、数据/投影、语法和静态打包检查通过。
 - 证据：output/playwright/v65-performance-baseline.json、v65-loader-comparison.json、v65-loading-chromium-results.json、v65-loading-webkit-results.json、v65-home-chromium-results.json。性能实验脚本在/tmp/parallens-v65-perf.cjs、/tmp/parallens-v65-loader.cjs，基线源码在/tmp/parallens-v65-before-app.js；它们是本轮临时测量材料，不是生产依赖。
 - 实际限制：线上受限样本在数据请求前已有12–18秒等待，CDN/链路波动占显著部分；本轮没有解决或声称解决所有冷启动延迟。没有新增生产遥测或外部数据访问。全站获奖品质仍未被证明，本轮只完成上述范围。
+
+# 首页变化到证据与行动的流程复查（2026-10-10）
+
+final result: passed（下述经营核查流程与本轮修复）
+
+## 步骤、截图与实际行为
+
+1. 首页发现试用转正变化：健康。45.0%→43.4%、比较日期和合并分母均可核对；默认趋势、四列结果和六节点保持。截图v66-01-home-after.png与v66-02-trial-after.png。
+2. 进入分组证据：已修复。原“核对分组证据”链接实际进入趋势页签；现在进入所选指标的groups页签，直接看到分组贡献。v66-03-destination-before.png与v66-03-destination-after.png为相同1600×900、总体范围、筛选收起、HOME选18后点击同一入口，均scrollY=424；不同页签是预期修复。来源为9a03b5e，源码备份/tmp/parallens-v66-before-app.js；已打开并接受并排截图v66-destination-comparison.png。
+3. 原位核对计算：已修复。新增互斥分组贡献图及可展开计算表，分组贡献合计回到总体变化；已打开并接受v66-04-calculation-after.png。原表将观鸟与狩猎Android Plus月付混在一起，与观察中的194→178周均人数不一致；图、表、观察现在共用明确的观鸟分组规则。
+4. 从失败样本登记行动：健康。定位列表、关联记录、右侧问题单同视野可操作；切换证据保留草稿，保存刷新后保留原基线、样本与说明。已打开并接受v66-05-registration-after.png；没有写入用户实际浏览器记录。
+
+完整证据均在output/playwright/，编号为本轮流程序号。入口、计算表和问题登记是交互截图，不以源码或旧截图代替视觉验收。捕获条件另见v66-capture-states.json。
+
+## 发现与修复
+
+- [P1 / 落点] “核对分组证据”与实际页签不一致，导致用户再找一次。链接明确携带panel=groups，同时保留目标页支持的业务筛选及既有问题上下文。
+- [P1 / 连续核查] 含明确metric的页面修改筛选时，routeHref丢失panel，回到趋势页签。changeFilter显式保留当前分组或完整数据视图；筛选后维持控件焦点，历史前进/后退保留视图。
+- [P1 / 口径] 观察按观鸟Android Plus月付统计，原分组表仅限定Android与Plus。共用isBirdPlusMonthlyAndroid判断，明确产品线、平台、套餐和周期，避免狩猎记录混入。
+- [P2 / 证据发现] 分组表被分配到完整数据页签，关键下降没有对应分组图。现在以组内转正人数除同一期总体成熟人数求贡献，两组互斥且穷尽当前范围：1746/9000→534/3000给出−1.60pp，其他组2304/9000→768/3000给出0.00pp，总体−1.60pp。它区别于组内转正率，不把支付失败同步变化作为因果结论。
+
+## 呈现与边界
+
+- 沿用深绿、暖白、橙色及既有证据布局。下降用橙色，增长用绿色，零值用灰色，同时保留正负号、分组名称和精确值，不能仅凭颜色判断。
+- 柱图纵轴包含0，正负范围对称；轴标pp、标签和注释明确“百分点”。按未舍入值求和，显示值保留两位小数并提示尾差。负值标签置于柱的负向末端，不放在0基线附近。
+- 当前筛选没有该组时不制造一条0组；任一已存在分组前/近期不足30人时不展示可靠贡献；选择单周时不保留前9周/近3周图。总体可用但分组不足时保留总体批次比较和解释。
+- 无新增模拟事实、图片、外部依赖、数据库或CI/CD配置。普通指标证据链接仍保留其原有趋势入口；仅分组CTA明确选groups。未开展移动端适配。
+
+## 验证与限制
+
+- verify_home_diagnosis_flows.js：Chrome/WebKit本地各通过13项检查；首页两条线索×三个桌面尺寸，D的原始记录贡献闭合、符号/轴/单位、国家重算、狩猎缺席分组、单周抑制、样本与草稿/保存/历史基线；另逐页检查A–G×groups/data共14种视图的筛选、控件焦点、前进后退；稀疏样本检查在独立浏览器内临时调整合成记录，不修改底表。
+- verify_home_brief_flows.js通过13项；verify_evidence_flows.js通过8项/31状态；verify_diagnostic_workspace_flows.js通过9项/21桌面工作区状态。数据、投影/计算、JS语法、静态打包和差异检查通过。
+- 早期探针错误使用.finding而非实际.detail-finding导致超时，修正定位后再验证。随后新检查确实暴露筛选丢失panel，修复应用而非取消断言。最终输出为v66-diagnosis-chromium-results.json、v66-diagnosis-webkit-results.json及v66-home/evidence/workspace-results.json。
+- 内置浏览器当前连接超时，按用户已有授权使用独立Playwright Chrome/WebKit，截图与行为均在本轮实际运行中取得。没有屏幕阅读器实机、完整WCAG或真实生产数据的验证；全站获奖品质仍未被证明。本轮结果只覆盖上述完整经营核查路径与相关状态。
