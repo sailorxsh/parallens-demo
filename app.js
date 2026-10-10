@@ -1003,17 +1003,19 @@ function filteredBreakdown(page) {
   const [dimension]=selected;
   const options=dimension==='functionType'?(page==='C'?['Upload','Live','Push']:['Live','Playback','Recognition']):
     Object.keys(sourceData.slices[dimension]??{});
-  const rows=options.map(option=>{
+  const groups=options.map(option=>{
     const state={...filterState,[dimension]:option};
     const value=projectMetric(id,state);
     return {label:optionLabels[option]??option,value};
-  }).filter(row=>row.value.kind==='rate'||row.value.kind==='count'||row.value.kind==='usd');
+  });
+  const rows=groups.filter(row=>['rate','count','usd'].includes(row.value.kind));
+  const omitted=groups.filter(row=>row.value.kind==='na');
   if(rows.length<2)return null;
   const unit=rows[0].value.kind==='rate'?'%':rows[0].value.kind==='usd'?'美元':'人';
   const values=rows.map(row=>row.value.kind==='rate'?row.value.value*100:row.value.value);
   const spec={title:`${filterLabels[dimension]} · ${catalogItem(id).name}分组对照`,unit,
     labels:rows.map(row=>row.label),details:unit==='%'?rows.map(row=>row.value):null,series:[{name:catalogItem(id).name,values}],
-    note:`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前模拟分组用于定位差异，不能证明原因。`};
+    note:`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前选择：${optionLabel(dimension,filterState[dimension])}。当前模拟分组用于定位差异，不能证明原因。${omitted.length?` 未绘制：${omitted.map(row=>`${row.label}（${row.value.reason}）`).join('；')}。`:''}`};
   const table={title:`${filterLabels[dimension]} · 组规模与指标`,
     columns:['分组',unit==='%'?'分子':'当前值',unit==='%'?'分母':'统计对象', '指标值'],
     rows:rows.map(row=>row.value.kind==='rate'?[row.label,row.value.numerator,row.value.denominator,percent(row.value.value)]:
@@ -2394,19 +2396,24 @@ function trialSamplesPanel() {
   const page='D';
   const week=filterState.week??String(sourceData.weekly.at(-1).week);
   const result=trialRows(trialState({...filterState,week}));
-  if(!result.rows)return null;
-  const failed=result.rows.filter(row=>row.payment_status==='failed');
-  const panel=element('section','entity-workspace trial-samples');
-  panel.append(element('h3','','成熟试用记录 · 支付失败样本'),
-    element('p','table-note',`W${week} 当前范围支付失败 ${number(failed.length)} 条；下列最多5条真实参与本页合成试用聚合，只作逐条核对入口。`));
+  const measure=metric(18),panel=element('section','entity-workspace trial-samples');
+  panel.append(element('h3','','成熟试用记录 · 支付失败样本'));
+  if(!result.rows?.length) {
+    panel.append(element('p','table-note',`W${week} · 当前范围支付失败数量 —`),
+      element('p','na-note',`${measure.kind==='na'?measure.reason:result.reason??'当前范围没有可核验的成熟试用记录'}。不能将此状态解读为零失败。`));
+    return panel;
+  }
+  const failed=result.rows.filter(row=>row.payment_status==='failed'),canLink=measure.kind!=='na';
+  panel.append(element('p','table-note',`W${week} · 成熟试用 ${number(result.rows.length)} 人 · 支付失败 ${number(failed.length)} 条；下列最多5条参与当前范围的合成试用聚合，只作逐条核对入口。`));
+  if(!canLink)panel.append(element('p','na-note',`${measure.reason}；记录保留供核对，当前指标尚不能作为问题登记基线。`));
   if(!failed.length) {panel.append(element('p','na-note','该范围无支付失败演示记录；不能据此推断真实业务没有失败。'));return panel;}
   const list=element('div','trial-sample-list');
   failed.slice(0,5).forEach(row=>{
-    const button=element('button','trial-sample-item');button.type='button';
+    const button=element(canLink?'button':'article','trial-sample-item');if(canLink)button.type='button';
     button.append(element('strong','',row.trial_id),element('span','',
       `${optionLabel('country',row.country)} · ${row.app_platform} · ${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · 观察至${row.outcome_observed_through}`),
-      element('span','trial-sample-action','关联到试用转正问题单 ↘'));
-    button.addEventListener('click',()=>{
+      element('span',canLink?'trial-sample-action':'trial-sample-context',canLink?'关联到试用转正问题单 ↘':'仅供核对 · 暂不可登记'));
+    if(canLink)button.addEventListener('click',()=>{
       const side=document.querySelector('.income-context');
       const alongside=side&&side.getBoundingClientRect().left>=panel.getBoundingClientRect().right;
       registerIssue(page,18,{preserveEvidence:Boolean(alongside)});
@@ -2552,6 +2559,10 @@ function actionRecord(page,evidenceId) {
   form.addEventListener('submit',event=>{
     event.preventDefault();
     updateStage();
+    if(!simulatedActionState[key]&&metric(evidenceId).kind==='na') {
+      showReceipt('当前指标没有可用登记基线，暂不能新建问题单；请先核对样本与适用范围。填写内容仍暂存在本次页面会话。','error');
+      return;
+    }
     [target,reviewValue].forEach(control=>control.setCustomValidity(control.required&&!control.value.trim()?'请填写此项复查信息':''));
     const invalid=controls.filter(control=>!control.checkValidity());
     if(invalid.length) {

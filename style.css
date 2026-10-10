@@ -585,10 +585,12 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 @container (max-width:800px) {.trial-readiness-grid {grid-template-columns:minmax(0,1fr)}}
 .trial-sample-list {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.5rem;margin-top:.7rem}
 .trial-sample-item {display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;min-width:0;border:1px solid #d5e1d2;background:#fbfdf9;color:#2a4433;border-radius:.38rem;padding:.55rem .65rem;text-align:left;cursor:pointer;font:inherit;font-size:var(--text-xs)}
-.trial-sample-item:hover {border-color:#7da98a;outline:2px solid #a9c7a8;outline-offset:1px}
+button.trial-sample-item:hover {border-color:#7da98a;outline:2px solid #a9c7a8;outline-offset:1px}
+article.trial-sample-item {cursor:auto}
 .trial-sample-item:focus-visible {border-color:#7da98a;outline:3px solid var(--focus);outline-offset:2px}
 .trial-sample-item strong {font-size:.75rem;overflow-wrap:anywhere}
 .trial-sample-action {color:#965a1e;text-decoration:underline;text-underline-offset:.16rem;margin-top:auto}
+.trial-sample-context {color:#58695b;margin-top:auto}
 .action-record-fields button {grid-column:1/-1;justify-self:end}
 
 /* Shared desktop diagnosis: evidence and its action remain in one workspace. */
