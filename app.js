@@ -3193,6 +3193,18 @@ function handleRouteChange() {
 }
 const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow'];
 const dataBatchSize=6;
+let chartLibraryReady;
+function waitForChartLibrary() {
+  if(window.echarts)return Promise.resolve(true);
+  if(chartLibraryReady)return chartLibraryReady;
+  const script=document.querySelector('#chart-library');
+  if(!script)return Promise.resolve(false);
+  chartLibraryReady=new Promise(resolve=>{
+    script.addEventListener('load',()=>resolve(Boolean(window.echarts)),{once:true});
+    script.addEventListener('error',()=>resolve(false),{once:true});
+  });
+  return chartLibraryReady;
+}
 function showLoadingState() {
   const panel=element('section','load-panel');panel.setAttribute('aria-labelledby','load-title');
   const heading=element('h1','','正在准备经营数据');heading.id='load-title';
@@ -3315,6 +3327,8 @@ async function start() {
     showLoadingState();
     main.setAttribute('aria-busy','true');
     document.querySelector('#announcement').textContent='正在准备经营数据';
+    // Attach before the later deferred library executes; data downloads can start now.
+    const libraryReady=waitForChartLibrary();
     const parts=await loadDataParts(()=>{
       ready++;
       document.querySelector('#load-meter').value=ready;
@@ -3322,6 +3336,8 @@ async function start() {
     });
     sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name,parts[index]]));
     dataLoaded=true;
+    if(!window.echarts)document.querySelector('#load-status').textContent='经营数据已齐，正在准备图表…';
+    await libraryReady;
     bindAppEvents();
     renderRoute();
   } catch(error) {

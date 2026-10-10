@@ -13,6 +13,19 @@ async(page)=>{
  });
  const rect=()=>p.locator('#main').boundingBox();
  try {
+  let releaseLibrary;
+  const libraryGate=new Promise(resolve=>{releaseLibrary=resolve;});
+  await p.route('**/vendor/echarts.min.js',async route=>{await libraryGate;await route.continue();});
+  try {
+   // DOMContentLoaded waits for deferred scripts, so inspect this intentional gap before it.
+   await p.goto(base,{waitUntil:'commit'});
+   await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===17,{},{timeout:10000});
+   check(await p.locator('#main').getAttribute('aria-busy')==='true','Waiting for the chart library falsely presents a ready dashboard');
+   check((await p.locator('#load-status').innerText()).includes('正在准备图表'),'Completed data leaves an unexplained wait');
+   check(!await p.locator('.home-results').count(),'Data alone presents a partially initialized dashboard');
+  } finally {releaseLibrary();}
+  await p.locator('#statusChart svg').waitFor();
+  await p.unroute('**/vendor/echarts.min.js');
   await p.route('**/data/*.json',async route=>{await new Promise(resolve=>setTimeout(resolve,250));await route.continue();});
   for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
    await p.setViewportSize({width,height});
@@ -22,7 +35,7 @@ async(page)=>{
    check(before.y===0,`Loading margins push main down at ${width}`);
    check(await p.locator('#main').getAttribute('aria-busy')==='true','Loading omitted busy state');
    check(await p.locator('.site-foot').evaluate(node=>node.getBoundingClientRect().top>=innerHeight),'Footer appears before dashboard is ready');
-   if(width===1366)await p.screenshot({path:'output/playwright/v65-loading-stable.png'});
+   if(width===1366)await p.screenshot({path:'output/playwright/v68-loading-stable.png'});
    await p.locator('#statusChart svg').waitFor();await p.waitForTimeout(100);
    const after=await rect(),startup=await p.evaluate(()=>window.__startup);
    check(Math.abs(before.x-after.x)<1&&Math.abs(before.y-after.y)<1,`Main jumps when loaded at ${width}`);
@@ -72,7 +85,21 @@ async(page)=>{
   check(peak===6,'Startup does not use the intended bounded concurrency');
   check((await p.locator('.action-record-header').innerText()).includes('DEMO-D-18-'),'Retry opens another issue');
   check(p.url().includes('country=US')&&p.url().includes('metric=18')&&p.url().includes('issue=18'),'Retry loses direct URL');
+  await p.unroute('**/data/*.json');
+  // A failed library can finish before the delayed app; neither engine may wait forever.
+  await p.route('**/app.js*',async route=>{await new Promise(resolve=>setTimeout(resolve,500));await route.continue();});
+  await p.route('**/vendor/echarts.min.js',route=>route.abort());
+  await p.goto(base,{waitUntil:'domcontentloaded'});
+  await p.locator('.home-results').waitFor();
+  check(await p.locator('#main').getAttribute('aria-busy')==='false','Library failure leaves the dashboard busy');
+  check((await p.locator('#trendChart').innerText()).includes('暂未加载'),'Library failure has no chart feedback');
+  await p.locator('.trend-table-wrap > summary').click();
+  check(await p.locator('.trend-table-wrap tbody tr').count()===12,'Library failure loses weekly evidence');
+  await p.locator('.nav-link[data-page="E"]').click();await p.locator('.income-workspace').waitFor();
+  check(await p.locator('.income-panel:not([hidden]) .chart-fallback').count()>0,'Fallback navigation fails without the library');
+  await p.locator('.income-panel:not([hidden]) .workspace-calculation > summary').first().click();
+  check(await p.locator('.income-panel:not([hidden]) .workspace-calculation table').first().isVisible(),'Fallback loses calculation evidence');
   check(errors.length===0,errors.join('; '));
-  return {status:'PASS',results,peakRequests:peak,progress,checks:['stable main and footer at 3 desktop sizes','CLS below .05 where observable','busy state','bounded concurrency','slow file does not block later requests or present partial data','failed fetch and retry','monotonic progress','direct filter, metric and issue URL preserved']};
+  return {status:'PASS',results,peakRequests:peak,progress,checks:['data loads while chart library is pending','complete data waits for charts with explicit feedback','chart library failure retains tables and navigation','stable main and footer at 3 desktop sizes','CLS below .05 where observable','busy state','bounded concurrency','slow file does not block later requests or present partial data','failed fetch and retry','monotonic progress','direct filter, metric and issue URL preserved']};
  }finally{await context.close();}
 }
