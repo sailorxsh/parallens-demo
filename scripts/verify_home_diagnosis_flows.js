@@ -56,6 +56,8 @@ async(page)=>{
   const hunting=await verifyNumbers();check(hunting.labels.length===1&&!hunting.labels[0].includes('观鸟'),'Hunting scope fabricates an absent Bird group');
   await p.goto(`${base}#/D?metric=18&panel=groups&week=12`);await p.locator('#D-panel-groups').waitFor();
   check(await contribution().count()===0,'Selected week retains a stale multi-period contribution');
+  const selectedWeek=p.locator('#D-panel-groups .workspace-chart-panel').filter({has:p.getByRole('heading',{name:'成熟试用转正率 · 所选W12',exact:true})});
+  check(await selectedWeek.count()===1&&(await selectedWeek.innerText()).includes('所选完整周的转正人数')&&!(await selectedWeek.innerText()).includes('前9周与近3周'),'Selected-week evidence retains an unrelated period description');
   await p.goto(`${base}#/D?metric=18&panel=groups`);await contribution().locator('svg').waitFor();
   await p.locator('.workspace-locations').getByRole('button',{name:'成熟试用记录 · 支付失败样本',exact:true}).click();
   await p.locator('.trial-sample-item').first().click();

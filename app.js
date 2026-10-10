@@ -2085,17 +2085,17 @@ function metricEvidence(id,page) {
         pending.dataset.evidenceKind='groups';panel.append(pending);
       }
     }
-    const spec={title:'成熟试用转正率 · 可比批次',kind:summaries.length===2?'periodComparison':undefined,unit:'%',labels:summaries.map(([label])=>label),
+    const spec={title:filterState.week?`成熟试用转正率 · 所选W${filterState.week}`:'成熟试用转正率 · 可比批次',kind:summaries.length===2?'periodComparison':undefined,unit:'%',labels:summaries.map(([label])=>label),
       details:summaries.map(([,item])=>item?.denominator>=30?{...item,basisLabel:'转正 / 成熟试用',numeratorUnit:'人',denominatorUnit:'人'}:null),
       series:[{name:'转正率',values:summaries.map(([,item])=>item?.denominator>=30?item.value*100:null)}],
-      note:'前9周与近3周分别汇总分子、分母后计算；小于30人的批次不绘制比例。'};
+      note:filterState.week?'所选完整周的转正人数除以成熟试用人数；小于30人的批次不绘制比例。':'前9周与近3周分别汇总分子、分母后计算；小于30人的批次不绘制比例。'};
     const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
     panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
     panel.append(dataTable({title:'试用明细聚合 · 转正与支付',
       columns:['批次','成熟试用','转正','转正率','支付尝试','支付失败'],
       rows:summaries.map(([label,item])=>[label,item?number(item.denominator):'—',item?number(item.numerator):'—',
         item?.denominator>=30?percent(item.value):'样本不足',item?number(item.attempts):'—',item?number(item.failed):'—']),
-      note:'前后两段长短不同；人数为区间合计，比较规模变化需换算为周均。每条试用记录在样例中最多有一次支付尝试。'}));
+      note:filterState.week?'人数为所选完整周的合计；每条试用记录在样例中最多有一次支付尝试。':'前后两段长短不同；人数为区间合计，比较规模变化需换算为周均。每条试用记录在样例中最多有一次支付尝试。'}));
     if(!filterState.week){
       const rows=periods.map(([label,result])=>[label,result.rows?trialAggregate(result.rows.filter(isBirdPlusMonthlyAndroid)):null]);
       const panelTable=dataTable({title:'观鸟 Android Plus月付组 · 转正与支付核对',
