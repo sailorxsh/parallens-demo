@@ -13,7 +13,7 @@ const fixtures={
   subscriptionFlow:file('subscription-flow'),
 };
 const context=vm.createContext({
-  __fixtures:fixtures,document:{querySelector:()=>null},window:{addEventListener:()=>{},removeEventListener:()=>{}},
+  __fixtures:fixtures,document:{documentElement:{},querySelector:()=>null},getComputedStyle:()=>({fontSize:'16px'}),window:{addEventListener:()=>{},removeEventListener:()=>{}},
   localStorage:{getItem:()=>null},URLSearchParams,location:{hash:''},console,
 });
 const source=fs.readFileSync(path.join(root,'app.js'),'utf8').replace(/\nstart\(\);\s*$/,'\n');

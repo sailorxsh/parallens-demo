@@ -35,12 +35,42 @@ let homeTrendFocus=13;
 let statusChart;
 const sparklines=[];
 const detailCharts=[];
+const chartPresentations=new WeakMap();
+const chartTextScale=()=>Math.max(1,parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
+const chartText=size=>size*chartTextScale();
+function setChartOption(instance,build) {
+  chartPresentations.set(instance,{build,scale:null});
+  refreshChartTypography(instance);
+}
+function refreshChartTypography(instance) {
+  const presentation=chartPresentations.get(instance),scale=chartTextScale();
+  if(!presentation||presentation.scale===scale)return false;
+  const option=presentation.build(),fontSize=chartText(12);
+  option.textStyle={fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize,...option.textStyle};
+  for(const key of ['xAxis','yAxis']) {
+    if(!option[key])continue;
+    const axes=Array.isArray(option[key])?option[key]:[option[key]];
+    axes.forEach(axis=>{
+      axis.axisLabel={fontSize,margin:chartText(8),...axis.axisLabel};
+      axis.nameTextStyle={fontSize,...axis.nameTextStyle};
+      axis.nameGap=chartText(axis.nameGap??15);
+    });
+  }
+  if(option.visualMap)option.visualMap.textStyle={fontSize,...option.visualMap.textStyle};
+  if(option.grid)for(const key of ['left','right','top','bottom']) {
+    if(typeof option.grid[key]==='number')option.grid[key]*=scale;
+  }
+  // Reapply authored presentation; ECharts merges the existing legend selection.
+  if(presentation.scale!==null)option.animationDurationUpdate=0;
+  instance.setOption(option);presentation.scale=scale;return true;
+}
 const chartSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(entries=>requestAnimationFrame(()=>{
   for(const {target:box} of entries) {
     if(!box.isConnected||!box.clientWidth||!box.clientHeight)continue;
     const instance=window.echarts?.getInstanceByDom(box);
     if(!instance||instance.isDisposed())continue;
-    if(Math.abs(instance.getWidth()-box.clientWidth)<1&&Math.abs(instance.getHeight()-box.clientHeight)<1)continue;
+    const typographyChanged=refreshChartTypography(instance);
+    if(!typographyChanged&&Math.abs(instance.getWidth()-box.clientWidth)<1&&Math.abs(instance.getHeight()-box.clientHeight)<1)continue;
     instance.resize();
     if(box.parentElement.classList.contains('chart-legend-frame'))fitChartLegend(box.parentElement,instance);
   }
@@ -84,7 +114,7 @@ function actionBaselineWindow(id) {
   return `快照 ${sourceData.snapshot.asOf}`;
 }
 window.addEventListener('resize',()=>{
-  chart?.resize(); statusChart?.resize(); sparklines.forEach(item=>item.resize()); detailCharts.forEach(item=>item.resize());
+  [chart,statusChart,...sparklines,...detailCharts].filter(item=>item&&!item.isDisposed()).forEach(item=>{refreshChartTypography(item);item.resize();});
   document.querySelectorAll('.chart-legend-frame').forEach(frame=>{
     const box=frame.querySelector('.detail-chart,#trendChart');
     const instance=box&&window.echarts?.getInstanceByDom(box);
@@ -109,7 +139,7 @@ function weeklyAxisLabel(label) {
   const end=new Date(`${week.weekEnd}T00:00:00Z`);
   return `{week|${label}}\n{date|${end.getUTCMonth()+1}/${end.getUTCDate()}}`;
 }
-const weeklyAxisText={week:{fontSize:11,lineHeight:15,color:'#506455'},date:{fontSize:10,lineHeight:14,color:'#58695b'}};
+const weeklyAxisText=()=>({week:{fontSize:chartText(12),lineHeight:chartText(18),color:'#506455'},date:{fontSize:chartText(12),lineHeight:chartText(18),color:'#58695b'}});
 const weeklyAxisNote='周轴日期为观察周结束日；完整起止日期见数据表。';
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -1101,14 +1131,14 @@ function drawSparkline(box,values,id,labels=dataset.weekly.map(w=>`W${w.week}`),
   }
   const instance=createChart(box);
   sparklines.push(instance);
-  instance.setOption({
+  setChartOption(instance,()=>({
     animation:false,grid:{left:2,right:2,top:5,bottom:5},
     xAxis:{type:'category',show:false,data:labels},
     yAxis:{type:'value',show:false,scale:true},
-    tooltip:{...chartTooltipStyle,trigger:'axis',formatter:params=>`${periodLabel(labels[params[0].dataIndex])}：${chartValue(params[0].value,unit)}`},
+    tooltip:{...chartTooltipStyle(),trigger:'axis',formatter:params=>`${periodLabel(labels[params[0].dataIndex])}：${chartValue(params[0].value,unit)}`},
     series:[{type:'line',data:values,symbol:'circle',symbolSize:(_,params)=>filterState.week&&labels[params.dataIndex]===`W${filterState.week}`?6:0,
       smooth:.2,lineStyle:{width:2,color:'#bf762b'},areaStyle:{color:'rgba(232,150,60,.13)'}}]
-  });
+  }));
 }
 function subscriptionDetails() {
   const details=element('section','status-details');
@@ -1145,12 +1175,12 @@ function drawStatus(box) {
   const keys=Object.keys(s);
   const totals=Object.fromEntries(keys.map(key=>[key,Object.values(s[key]).reduce((a,b)=>a+b,0)]));
   const specs=[['Free或无权益','free','noEntitlement','#9eaa9a'],['试用中','trialEarly','trialNearExpiry','#e8b765'],['付费中','paidCurrent',null,'#356d51'],['已取消未到期','cancelledButEntitled',null,'#e8963c'],['支付失败','paymentFailed',null,'#e5484d'],['已过期','expired',null,'#718078']];
-  statusChart.setOption({
+  setChartOption(statusChart,()=>({
     animationDuration:chartAnimationDuration(450),grid:{left:42,right:26,top:12,bottom:62},
     xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'},splitLine:{lineStyle:{color:'#e4eae2'}}},
     yAxis:{type:'category',data:keys.map(key=>key==='bird'?'观鸟':'狩猎'),axisLine:{show:false},axisTick:{show:false}},
-    legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:10,color:'#596b5e'}},
-    tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+    legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:chartText(12),color:'#596b5e'}},
+    tooltip:{...chartTooltipStyle(),trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
       const key=keys[params[0]?.dataIndex];
       if(!key)return '';
       return `${key==='bird'?'观鸟':'狩猎'} · 主账号 ${number(totals[key])}人<br>${params.map(item=>
@@ -1161,7 +1191,7 @@ function drawStatus(box) {
         (item[birdKey]??0)+(birdKey==='trialEarly'?item.trialNearExpiry:0):
         (item[huntingKey??birdKey]??0)+(birdKey==='trialEarly'?item.trialEarly:0);
         return totals[key]?value/totals[key]*100:0;})})),
-  });
+  }));
 }
 function miniCard({id,label,page,value,note='',critical=false,alert=false}) {
   const article=element('article',`mini-card${alert?' alert-card':''}${critical?' critical':''}`);
@@ -1446,7 +1476,7 @@ function chartNote(spec) {
 function fitChartLegend(frame,instance) {
   const controls=frame.querySelector('.chart-legend');
   if(controls?.offsetHeight)instance.setOption({animationDurationUpdate:chartAnimationDuration(200),
-    grid:{bottom:controls.offsetHeight+Number(frame.dataset.legendPadding)}});
+    grid:{bottom:controls.offsetHeight+chartText(Number(frame.dataset.legendPadding))}});
 }
 function interactiveChartLegend(box,instance,lines,title,axisPadding=28) {
   let frame=box.parentElement;
@@ -1503,36 +1533,36 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
   const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:'#b87021',pattern:'solid',details:weeklyRateDetails(13)},
     {id:18,name:'试用→转正率',values:conversion,color:'#356d51',pattern:'dashed',details:weeklyRateDetails(18)}].filter(item=>item.values&&(!selected||item.id===selected.id));
   const axis=trendAxisDomain([...lines.map(item=>item.values),...(selected?[[selected.beforeRate,selected.afterRate]]:[])],'%');
-  chart.setOption({
+  setChartOption(chart,()=>({
     color:lines.map(item=>item.color),
     animationDuration:chartAnimationDuration(450),
     textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif'},
-    tooltip:{...chartTooltipStyle,trigger:'axis',formatter:params=>{
+    tooltip:{...chartTooltipStyle(),trigger:'axis',formatter:params=>{
       const index=params[0]?.dataIndex;if(index===undefined)return '';
       return `${periodLabel(`W${weeks[index].week}`)}<br>${params.map(item=>{
         const line=lines.find(line=>line.name===item.seriesName),basis=Number.isFinite(item.value)?chartBasis(line?.details[index]):'';
-        return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br><small>${basis}</small>`:''}`;
+        return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br>${basis}`:''}`;
       }).join('<br>')}`;
     }},
-    legend:{show:lines.length<2,selectedMode:lines.length>1,bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
+    legend:{show:lines.length<2,selectedMode:lines.length>1,bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:chartText(12)}},
     grid:{left:48,right:52,top:28,bottom:64},
     xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},
-      axisLabel:{color:'#58695b',formatter:weeklyAxisLabel,rich:weeklyAxisText,showMinLabel:true,showMaxLabel:true,hideOverlap:true}},
+      axisLabel:{color:'#58695b',formatter:weeklyAxisLabel,rich:weeklyAxisText(),showMinLabel:true,showMaxLabel:true,hideOverlap:true}},
     yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{formatter:value=>`${Number(value).toFixed(axis.step<.1?2:1)}%`,color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
     series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:5,
       symbol:item.id===18?'rect':'circle',lineStyle:{width:2.5,type:item.pattern},
       data:item.values.map(value=>Number.isFinite(value)?Number(value.toFixed(1)):null),
-      endLabel:{show:true,formatter:params=>`${Number(params.value).toFixed(1)}%`,color:chartLabelColor(item.color),fontSize:11,fontWeight:600},
+      endLabel:{show:true,formatter:params=>`${Number(params.value).toFixed(1)}%`,color:chartLabelColor(item.color),fontSize:chartText(12),fontWeight:600},
       ...(selected?{
         markLine:{silent:true,symbol:'none',lineStyle:{color:'#718777',type:'dashed',width:1.2},
-          label:{formatter:`${selected.beforeLabel} ${selected.beforeRate.toFixed(1)}%`,position:'insideStartTop',color:'#4d6655',fontSize:10},
+          label:{formatter:`${selected.beforeLabel} ${selected.beforeRate.toFixed(1)}%`,position:'insideStartTop',color:'#4d6655',fontSize:chartText(12)},
           data:[{yAxis:selected.beforeRate}]},
         markArea:{silent:true,itemStyle:{color:selected.id===13?'rgba(184,112,33,.07)':'rgba(53,109,81,.07)'},
-          label:{show:true,position:'insideTopRight',color:'#58695b',fontSize:10},
+          label:{show:true,position:'insideTopRight',color:'#58695b',fontSize:chartText(12)},
           data:[[{name:selected.afterLabel.replace('合并率',''),xAxis:`W${weeks[selected.split].week}`},{xAxis:`W${weeks.at(-1).week}`}]]},
       }:{}),
     })),
-  });
+  }));
   interactiveChartLegend(node,chart,lines,'激活与转正周度趋势',44);
 }
 const groupLabels={
@@ -1726,8 +1756,8 @@ function chartValue(value,unit) {
   return `${number(numeric)}${unit??''}`;
 }
 const chartLabelColor=color=>({'#bf762b':'#97541c','#b87021':'#97541c','#7593a0':'#496876','#e5484d':'#b82d37'})[color]??color;
-const chartTooltipStyle={confine:true,backgroundColor:'#fffefa',borderColor:'#cddbc7',
-  textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize:12,lineHeight:20,color:'#263d2e'}};
+const chartTooltipStyle=()=>({confine:true,backgroundColor:'#fffefa',borderColor:'#cddbc7',
+  textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize:chartText(13),lineHeight:chartText(20),color:'#263d2e'}});
 function chartPointDetail(spec,line,index) {
   if(!['%','美元/人'].includes(spec.unit))return null;
   return line.details?.[index]??(spec.series.length===1?spec.details?.[index]:null);
@@ -1887,14 +1917,14 @@ function drawDetailChart(box,spec) {
   const colors=['#bf762b','#356d51','#7593a0'];
   if(spec.kind==='periodComparison') {
     const line=spec.series[0],axis=trendAxisDomain(spec.series,spec.unit);
-    instance.setOption({animationDuration:chartAnimationDuration(350),
+    setChartOption(instance,()=>({animationDuration:chartAnimationDuration(350),
       grid:{left:184,right:62,top:35,bottom:42},
       xAxis:{type:'value',min:axis?.min,max:axis?.max,interval:axis?.step,
         axisLabel:{color:'#58695b',formatter:value=>chartValue(value,spec.unit)},
         splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false},axisTick:{show:false}},
       yAxis:{type:'category',inverse:true,data:spec.labels,
-        axisLabel:{color:'#506455',fontSize:11},axisLine:{show:false},axisTick:{show:false}},
-      tooltip:{...chartTooltipStyle,trigger:'item',formatter:params=>{
+        axisLabel:{color:'#506455',fontSize:chartText(12)},axisLine:{show:false},axisTick:{show:false}},
+      tooltip:{...chartTooltipStyle(),trigger:'item',formatter:params=>{
         const index=params.dataIndex,basis=chartBasis(chartPointDetail(spec,line,index));
         return `${spec.labels[index]}：${chartValue(line.values[index],spec.unit)}${basis?`<br>${basis}`:''}`;
       }},
@@ -1902,14 +1932,14 @@ function drawDetailChart(box,spec) {
         data:line.values.map((value,index)=>Number.isFinite(value)?{value:[value,index],
           itemStyle:{color:index?'#356d51':'#8a9f8e'}}:{value:[null,index]}),
         label:{show:true,position:'right',distance:9,formatter:params=>chartValue(params.value[0],spec.unit),
-          color:'#315540',fontSize:12,fontWeight:600}}],
-    });
+          color:'#315540',fontSize:chartText(12),fontWeight:600}}],
+    }));
     return instance;
   }
   if(spec.kind==='waterfall') {
     const v=spec.flow,levels=waterfallLevels(spec),axis=trendAxisDomain([levels],spec.unit);
-    instance.setOption({animationDuration:chartAnimationDuration(350),
-      tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+    setChartOption(instance,()=>({animationDuration:chartAnimationDuration(350),
+      tooltip:{...chartTooltipStyle(),trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
         const index=params[0]?.dataIndex;
         if(index===undefined)return '';
         const stock=index===0||index===5,step=spec.series[0].values[index];
@@ -1921,29 +1951,29 @@ function drawDetailChart(box,spec) {
       series:[
         {type:'bar',stack:'flow',silent:true,itemStyle:{color:'transparent'},data:[0,levels[0],levels[1],levels[2],levels[4],0]},
         {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#356d51'},data:[0,v.trialPaid,v.directPaid,v.recovered,0,0],
-          label:{show:true,position:'top',color:'#315540',fontSize:12,fontWeight:600,
+          label:{show:true,position:'top',color:'#315540',fontSize:chartText(12),fontWeight:600,
             formatter:params=>params.dataIndex>=1&&params.dataIndex<=3?`${params.value>0?'+':''}${number(params.value)}`:''}},
         {type:'bar',stack:'flow',barMaxWidth:50,itemStyle:{color:'#c16952'},data:[0,0,0,0,v.lost,0],
-          label:{show:true,position:'bottom',color:'#913e2b',fontSize:12,fontWeight:600,
+          label:{show:true,position:'bottom',color:'#913e2b',fontSize:chartText(12),fontWeight:600,
             formatter:params=>params.dataIndex===4?`${params.value>0?'−':''}${number(params.value)}`:''}},
         {type:'scatter',symbolSize:12,itemStyle:{color:'#234f37'},
           data:levels.map((value,index)=>[index,index===0||index===5?value:null]),
-          label:{show:true,position:'top',distance:8,color:'#315540',fontSize:12,fontWeight:600,
+          label:{show:true,position:'top',distance:8,color:'#315540',fontSize:chartText(12),fontWeight:600,
             formatter:params=>number(params.value[1])},
           markLine:{silent:true,symbol:'none',label:{show:false},lineStyle:{color:'#98ac9a',type:'dashed',width:1},
             data:levels.slice(0,-1).map((value,index)=>[{coord:[index,value]},{coord:[index+1,value]}])}},
       ],
-    });
+    }));
     return instance;
   }
   if (spec.kind==='boxplot') {
-    instance.setOption({
+    setChartOption(instance,()=>({
       animationDuration:chartAnimationDuration(350),
-      tooltip:{...chartTooltipStyle,trigger:'item',formatter:params=>{
+      tooltip:{...chartTooltipStyle(),trigger:'item',formatter:params=>{
         const [minimum,q1,median,q3,maximum]=params.data;
         return `${spec.title}<br>最小 ${number(minimum)} · Q1 ${number(q1)} · P50 ${number(median)} · Q3 ${number(q3)} · 最大 ${number(maximum)} 分钟`;
       }},
-      grid:{left:58,right:35,top:24,bottom:48},
+      grid:{left:58,right:35,top:38,bottom:48},
       xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
       yAxis:{type:'value',min:0,max:2600,name:'分钟',nameTextStyle:{color:'#506455'},axisLabel:{color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}}},
       series:[{name:'时长分位',type:'boxplot',data:spec.series[0].values,
@@ -1951,16 +1981,16 @@ function drawDetailChart(box,spec) {
         markLine:{silent:true,symbol:'none',lineStyle:{type:'dashed',width:1.5,color:'#356d51'},
           label:{formatter:params=>params.name,position:'insideEndTop',color:'#315540'},
           data:[{name:'P50 170分钟',yAxis:170},{name:`P90 ${number(spec.p90)}分钟`,yAxis:spec.p90}]}}],
-    });
+    }));
     return instance;
   }
   if (spec.kind==='heatmap') {
     const cells=spec.series[0].values.flatMap((row,y)=>row.map((value,x)=>({
       value:[x,y,value],label:{color:value>=90?'#fffefa':'#000'},
     })));
-    instance.setOption({
+    setChartOption(instance,()=>({
       animationDuration:chartAnimationDuration(350),
-      tooltip:{...chartTooltipStyle,formatter:params=>{
+      tooltip:{...chartTooltipStyle(),formatter:params=>{
         const index=params.value[1],owners=spec.sampleSizes?.[index];
         const numerator=spec.sampleCounts?.[index]?.[params.value[0]];
         return `${spec.labels[index]} · ${spec.dimensions[params.value[0]]}：${Number(params.value[2]).toFixed(1)}%${owners?
@@ -1973,26 +2003,26 @@ function drawDetailChart(box,spec) {
         text:['100%','0%'],textStyle:{color:'#506455'},inRange:{color:['#eaf2e7','#a9caa9','#356d51']}},
       series:[{type:'heatmap',data:cells,label:{show:true,formatter:params=>`${Number(params.value[2]).toFixed(1)}%`,fontWeight:600},
         itemStyle:{borderColor:'#fffefa',borderWidth:4}}],
-    });
+    }));
     return instance;
   }
   if (spec.kind==='stacked100') {
-    instance.setOption({
+    setChartOption(instance,()=>({
       animationDuration:chartAnimationDuration(350),color:colors,
-      tooltip:{...chartTooltipStyle,trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+      tooltip:{...chartTooltipStyle(),trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
         const index=params[0]?.dataIndex;if(index===undefined)return '';
         return `${spec.labels[index]}<br>${params.map(item=>{
           const basis=chartBasis(chartPointDetail(spec,spec.series[item.seriesIndex],index));
-          return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br><small>${basis}</small>`:''}`;
+          return `${item.marker}${item.seriesName}：${chartValue(item.value,'%')}${basis?`<br>${basis}`:''}`;
         }).join('<br>')}`;
       }},
-      legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:11,color:'#506455'}},
+      legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:chartText(12),color:'#506455'}},
       grid:{left:115,right:24,top:22,bottom:55},
       xAxis:{type:'value',min:0,max:100,axisLabel:{formatter:'{value}%',color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}}},
       yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
     series:spec.series.map((line,index)=>({name:line.name,type:'bar',stack:'total',barWidth:38,
         data:line.values,itemStyle:{color:line.color??colors[index%colors.length]}})),
-    });
+    }));
     return instance;
   }
   const plotted=spec.series.flatMap(line=>line.values).filter(value=>Number.isFinite(value));
@@ -2001,11 +2031,11 @@ function drawDetailChart(box,spec) {
   const weeklyAxis=isTimeline&&spec.labels.some(label=>/^W\d+$/.test(label));
   const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
   const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${chartValue(value,spec.unit)}`;
-  const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?11:6.2),0)));
-  const leftReserve=spec.unit==='美元'?70:spec.unit==='人'||spec.unit==='台'?62:46;
+  const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?12:6.8),0)));
+  const leftReserve=['美元','个百分点'].includes(spec.unit)?70:spec.unit==='人'||spec.unit==='台'?62:46;
   const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+24),box.clientWidth*.32)):18;
   const timelineLabelInterval=index=>{
-    const spacing=Math.max(weeklyAxis?55:38,...spec.labels.map(label=>String(label).length*7+18));
+    const spacing=chartText(Math.max(weeklyAxis?62:42,...spec.labels.map(label=>String(label).length*7+18)));
     const slots=Math.min(spec.labels.length,Math.max(2,Math.floor((box.clientWidth-leftReserve-rightReserve)/spacing)+1));
     return Array.from({length:slots},(_,slot)=>Math.round(slot*(spec.labels.length-1)/Math.max(1,slots-1))).includes(index);
   };
@@ -2017,25 +2047,25 @@ function drawDetailChart(box,spec) {
     if(value>=1000)return `${(value/1000).toFixed(span<500?2:span<2000?1:0)}k`;
     return number(Math.round(value));
   };
-  instance.setOption({
+  setChartOption(instance,()=>({
     animationDuration:chartAnimationDuration(350),
     color:colors,
     textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif'},
-    tooltip:{...chartTooltipStyle,trigger:'axis',formatter:params=>{
+    tooltip:{...chartTooltipStyle(),trigger:'axis',formatter:params=>{
       const index=params[0]?.dataIndex;
       if(index===undefined)return '';
       const lines=[periodLabel(spec.labels[index]),...params.map(item=>{
         const line=spec.series[item.seriesIndex],basis=Number.isFinite(item.value)?chartBasis(chartPointDetail(spec,line,index)):'';
-        return `${item.marker}${item.seriesName}：${chartValue(item.value,spec.unit)}${basis?`<br><small>${basis}</small>`:''}`;
+        return `${item.marker}${item.seriesName}：${chartValue(item.value,spec.unit)}${basis?`<br>${basis}`:''}`;
       })];
       return lines.join('<br>');
     }},
     legend:{show:false},
     grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32)+(weeklyAxis?16:0):76},
     xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#58695b',
-      ...(weeklyAxis?{formatter:weeklyAxisLabel,rich:weeklyAxisText}:{}),
+      ...(weeklyAxis?{formatter:weeklyAxisLabel,rich:weeklyAxisText()}:{}),
       interval:isTimeline?timelineLabelInterval:0,
-      showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:isTimeline?0:spec.labelRotation??18,fontSize:11},
+      showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:isTimeline?0:spec.labelRotation??18,fontSize:chartText(12)},
       axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
     yAxis:{type:'value',min:trendAxis?.min??spec.minY??0,max:trendAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
       ...(trendAxis?{interval:trendAxis.step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
@@ -2046,12 +2076,12 @@ function drawDetailChart(box,spec) {
       barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
       lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
       endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
-        color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:11,fontWeight:600,width:rightReserve-12,overflow:'truncate'},
+        color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:chartText(12),fontWeight:600,width:chartText(rightReserve-12),overflow:'truncate'},
       label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
-        fontSize:11,fontWeight:600,color:'#365a43'},
+        fontSize:chartText(12),fontWeight:600,color:'#365a43'},
       labelLayout:{hideOverlap:true,moveOverlap:'shiftY'},
     })),
-  });
+  }));
   interactiveChartLegend(box,instance,spec.series.map((line,index)=>({...line,color:line.color??colors[index%colors.length],
     pattern:isTimeline?['solid','dashed','dotted'][index%3]:'bar'})),spec.title,isTimeline?28+(weeklyAxis?16:0):55);
   return instance;
