@@ -1514,6 +1514,10 @@ function createTrendTable() {
 function isTimelineSpec(spec) {
   return spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label));
 }
+function chartNiceStep(roughStep) {
+  const magnitude=10**Math.floor(Math.log10(roughStep)),relative=roughStep/magnitude;
+  return (relative<=1?1:relative<=2?2:relative<=2.5?2.5:relative<=5?5:10)*magnitude;
+}
 function trendAxisDomain(series,unit) {
   const values=series.flatMap(line=>Array.isArray(line)?line:line?.values??[]).filter(Number.isFinite);
   if(!values.length)return null;
@@ -1524,17 +1528,23 @@ function trendAxisDomain(series,unit) {
   if(low>=0)lower=Math.max(0,lower);
   if(unit==='%')upper=Math.min(100,upper);
   const roughStep=(upper-lower)/4;
-  const magnitude=10**Math.floor(Math.log10(roughStep));
-  const relative=roughStep/magnitude;
-  const nice=relative<=1?1:relative<=2?2:relative<=2.5?2.5:relative<=5?5:10;
-  const step=unit==='%'||unit==='美元/人'?nice*magnitude:Math.max(1,nice*magnitude);
+  const nice=chartNiceStep(roughStep);
+  const step=unit==='%'||unit==='美元/人'?nice:Math.max(1,nice);
   const rounded=value=>Number(value.toPrecision(12));
   const min=rounded(Math.floor(lower/step)*step);
   const max=rounded(unit==='%'?Math.min(100,Math.ceil(upper/step)*step):Math.ceil(upper/step)*step);
   return {min,max,step};
 }
+function percentageBarAxis(spec) {
+  if(spec.kind||spec.unit!=='%'||isTimelineSpec(spec)||spec.minY!=null||spec.maxY!=null)return null;
+  const values=spec.series.flatMap(line=>line.values).filter(Number.isFinite);
+  if(!values.length||values.some(value=>value<0||value>100))return null;
+  const high=Math.max(...values),upper=Math.min(100,high?high*1.12:1),step=chartNiceStep(upper/5);
+  return {min:0,max:Number(Math.min(100,Math.ceil(upper/step)*step).toPrecision(12)),step};
+}
+const chartStepPrecision=step=>(step?.toFixed(6).replace(/0+$/,'').split('.')[1]??'').length;
 function trendAxisNote(axis,unit) {
-  const format=value=>unit==='%'?`${value.toFixed(axis.step<.1?2:1)}%`:
+  const format=value=>unit==='%'?`${value.toFixed(Math.max(1,chartStepPrecision(axis.step)))}%`:
     unit==='美元/人'?`$${value.toFixed(2)}/人`:
       unit==='美元'?`$${number(value)}`:`${number(value)}${unit}`;
   return `纵轴 ${format(axis.min)}–${format(axis.max)}${axis.min>0?'，为观察趋势采用非零起点':''}；精确值见数据表。`;
@@ -1555,6 +1565,8 @@ function chartScaleNote(spec) {
     const axis=trendAxisDomain(spec.series,spec.unit);
     return axis?trendAxisNote(axis,spec.unit).replace('纵轴','横轴').replace('为观察趋势采用非零起点','点图使用局部范围比较两批次；不表示人数规模'):'';
   }
+  const barAxis=percentageBarAxis(spec);
+  if(barAxis)return `${trendAxisNote(barAxis,spec.unit)} 柱形从零比较；不同图的刻度上限可能不同。`;
   const axis=!spec.kind&&isTimelineSpec(spec)?trendAxisDomain(spec.series,spec.unit):null;
   return axis?`${trendAxisNote(axis,spec.unit)}${spec.labels.some(label=>/^W\d+$/.test(label))?` ${weeklyAxisNote}`:''}`:'';
 }
@@ -2116,6 +2128,7 @@ function drawDetailChart(box,spec) {
   const plotted=spec.series.flatMap(line=>line.values).filter(value=>Number.isFinite(value));
   const span=plotted.length?Math.max(...plotted)-Math.min(...plotted):0;
   const trendAxis=isTimeline?trendAxisDomain(spec.series,spec.unit):null;
+  const barAxis=percentageBarAxis(spec);
   const weeklyAxis=isTimeline&&spec.labels.some(label=>/^W\d+$/.test(label));
   const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
   const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${chartValue(value,spec.unit)}`;
@@ -2128,7 +2141,11 @@ function drawDetailChart(box,spec) {
     return Array.from({length:slots},(_,slot)=>Math.round(slot*(spec.labels.length-1)/Math.max(1,slots-1))).includes(index);
   };
   const axisValue=value=>{
-    if(spec.unit==='%')return `${Number(value).toFixed(span<5?1:0)}%`;
+    if(spec.unit==='%') {
+      const step=barAxis?.step??trendAxis?.step;
+      const precision=Math.max(span<5?1:0,chartStepPrecision(step));
+      return `${Number(value).toFixed(precision)}%`;
+    }
     if(spec.unit==='个百分点')return `${Number(value).toFixed(1)}pp`;
     if(spec.unit==='美元/人')return `$${Number(value).toFixed(span<1?2:1)}`;
     if(spec.unit==='美元')return value>=1000?`$${(value/1000).toFixed(span<1000?2:1)}k`:`$${number(Math.round(value))}`;
@@ -2155,8 +2172,8 @@ function drawDetailChart(box,spec) {
       interval:isTimeline?timelineLabelInterval:0,
       showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:isTimeline?0:spec.labelRotation??18,fontSize:chartText(12)},
       axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
-    yAxis:{type:'value',min:trendAxis?.min??spec.minY??0,max:trendAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
-      ...(trendAxis?{interval:trendAxis.step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
+    yAxis:{type:'value',min:trendAxis?.min??barAxis?.min??spec.minY??0,max:trendAxis?.max??barAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
+      ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
       axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
     series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
       data:spec.unit==='个百分点'?line.values.map(value=>({value,label:{position:value<0?'bottom':'top',color:value<0?'#97541c':value>0?'#315e41':'#58695b'},
