@@ -28,7 +28,8 @@ let startupInProgress=false;
 let appEventsBound=false;
 let lastRenderedHash;
 let diagnosticWorkspaceView='change';
-const chartAnimationDuration=duration=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?0:duration;
+const chartMotionPreference=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+const chartAnimationDuration=duration=>chartMotionPreference?.matches?0:duration;
 let definitionReturnFocus;
 let chart;
 let homeTrendFocus=13;
@@ -39,13 +40,14 @@ const chartPresentations=new WeakMap();
 const chartTextScale=()=>Math.max(1,parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
 const chartText=size=>size*chartTextScale();
 function setChartOption(instance,build) {
-  chartPresentations.set(instance,{build,scale:null});
+  chartPresentations.set(instance,{build,scale:null,reducedMotion:null});
   refreshChartTypography(instance);
 }
 function refreshChartTypography(instance) {
-  const presentation=chartPresentations.get(instance),scale=chartTextScale();
-  if(!presentation||presentation.scale===scale)return false;
+  const presentation=chartPresentations.get(instance),scale=chartTextScale(),reducedMotion=!!chartMotionPreference?.matches;
+  if(!presentation||presentation.scale===scale&&presentation.reducedMotion===reducedMotion)return false;
   const option=presentation.build(),fontSize=chartText(12);
+  option.animation=!reducedMotion&&(option.animation??true);
   option.textStyle={fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize,...option.textStyle};
   for(const key of ['xAxis','yAxis']) {
     if(!option[key])continue;
@@ -61,9 +63,14 @@ function refreshChartTypography(instance) {
     if(typeof option.grid[key]==='number')option.grid[key]*=scale;
   }
   // Reapply authored presentation; ECharts merges the existing legend selection.
-  if(presentation.scale!==null)option.animationDurationUpdate=0;
-  instance.setOption(option);presentation.scale=scale;return true;
+  if(reducedMotion||presentation.scale!==null)option.animationDurationUpdate=0;
+  instance.setOption(option);presentation.scale=scale;presentation.reducedMotion=reducedMotion;return true;
 }
+chartMotionPreference?.addEventListener('change',()=>{
+  for(const instance of [chart,statusChart,...sparklines,...detailCharts]) {
+    if(instance&&!instance.isDisposed())refreshChartTypography(instance);
+  }
+});
 const chartSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(entries=>requestAnimationFrame(()=>{
   for(const {target:box} of entries) {
     if(!box.isConnected||!box.clientWidth||!box.clientHeight)continue;
@@ -1164,6 +1171,26 @@ function metricValueRow(id,valueNode,trend) {
   }
   return row;
 }
+function journeyStatus(id) {
+  const value=metric(id);
+  if(value.kind==='na')return {status:value.availability==='pending'?'待补数据':'不适用',severity:'neutral'};
+  if(id===13||id===18) {
+    const comparison=weeklyRateComparison(id,id===13?8:9);
+    if(!comparison)return {status:'缺少可比批次',severity:'neutral'};
+    const before=comparison.beforeLabel.replace('合并率',''),after=comparison.afterLabel.replace('合并率','');
+    const direction=Math.abs(comparison.delta)<.05?0:Math.sign(comparison.delta);
+    return {status:direction?`${after}${direction<0?'低于':'高于'}${before}`:`${after}与${before}持平`,
+      severity:direction<0?'warn':direction>0?'ok':'neutral'};
+  }
+  if(id===9) {
+    const series=trendValues(id),week=effectiveFor(id).find(([key])=>key==='week')?.[1];
+    const index=week?Number(week)-1:(series?.length??0)-1,current=series?.[index],previous=series?.[index-1];
+    if(!Number.isFinite(current)||!Number.isFinite(previous))return {status:'缺少可比周',severity:'neutral'};
+    const direction=Math.sign(current-previous);
+    return {status:`较上周${direction>0?'增加':direction<0?'减少':'持平'}`,severity:direction>0?'ok':direction<0?'warn':'neutral'};
+  }
+  return {status:({11:'绑定尝试口径',23:'到期应续用户',34:'当前有效付费权益'})[id]??'当前范围',severity:'neutral'};
+}
 function nodeTrendDetails(id) {
   const series=trendValues(id);
   if(!series) return element('p','node-change','当前维度无可用周趋势');
@@ -1236,8 +1263,8 @@ function drawStatus(box) {
   const specs=[['Free或无权益','free','noEntitlement','#9eaa9a'],['试用中','trialEarly','trialNearExpiry','#e8b765'],['付费中','paidCurrent',null,'#356d51'],['已取消未到期','cancelledButEntitled',null,'#e8963c'],['支付失败','paymentFailed',null,'#e5484d'],['已过期','expired',null,'#718078']];
   setChartOption(statusChart,()=>({
     animationDuration:chartAnimationDuration(450),grid:{left:42,right:26,top:12,bottom:62},
-    xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%'},splitLine:{lineStyle:{color:'#e4eae2'}}},
-    yAxis:{type:'category',data:keys.map(key=>key==='bird'?'观鸟':'狩猎'),axisLine:{show:false},axisTick:{show:false}},
+    xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%',color:'#58695b'},splitLine:{lineStyle:{color:'#e4eae2'}}},
+    yAxis:{type:'category',data:keys.map(key=>key==='bird'?'观鸟':'狩猎'),axisLabel:{color:'#506455'},axisLine:{show:false},axisTick:{show:false}},
     legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:chartText(12),color:'#596b5e'}},
     tooltip:{...chartTooltipStyle(),trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
       const key=keys[params[0]?.dataIndex];
@@ -1355,13 +1382,13 @@ function renderHome() {
   const journeyTitle=sectionTitle('03  /  VALUE JOURNEY','六节点经营主线','调查顺序 · 各自批次与分母，不能相乘');
   const rail=element('div','journey-rail');
   [
-    {id:9,label:'周新增注册',value:formatMetric(9),page:'A',detail:1,status:'周增幅在演示区间',severity:'ok'},
-    {id:11,label:'首次绑定成功率',value:formatMetric(11),page:'A',detail:2,status:'绑定尝试口径',severity:'ok'},
-    {id:13,label:'7日价值激活率',value:formatMetric(13),page:'A',detail:3,status:'观鸟线 · 低于演示阈值',severity:'warn',star:true},
-    {id:18,label:'试用→转正率',value:formatMetric(18),page:'D',detail:4,status:'连续3周低于前期',severity:'warn',star:true},
-    {id:23,label:'续订率',value:formatMetric(23),page:'D',detail:5,status:'到期应续用户',severity:'ok',star:true},
-    {id:34,label:'付费权益主账号',value:formatMetric(34),page:'E',detail:6,status:'健康阈值待校准',severity:'neutral'},
-  ].forEach(item=>rail.append(card({...item,kind:'journey',status:selectedFilters().length?'筛后模拟值':item.status})));
+    {id:9,label:'周新增注册',value:formatMetric(9),page:'A',detail:1},
+    {id:11,label:'首次绑定成功率',value:formatMetric(11),page:'A',detail:2},
+    {id:13,label:'7日价值激活率',value:formatMetric(13),page:'A',detail:3,star:true},
+    {id:18,label:'试用→转正率',value:formatMetric(18),page:'D',detail:4,star:true},
+    {id:23,label:'续订率',value:formatMetric(23),page:'D',detail:5,star:true},
+    {id:34,label:'付费权益主账号',value:formatMetric(34),page:'E',detail:6},
+  ].forEach(item=>rail.append(card({...item,kind:'journey',...journeyStatus(item.id)})));
 
   const story=element('div','story-panel');
   const trend=element('section','trend-panel');
@@ -1989,7 +2016,7 @@ function drawDetailChart(box,spec) {
       }},
       series:[{name:line.name,type:'scatter',symbolSize:12,
         data:line.values.map((value,index)=>Number.isFinite(value)?{value:[value,index],
-          itemStyle:{color:index?'#356d51':'#8a9f8e'}}:{value:[null,index]}),
+          itemStyle:{color:index?'#356d51':'#fffefa',borderColor:index?'#356d51':'#506e5b',borderWidth:2,opacity:1}}:{value:[null,index]}),
         label:{show:true,position:'right',distance:9,formatter:params=>chartValue(params.value[0],spec.unit),
           color:'#315540',fontSize:chartText(12),fontWeight:600}}],
     }));
