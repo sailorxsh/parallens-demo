@@ -85,6 +85,14 @@ function periodLabel(label) {
   const short=date=>`${date.getUTCMonth()+1}/${date.getUTCDate()}`;
   return `${label} · ${short(start)}–${short(end)}`;
 }
+function weeklyAxisLabel(label) {
+  const week=sourceData?.weekly?.find(item=>`W${item.week}`===label);
+  if(!week)return label;
+  const end=new Date(`${week.weekEnd}T00:00:00Z`);
+  return `{week|${label}}\n{date|${end.getUTCMonth()+1}/${end.getUTCDate()}}`;
+}
+const weeklyAxisText={week:{fontSize:11,lineHeight:15,color:'#506455'},date:{fontSize:10,lineHeight:14,color:'#58695b'}};
+const weeklyAxisNote='周轴日期为观察周结束日；完整起止日期见数据表。';
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -1271,7 +1279,7 @@ function renderHome() {
     overview.setAttribute('aria-pressed',String(!selected));
     signals.querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.metricId)===id)));
     const axis=trendAxisDomain(selected?[selected.series,[selected.beforeRate,selected.afterRate]]:[trendValues(13),trendValues(18)],'%');
-    scaleNote.hidden=!axis;scaleNote.textContent=axis?trendAxisNote(axis,'%'):'';
+    scaleNote.hidden=!axis;scaleNote.textContent=axis?`${trendAxisNote(axis,'%')} ${weeklyAxisNote}`:'';
     chartBox.setAttribute('aria-label',`${heading.textContent}，12个观察周；${selected?`${selected.beforeLabel}${selected.beforeRate.toFixed(1)}%，${selected.afterLabel}${selected.afterRate.toFixed(1)}%，变化${homeComparisonChange(selected)}；`:''}${scaleNote.textContent}`);
     context.replaceChildren();
     if(selected) {
@@ -1392,7 +1400,7 @@ function chartScaleNote(spec) {
     return axis?trendAxisNote(axis,spec.unit).replace('纵轴','横轴').replace('为观察趋势采用非零起点','点图使用局部范围比较两批次；不表示人数规模'):'';
   }
   const axis=!spec.kind&&isTimelineSpec(spec)?trendAxisDomain(spec.series,spec.unit):null;
-  return axis?trendAxisNote(axis,spec.unit):'';
+  return axis?`${trendAxisNote(axis,spec.unit)}${spec.labels.some(label=>/^W\d+$/.test(label))?` ${weeklyAxisNote}`:''}`:'';
 }
 function chartNote(spec) {
   return [spec.note,chartScaleNote(spec)].filter(Boolean).join(' ');
@@ -1469,8 +1477,9 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
       }).join('<br>')}`;
     }},
     legend:{show:lines.length<2,selectedMode:lines.length>1,bottom:0,itemWidth:17,itemHeight:3,textStyle:{color:'#536758',fontSize:11}},
-    grid:{left:48,right:52,top:28,bottom:48},
-    xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},axisLabel:{color:'#58695b'}},
+    grid:{left:48,right:52,top:28,bottom:64},
+    xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},
+      axisLabel:{color:'#58695b',formatter:weeklyAxisLabel,rich:weeklyAxisText,showMinLabel:true,showMaxLabel:true,hideOverlap:true}},
     yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{formatter:value=>`${Number(value).toFixed(axis.step<.1?2:1)}%`,color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
     series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:5,
       symbol:item.id===18?'rect':'circle',lineStyle:{width:2.5,type:item.pattern},
@@ -1486,7 +1495,7 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
       }:{}),
     })),
   });
-  interactiveChartLegend(node,chart,lines,'激活与转正周度趋势');
+  interactiveChartLegend(node,chart,lines,'激活与转正周度趋势',44);
 }
 const groupLabels={
   bird:'观鸟',hunting:'狩猎',free:'Free',noEntitlement:'无权益',trialEarly:'试用前期',trialNearExpiry:'试用临期',paidCurrent:'付费中',cancelledButEntitled:'已取消未到期',paymentFailed:'支付失败',expired:'已过期',
@@ -1943,13 +1952,14 @@ function drawDetailChart(box,spec) {
   const plotted=spec.series.flatMap(line=>line.values).filter(value=>Number.isFinite(value));
   const span=plotted.length?Math.max(...plotted)-Math.min(...plotted):0;
   const trendAxis=isTimeline?trendAxisDomain(spec.series,spec.unit):null;
+  const weeklyAxis=isTimeline&&spec.labels.some(label=>/^W\d+$/.test(label));
   const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
   const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${chartValue(value,spec.unit)}`;
   const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?11:6.2),0)));
   const leftReserve=spec.unit==='美元'?70:spec.unit==='人'||spec.unit==='台'?62:46;
   const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+24),box.clientWidth*.32)):18;
   const timelineLabelInterval=index=>{
-    const spacing=Math.max(38,...spec.labels.map(label=>String(label).length*7+18));
+    const spacing=Math.max(weeklyAxis?55:38,...spec.labels.map(label=>String(label).length*7+18));
     const slots=Math.min(spec.labels.length,Math.max(2,Math.floor((box.clientWidth-leftReserve-rightReserve)/spacing)+1));
     return Array.from({length:slots},(_,slot)=>Math.round(slot*(spec.labels.length-1)/Math.max(1,slots-1))).includes(index);
   };
@@ -1975,8 +1985,9 @@ function drawDetailChart(box,spec) {
       return lines.join('<br>');
     }},
     legend:{show:false},
-    grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32):76},
+    grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32)+(weeklyAxis?16:0):76},
     xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#58695b',
+      ...(weeklyAxis?{formatter:weeklyAxisLabel,rich:weeklyAxisText}:{}),
       interval:isTimeline?timelineLabelInterval:0,
       showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:isTimeline?0:spec.labelRotation??18,fontSize:11},
       axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
@@ -1996,7 +2007,7 @@ function drawDetailChart(box,spec) {
     })),
   });
   interactiveChartLegend(box,instance,spec.series.map((line,index)=>({...line,color:line.color??colors[index%colors.length],
-    pattern:isTimeline?['solid','dashed','dotted'][index%3]:'bar'})),spec.title,isTimeline?28:55);
+    pattern:isTimeline?['solid','dashed','dotted'][index%3]:'bar'})),spec.title,isTimeline?28+(weeklyAxis?16:0):55);
   return instance;
 }
 function flattenMeasure(value,path='',rows=[],field='') {
