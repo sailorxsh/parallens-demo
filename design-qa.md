@@ -111,3 +111,5 @@ final result: passed
 - 未开展移动端适配，不宣称屏幕阅读器实机测试或完整WCAG认证；奖项品质、全站性能及真实生产协作仍需独立证据。
 
 - 最终本地检查：Chrome、WebKit各通过12项检查、24个页面/尺寸状态、9组交互图例；输出为output/playwright/v64-legend-chromium-results.json与v64-legend-webkit-results.json。草稿/历史基线和隐藏图表在缩放后重新打开的间距均保留。线上结果另存发布检查文件，不以本地通过代替上线验证。
+
+- 发布后检查：9391aab对应的Pages部署成功；线上app.js/style.css/index.html与本地逐字节一致。Chrome及WebKit线上各通过12项检查、24个状态。Chrome首次在异步resize处理前断言曾报告短暂溢出；测试改为等待应用自身的SVG尺寸与容器同步（10秒超时），再验证溢出和标签间距，没有手动重绘或取消断言。

@@ -68,6 +68,13 @@ async(parent)=>{
     check(await p.locator('.chart-legend-button[aria-pressed=true]').count()===2,'Rebuilt comparison keeps obsolete hidden-series state');
     await p.setViewportSize({width:900,height:900});
     await p.evaluate(()=>document.documentElement.style.fontSize='24px');await p.setViewportSize({width:901,height:900});
+    // Viewport changes return before Chromium's resize handler has updated each SVG.
+    // Wait for the application's own chart sizes; do not resize charts from the test.
+    await p.waitForFunction(()=>[...document.querySelectorAll('#trendChart,#statusChart,.node-sparkline')]
+      .filter(n=>n.clientWidth&&n.clientHeight).every(n=>{
+        const instance=echarts.getInstanceByDom(n);
+        return !instance||(Math.abs(instance.getWidth()-n.clientWidth)<1.1&&Math.abs(instance.getHeight()-n.clientHeight)<1.1);
+      }),null,{timeout:10000});
     const frame=p.locator('#trendChart').locator('..');
     check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Larger desktop text overflows the page');
     check(await p.locator('.app-sidebar .brand').evaluate(n=>n.scrollWidth<=n.clientWidth+1),'Larger desktop text clips the brand into content');
