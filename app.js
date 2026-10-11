@@ -965,6 +965,13 @@ function subscriptionIncomeCalculationSpec(change) {
 function subscriptionIncomeCalculation(change) {
   return dataTable(subscriptionIncomeCalculationSpec(change));
 }
+function arppuChangeLabel(delta) {
+  if(Math.abs(delta)<1e-10)return '持平';
+  // Preserve half-cent rounding despite binary subtraction near the boundary.
+  const cents=Math.round((Math.abs(delta)+1e-10)*100);
+  return cents?`${delta>0?'+':'−'}$${(cents/100).toFixed(2)}/人`:
+    `${delta>0?'上升':'下降'}不足 $0.01/人`;
+}
 function incomeDriverSummary(change) {
   const wrap=element('div','finding-income-drivers');
   wrap.append(element('p','income-driver-period',`${change.beforeLabel} → ${change.afterLabel} · 指标本身的变化`));
@@ -972,8 +979,7 @@ function incomeDriverSummary(change) {
   const countDelta=change.after.denominator-change.before.denominator;
   const arppuDelta=change.afterARPPU-change.beforeARPPU;
   const signed=(value,format)=>Math.abs(value)<1e-10?'持平':`${value>0?'+':'−'}${format(Math.abs(value))}`;
-  const arppuDeltaLabel=Math.abs(arppuDelta)>=1e-10&&Math.abs(arppuDelta)<.005?
-    `${arppuDelta>0?'上升':'下降'}不足 $0.01/人`:signed(arppuDelta,value=>`$${value.toFixed(2)}/人`);
+  const arppuDeltaLabel=arppuChangeLabel(arppuDelta);
   for(const [key,label,before,after,delta] of [
     ['payers','月内订阅付款主账号',number(change.before.denominator),`${number(change.after.denominator)} 人`,signed(countDelta,value=>`${number(value)} 人`)],
     ['arppu','订阅ARPPU',`$${change.beforeARPPU.toFixed(2)}`,`$${change.afterARPPU.toFixed(2)}/人`,arppuDeltaLabel]
@@ -1131,15 +1137,15 @@ function headlineTrend(id) {
   const index=filterState.week&&/^W\d+$/.test(history.labels[0])?Math.max(0,history.labels.indexOf(`W${filterState.week}`)):history.values.length-1;
   const current=history.values[index],before=history.values[index-1];
   const delta=current==null||before==null?null:current-before;
-  const deltaText=delta==null?'暂无可比值':Math.abs(delta)<.05?'与上期持平':history.unit==='%'?
-    `${delta>0?'+':''}${delta.toFixed(1)} 个百分点`:history.unit==='美元/人'?
-    `${delta>0?'+':''}$${delta.toFixed(2)}（较上期）`:
+  const moneyChange=history.unit==='美元/人'&&delta!==null?arppuChangeLabel(delta):null;
+  const deltaText=delta==null?'暂无可比值':moneyChange?(moneyChange==='持平'?'与上期持平':`${moneyChange}（较上期）`):Math.abs(delta)<.05?'与上期持平':history.unit==='%'?
+    `${delta>0?'+':''}${delta.toFixed(1)} 个百分点`:
     `${delta>0?'+':''}${number(Math.round(delta))}${history.unit}（较上期）`;
   const wrap=element('div','headline-trend');
   if(delta!==null)wrap.dataset.delta=String(delta);
   wrap.append(element('span','headline-trend-label',`${history.labels[index]} · ${deltaText}`));
   const box=element('div','node-sparkline headline-sparkline');box.dataset.metricId=String(id);
-  box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':`${Number(current).toFixed(history.unit==='%'||history.unit==='美元/人'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
+  box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':history.unit==='美元/人'?chartValue(current,history.unit):`${Number(current).toFixed(history.unit==='%'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
   wrap.append(box);
   return wrap;
 }
