@@ -722,7 +722,7 @@
       "id": 29,
       "page": "B",
       "entity": "Owner用户",
-      "window": "2026-09-24 最近活跃间隔快照；历史回流观察窗另计",
+      "window": "2026-09-24 最近活跃间隔快照；历史回流为入组后7天，入组日期未提供",
       "businessDimensions": [
         "appPlatform",
         "country",

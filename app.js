@@ -2330,15 +2330,16 @@ function metricEvidence(id,page) {
     const age=sourceData.inactivityCohorts;
     const threshold=value.thresholdDays;
     const returns=threshold===21?age.returnsAfterThreshold['21days']:age.returnsAfterThreshold['30days'];
-    const applicable=selectedFilters().filter(([key])=>key!=='season');
+    const applicable=effectiveFor(id).filter(([key])=>key!=='season');
     const shares=sharesFor(applicable,id);
     const cohort=allocatedCount(age.historicalReturnCohort[`${threshold}days`],applicable,id,'numerator',shares);
     const returning=Math.min(cohort,allocatedCount(returns,applicable,id,'numerator',shares));
-    panel.append(dataTable({title:`${threshold}天未使用与7天回流 · 同一合成规则`,
-      columns:['观察项','人数','分母','率'],rows:[
-        [`连续${threshold}天未使用`,value.numerator,value.denominator,percent(value.value)],
-        ['历史入组后7天回流',returning,cohort,percent(returning/cohort)]],
-      note:`迁徙季按21天、淡季按30天识别；回流属于历史入组群体，不与当前沉睡池直接相减。${age.note}`}));
+    const returnRate=cohort>=30?percent(returning/cohort):cohort>0?'样本不足（少于30人）':'无历史样本';
+    panel.append(dataTable({title:`${threshold}天未使用与7天回流 · 不同人群`,
+      columns:['观察项','人数（人）','分母（人）','率','时点 / 观察窗'],rows:[
+        [`连续${threshold}天未使用`,value.numerator,value.denominator,percent(value.value),`${age.asOf} 快照`],
+        ['历史入组后7天回流',returning,cohort,returnRate,`${age.returnWindow}；入组日期未提供`]],
+      note:'未使用池与历史回流为不同人群，不能直接相减。迁徙季按21天、淡季按30天识别；历史入组日期未提供，不作跨期比较或召回效果归因。数值为合成样例；回流分母少于30人时只保留人数，30人为演示规则。'}));
   } else if(id===27&&value.kind==='rate') {
     const options=['Live','Playback','Recognition'];
     panel.append(dataTable({title:'业务功能渗透 · 同一活跃人群',columns:['功能','使用主账号','活跃主账号','使用率'],

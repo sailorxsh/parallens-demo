@@ -152,7 +152,9 @@ th:first-child,td:first-child {text-align:left}
 .structure-panel .data-table-scroll {border:0;padding:.35rem 0 0}
 .structure-panel .diagnostic-table {min-width:25rem}
 .evidence-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
-.data-table-scroll {min-width:0;max-width:100%;overflow-x:auto;background:var(--paper);border:1px solid var(--line);padding:1rem 1.1rem;scrollbar-color:#afbeb0 transparent}
+.data-table-scroll {min-width:0;max-width:100%;overflow-x:auto;container-type:inline-size;background:var(--paper);border:1px solid var(--line);padding:1rem 1.1rem;scrollbar-color:#afbeb0 transparent}
+.data-table-scroll > .table-note,.data-table-scroll > .table-scroll-hint {position:sticky;left:0}
+.data-table-scroll .diagnostic-table caption {position:sticky;left:0;max-inline-size:100cqi}
 .data-table-scroll:focus-visible {outline:3px solid var(--focus);outline-offset:3px}
 .table-scroll-hint {font-size:var(--text-xs);line-height:1.5;color:#526e58;margin:.2rem 0 .5rem}
 .detail-chart-panel .data-table-scroll {padding:.3rem .1rem;border:0}
@@ -567,6 +569,7 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .snapshot-card:first-child .metric-delta.improving {background:#376248;color:#f2f8eb}
 .snapshot-card:first-child .metric-delta.adverse {background:#7a4937;color:#fff0e8}
 .data-table-scroll .diagnostic-table thead th {position:sticky;top:0;z-index:1}
+.data-table-scroll .diagnostic-table thead th:first-child {left:0;z-index:2}
 .data-table-scroll .diagnostic-table tbody th {position:sticky;left:0;z-index:1;background:#fffefa}
 .data-table-scroll .diagnostic-table tbody tr:hover th {background:#fafbf5}
 .inspector-close {display:block;margin:0 0 .55rem auto;border:0;background:none;color:#52745e;cursor:pointer;font:inherit;font-size:var(--text-xs);text-decoration:underline;text-underline-offset:.18rem}
