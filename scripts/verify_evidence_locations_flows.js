@@ -24,6 +24,8 @@ async(page)=>{
           await button.focus();await button.press('Enter');
           check(await target.isVisible(),`${code} destination stays hidden`);
           await p.waitForFunction(id=>document.getElementById(id).contains(document.activeElement),id);
+          // Focus changes synchronously; sticky geometry settles on the next painted frames.
+          await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
           const focused=await p.evaluate(id=>document.getElementById(id).contains(document.activeElement),id);
           check(focused,`${code} destination does not receive keyboard focus`);
           const targetBox=await target.boundingBox(),navBox=await navigation.boundingBox();

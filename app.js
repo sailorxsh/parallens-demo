@@ -2340,6 +2340,7 @@ function metricEvidence(id,page) {
     const pair=element('div','evidence-pair');
     pair.dataset.evidenceKind=kind;
     pair.dataset.evidenceMetric=String(id);
+    if(spec.comparisonGroup)pair.dataset.comparisonGroup=spec.comparisonGroup;
     const plot=element('div','evidence-plot');
     const box=element('div','detail-chart');box.setAttribute('role','img');
     box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
@@ -2393,7 +2394,7 @@ function metricEvidence(id,page) {
           group.summaries[0].numerator/overall[0].denominator)*100);
         const bound=Math.max(.5,Math.ceil(Math.max(...changes.map(Math.abs))*1.15*2)/2);
         const signed=value=>`${Math.abs(value)<.005?'':value>0?'+':'−'}${Math.abs(value).toFixed(2)}`;
-        const changeSpec={title:'转正率变化 · 互斥分组贡献',unit:'个百分点',labels:groups.map(group=>group.name),
+        const changeSpec={title:'转正率变化 · 互斥分组贡献',comparisonGroup:'trial-periods',unit:'个百分点',labels:groups.map(group=>group.name),
           minY:-bound,maxY:bound,labelRotation:0,series:[{name:'对总体变化的贡献',values:changes,color:'#bc6a20'}],
           note:`前9周与近3周比较；未舍入贡献相加为总体变化 ${signed((overall[1].value-overall[0].value)*100)} 个百分点，显示值可能有舍入尾差。pp表示百分点；纵轴包含0，正负贡献使用相同刻度。`};
         appendEvidencePair(changeSpec,{title:'分组贡献 · 可验算依据',
@@ -2406,7 +2407,7 @@ function metricEvidence(id,page) {
         pending.dataset.evidenceKind='groups';panel.append(pending);
       }
     }
-    const spec={title:filterState.week?`成熟试用转正率 · 所选W${filterState.week}`:'成熟试用转正率 · 可比批次',kind:summaries.length===2?'periodComparison':undefined,unit:'%',labels:summaries.map(([label])=>label),
+    const spec={title:filterState.week?`成熟试用转正率 · 所选W${filterState.week}`:'成熟试用转正率 · 可比批次',comparisonGroup:filterState.week?undefined:'trial-periods',kind:summaries.length===2?'periodComparison':undefined,unit:'%',labels:summaries.map(([label])=>label),
       details:summaries.map(([,item])=>item?.denominator>=30?{...item,basisLabel:'转正 / 成熟试用',numeratorUnit:'人',denominatorUnit:'人'}:null),
       series:[{name:'转正率',values:summaries.map(([,item])=>item?.denominator>=30?item.value*100:null)}],
       note:filterState.week?'所选完整周的转正人数除以成熟试用人数；小于30人的批次不绘制比例。':'前9周与近3周分别汇总分子、分母后计算；小于30人的批次不绘制比例。'};
@@ -3113,6 +3114,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       const spec=specs.find(([box])=>box===node)?.[1];
       const chartPanel=element('section','detail-chart-panel workspace-chart-panel');
       chartPanel.dataset.evidenceMetric=String(selectedMetric);
+      if(spec?.comparisonGroup)chartPanel.dataset.comparisonGroup=spec.comparisonGroup;
       if(spec?.kind==='periodComparison')chartPanel.classList.add('period-comparison');
       if(spec)chartPanel.append(element('h3','workspace-chart-title',spec.title));
       chartPanel.append(node);
@@ -3335,6 +3337,12 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       const item=element('li','');item.append(button);list.append(item);
     });
     navigation.append(list);groupPanel.prepend(navigation);
+  }
+  // Pair the two views of the same mature cohorts; each keeps its own scale and calculation.
+  const trialComparisons=[...groupPanel.children].filter(node=>node.dataset.comparisonGroup==='trial-periods');
+  if(trialComparisons.length===2) {
+    const comparison=element('div','trial-period-comparisons');
+    trialComparisons[0].before(comparison);comparison.append(...trialComparisons);
   }
   workspace.addEventListener('toggle',()=>requestAnimationFrame(drawVisible),true);
   layout.append(left,right);workspace.append(layout);body.append(workspace);

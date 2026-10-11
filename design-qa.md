@@ -713,3 +713,49 @@ final result: passed
 按../planning/桌面看板迭代执行方案.md第四轮已明确的验收，请求使用者实际完成三项任务并反馈耗时／卡点：一分钟指出优先问题和幅度；两分钟定位分组证据并说明归因边界；登记并说明复查指标。请求已经发出，当前没有结果；不拿自动化耗时冒充真实使用任务通过，不将未答复当成验收通过。后续核心流程或整体方向如需改变，先按AGENTS.md提交具体范围、取舍及验收供用户确认。
 
 本轮实现与回归范围：passed。整站完整奖项品质目标：未证明完成，保持原目标。线上状态以实际提交和Pages核对为准，Netlify不变。
+
+## v97：以完整数据探索体验核对诊断密度（2026-10-12）
+
+v96为实际进展：4eab5b4在干净main，Pages 38138339422成功。本轮先研究真实数据探索工具，再复查首页→试用观察→D分组证据→样本，而不是把获奖品牌网站当成登录后经营产品。参考[Climate TRACE Air pollution](https://www.climatetrace.org/air-pollution)是[2026 Webby最佳数据可视化提名作品](https://winners.webbyawards.com/2026/websites-and-mobile-sites/features-design/best-data-visualization/368572/climate-trace-air-pollution)，不是获奖者。实页进入地图、展开条件、切换Worst Conditions后，解释和可视化同步，图例直接说明模型语义；仅借鉴同一工作区的证据及边界表达，不引入无地理需求的地图或粒子动画。
+
+| 审查步骤 | 健康状态及判断 |
+|---|---|
+| 1 参考入口和地图 | 可访问；可选Cookie被拒绝后进入地图。图例与解释同屏；大地图适合地理探索，不直接适用于本经营看板。 |
+| 2 参考条件选择与结果 | 最终切换成功，条件、解释、可视化对应；自动化点击只读输入曾被覆盖，改用可见控件与键盘完成。选项的可访问名称为MR/HE，与可见业务文字不一致，不能照搬。 |
+| 3 当前经营总览→试用观察 | 通过；图形、45.0%→43.4%、比较窗口和诊断入口同步，保留第二版极简页头。 |
+| 4 D分组证据→支付样本 | 数据通过；12周事实独立计算：W12总体1000人成熟、66人失败，其中目标组22人，其余组44人。不是66与22的同口径冲突。发现两张少量点的比较图分别占满一行，增加上下对照距离。 |
+| 5 同一视口修前／修后 | 已修复密度问题；总体变化、互斥贡献和右侧观察同屏。1600×900、证据顶部70px、表格收起：两图区域从698.31px降到438.45px，约减少37%。这是布局测量，不是业务人员任务耗时。 |
+| 6 窄桌面、宽桌面及放大文字 | 通过；1366px证据区保留纵向，1600／1920px并列；150%文字放大恢复纵向，无页面横向溢出。 |
+| 7 数据表、图点与定位 | 通过；各图自己的完整计算和数值保留，点击真实柱/点展开自身表格并标亮，键盘定位保留草稿、指标及历史基线。 |
+
+参考审查的原始实页截图，保存后逐张打开；切换条件的中间加载画面不作为最终证据：
+
+![参考入口](output/playwright/v97-audit/01-reference-entry.png)
+![参考地图及解释](output/playwright/v97-audit/02-reference-map.png)
+![条件说明](output/playwright/v97-audit/03-reference-date.png)
+![切换条件后的最终状态](output/playwright/v97-audit/04-reference-condition.png)
+
+当前产品的实际路径及同位置比较：
+
+![经营总览](output/playwright/v97-audit/05-parallens-home.png)
+![试用观察](output/playwright/v97-audit/06-parallens-trial-observation.png)
+![原有D分组证据](output/playwright/v97-audit/07-parallens-trial-evidence.png)
+![支付样本](output/playwright/v97-audit/08-parallens-trial-samples.png)
+![修前1600px同位置](output/playwright/v97-audit/10-source-comparison-1600.png)
+![修后1600px同位置](output/playwright/v97-audit/09-paired-comparison-1600.png)
+![1366px回退](output/playwright/v97-audit/11-comparison-1366.png)
+![1920px并列](output/playwright/v97-audit/12-comparison-1920.png)
+![放大文字后回退](output/playwright/v97-audit/15-comparison-text-zoom.png)
+
+实现仅把同一成熟批次的两种现有比较放进一个有序网格，按证据区48rem宽度决定是否并列。指标、周期、图型、刻度、阈值、计算及各自数据表不变；不把不同分母画成一条线，不把同期变化称作因果。原证据目标ID、定位按钮和登记入口继续指向原节点。使用CSS Grid与既有容器查询，没有视觉顺序重排、裁切掩盖、缩小字体或新增资源；按Modern Web Guidance的css-layout完整指引核对。
+
+验证：新增verify_trial_comparison_layout_flows.js在Chrome／WebKit各12个可比范围通过，覆盖三桌面宽度、总体／美国／英国／iOS、独立原始批次分子分母、两个计算表展开、SVG标签边界、键盘落点不受吸顶导航遮挡、真实鼠标柱/点到表格行、150%文字放大、选定周／小样本／不适用范围及其他指标隔离。既有证据定位Chrome21场景、样本状态WebKit18场景通过；原数据、12,000条事实、投影、语法、diff和27文件打包通过。
+
+失败诊断：首次真实柱点击的测试把ECharts对象数据当成数值，导致非有限坐标；按实际datum.value读取，保留真实鼠标点击及表格断言。旧证据定位测试在C页1600px报吸顶导航遮挡，同样失败能在未修改线上版本复现。随后实际操作截图确认最终落点、焦点及草稿正常；测试在焦点同步改变后立即分别读取导航和目标几何，早于吸顶绘制完成。补等待两个绘制帧后原遮挡断言通过，未修改C页产品行为、删场景或放宽阈值。
+
+![旧定位回归的实际起点](output/playwright/v97-audit/13-C-group-start.png)
+![绘制完成后的正常键盘落点](output/playwright/v97-audit/14-C-first-destination.png)
+
+工具边界：中断后旧浏览器句柄已断开，本地8765连接拒绝且无监听；确认后启动新本地服务和隔离浏览器。不是因观察超时重启仍在工作的句柄。报告截图、语义及交互回归不证明完整辅助技术合规、真实使用者任务耗时或奖项评审结果。真实任务反馈仍待收到，没有重新提问或当成默认通过；性能及原创性总体目标继续审查，不能用本次密度改进宣称已达到全部奖项品质。Netlify维持冻结；发布以实际SHA、Pages及线上实页验证为准。
+
+本轮实现与回归范围：passed。完整目标：尚未证明完成。
