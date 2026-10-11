@@ -477,6 +477,10 @@ function changeFilter(page,key,value) {
 const na=reason=>({kind:'na',reason});
 const pending=reason=>({kind:'na',availability:'pending',reason});
 const contractFor=id=>sourceData.contract.find(item=>item.id===id);
+const metricEntityLabel=entity=>({
+  '用户Cohort':'新注册用户批次','试用Cohort':'试用用户批次','Eligible用户Cohort':'符合条件的主账号批次',
+  'Owner用户':'主账号','设备Cohort':'新激活设备批次','Session':'会话',
+})[entity]??entity;
 const policyFor=id=>sourceData.filterPolicy.metrics.find(item=>item.id===id);
 const effectiveFor=(id,state=filterState)=>Object.entries(state).filter(([key,value])=>
   value&&value!=='All'&&policyFor(id).businessDimensions.includes(key));
@@ -1065,7 +1069,7 @@ function filteredBreakdown(page) {
   const table={title:`${filterLabels[dimension]} · 组规模与指标`,
     columns:['分组',unit==='%'?'分子':'当前值',unit==='%'?'分母':'统计对象', '指标值'],
     rows:rows.map(row=>row.value.kind==='rate'?[row.label,row.value.numerator,row.value.denominator,percent(row.value.value)]:
-      [row.label,row.value.value,contract.entity,unit==='美元'?`$${number(row.value.value)}`:`${number(row.value.value)}${unit}`]),
+      [row.label,row.value.value,metricEntityLabel(contract.entity),unit==='美元'?`$${number(row.value.value)}`:`${number(row.value.value)}${unit}`]),
     note:spec.note};
   return {spec,table};
 }
@@ -2321,8 +2325,9 @@ function metricEvidence(id,page) {
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
     id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
-  const dimensions=id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions;
-  const intro=element('p','evidence-meta',`统计对象：${contract.entity} · 窗口：${contract.window} · 当前数据可筛选维度：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
+  const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
+    .filter(key=>relevantFilters(page).includes(key));
+  const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本页可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
   const filterContext=metricFilterContext(id);
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
@@ -2961,7 +2966,7 @@ function metricInspector(id,page) {
   };
   if(summary.label!==item.name)fact('当前主值',summary.label);
   summary.fields.forEach(([label,text])=>fact(label,text));
-  fact('统计对象',contract.entity);
+  fact('统计对象',metricEntityLabel(contract.entity));
   fact('时间窗口',contract.window);
   if(id===54&&value.kind==='group') {
     const quality=dataQualityState(value);fact('演示判定',quality.label);fact('判定依据',quality.reason);
