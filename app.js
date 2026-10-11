@@ -1030,7 +1030,7 @@ function subscriptionBridgeSpec() {
   if(Object.values(v).some(x=>!Number.isFinite(x)||x<0))return null;
   const labels=['期初','试用转正','直接首付','恢复订阅','失去权益','期末'];
   const steps=[v.opening,v.trialPaid,v.directPaid,v.recovered,-v.lost,v.closing];
-  return {kind:'waterfall',title:'有效订阅人数流转 · 9/1–9/24',unit:'人',labels,
+  return {kind:'waterfall',metricId:21,title:'有效订阅人数流转 · 9/1–9/24',unit:'人',labels,
     series:[{name:'人数变化',values:steps}],flow:v,
     note:`${number(v.opening)} + ${number(v.trialPaid)} + ${number(v.directPaid)} + ${number(v.recovered)} − ${number(v.lost)} = ${number(v.closing)} 人；净增 ${v.closing-v.opening>=0?'+':''}${number(v.closing-v.opening)} 人。${effectiveFor(21).some(([key])=>!['productLine','week'].includes(key))?'筛后各项为模拟分片流转估算。':'各项与当前演示订阅流水闭合。'}`};
 }
@@ -2221,6 +2221,7 @@ function metricEvidence(id,page) {
   const appendEvidencePair=(spec,tableSpec,kind='groups')=>{
     const pair=element('div','evidence-pair');
     pair.dataset.evidenceKind=kind;
+    pair.dataset.evidenceMetric=String(id);
     const plot=element('div','evidence-plot');
     const box=element('div','detail-chart');box.setAttribute('role','img');
     box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
@@ -2973,6 +2974,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     if(node.matches('.detail-chart')) {
       const spec=specs.find(([box])=>box===node)?.[1];
       const chartPanel=element('section','detail-chart-panel workspace-chart-panel');
+      chartPanel.dataset.evidenceMetric=String(selectedMetric);
       if(spec?.kind==='periodComparison')chartPanel.classList.add('period-comparison');
       if(spec)chartPanel.append(element('h3','workspace-chart-title',spec.title));
       chartPanel.append(node);
@@ -2994,6 +2996,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const addChart=(container,spec)=>{
     spec=diagnosticChartFacts(page,spec);
     const panel=element('div','detail-chart-panel workspace-chart-panel');
+    if(spec.metricId)panel.dataset.evidenceMetric=String(spec.metricId);
     panel.append(element('h3','workspace-chart-title',spec.title));
     const box=element('div','detail-chart');box.setAttribute('role','img');
     box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
@@ -3031,6 +3034,9 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   if(legacy) {
     const contextual=(node,key,label)=>{
       const disclosure=element('details','workspace-context');
+      const ownsSelectedChart=[node,...node.querySelectorAll('.detail-chart-panel')]
+        .some(panel=>panel.dataset.evidenceMetric===String(selectedMetric));
+      if(ownsSelectedChart)disclosure.open=true;
       disclosure.append(element('summary','',label),node);panels.get(key).append(disclosure);
     };
     const hasSelectedHistory=Boolean(panels.get('change').querySelector('.detail-chart,.na-note'));
@@ -3094,9 +3100,12 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   });
   const routeParams=new URLSearchParams(location.hash.split('?')[1]??'');
   showRight(routeParams.has('issue')?'record':'observation');
+  const hasSelectedGroupChart=[...panels.get('groups').querySelectorAll(
+    `.evidence-pair[data-evidence-metric="${selectedMetric}"],.detail-chart-panel[data-evidence-metric="${selectedMetric}"]`)]
+    .some(node=>!node.closest('details:not([open])'));
   const initialView=routeParams.has('panel')?diagnosticWorkspaceView:
     panels.get('change').querySelector(':scope > .evidence-pair,:scope > .na-note,:scope > .analysis-main')?'change':
-      panels.get('groups').querySelector(':scope > .detail-chart,:scope > .evidence-pair,:scope > .detail-chart-panel,:scope > .entity-workspace')?'groups':'data';
+      hasSelectedGroupChart?'groups':'data';
   function syncWorkspaceLinks() {
     for(const link of document.querySelectorAll('a[href]')) {
       const href=link.getAttribute('href');if(href.split('?')[0]!==`#/${page}`)continue;
@@ -3311,6 +3320,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     if(spec.kind==='heatmap'&&!spec.sampleSizes&&metric(39).kind==='group')
       spec={...spec,sampleSizes:spec.labels.map(name=>metric(39).value[name]?.owners)};
     const chartPanel=element('div','detail-chart-panel');
+    if(spec.metricId)chartPanel.dataset.evidenceMetric=String(spec.metricId);
     const heading=element('div','chart-heading');heading.append(element('h3','',spec.title),element('span','chart-unit',`单位：${spec.unit}`));chartPanel.append(heading);
     const box=element('div','detail-chart');box.setAttribute('role','img');
     const latest=!spec.kind?spec.series.map(line=>`${line.name}：${chartValue(line.values.at(-1),spec.unit)}`).join('；'):'';

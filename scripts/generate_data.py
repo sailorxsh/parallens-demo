@@ -676,6 +676,9 @@ diagnostics["D"]["extraCharts"][0]["series"][0]["color"] = "#e5484d"
 diagnostics["D"]["chart"]["series"] = diagnostics["D"]["chart"]["series"][:1]
 diagnostics["D"]["chart"]["note"] = "分母为每周1,000名到期试用用户；下图另看支付尝试失败率，不共用分母。"
 diagnostics["G"]["extraCharts"][0]["series"][0]["color"] = "#e5484d"
+diagnostics["A"]["extraCharts"][0]["metricId"] = 14
+diagnostics["F"]["chart"]["metricId"] = 50
+diagnostics["F"]["extraCharts"][0]["metricId"] = 48
 write("diagnostics.json", diagnostics)
 
 # Explicit coverage for the synthetic slice model. These are supported demo joins,
