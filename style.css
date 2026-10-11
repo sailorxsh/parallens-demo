@@ -429,6 +429,9 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .action-record-fields input,.action-record-fields select,.action-record-fields textarea {min-width:0;width:100%;border:1px solid var(--control-border);border-radius:.25rem;background:#fffefa;color:#20372b;padding:.46rem .55rem;font:inherit;font-size:var(--text-sm);height:2.15rem}
 .action-record-fields textarea {height:3.5rem;resize:vertical;line-height:1.5}
 .action-record-fields [aria-invalid=true] {border-color:#b82d37;background:#fff6f1}
+.action-field {min-width:0}
+.action-field-error {font-size:var(--text-xs);line-height:1.5;color:#a72b34;overflow-wrap:anywhere}
+.action-field-error:not([hidden]) {display:block;margin-top:.2rem}
 .action-record-fields .action-note-field {grid-column:1/-1}
 .action-review {margin:.7rem 0;border-top:1px solid #dce5d8;padding-top:.55rem}
 .action-review summary {cursor:pointer;font-size:.75rem;font-weight:700;color:#365a43}

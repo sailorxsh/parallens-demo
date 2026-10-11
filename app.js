@@ -2544,6 +2544,25 @@ function actionRecord(page,evidenceId) {
   const footer=element('div','action-record-footer');footer.append(receipt,save);form.append(footer);
   const review=element('a','insight-link','复查关联指标 ↗');review.href=routeHref(page,evidenceId);form.append(review);
   const controls=[owner,status,due,target,note,linkedSample,reviewValue,reviewedAt];
+  const fieldErrors=new Map();
+  for(const control of controls) {
+    const label=control.closest('label'),field=element('div',`action-field${label.classList.contains('action-note-field')?' action-note-field':''}`);
+    control.id=`field-${issueId}-${control.name}`;label.htmlFor=control.id;
+    const error=element('span','action-field-error');error.id=`error-${issueId}-${control.name}`;error.hidden=true;
+    label.replaceWith(field);field.append(label,error);fieldErrors.set(control,error);
+  }
+  const clearFieldError=control=>{
+    const error=fieldErrors.get(control);
+    if(error){error.hidden=true;error.textContent='';}
+    control.removeAttribute('aria-invalid');control.removeAttribute('aria-describedby');
+  };
+  const fieldErrorText=control=>{
+    const labels={owner:'负责人',status:'处理状态',due:'计划复查日',target:'验收条件',note:'处理说明',
+      linkedSample:'关联演示记录',reviewValue:'复查实测值',reviewedAt:'实际复查日'};
+    const label=labels[control.name]??'有效信息';
+    return control.validity.rangeOverflow?`${label}不能晚于今天`:
+      control.validity.badInput?`请填写有效的${label}`:`请填写${label}`;
+  };
   const readFields=()=>Object.fromEntries(controls.map(control=>[control.name,control.value]));
   const savedFields=Object.fromEntries(controls.map(control=>[control.name,current[control.name]??(control===status?'pending':'')]));
   let savedFingerprint=JSON.stringify(savedFields);
@@ -2559,7 +2578,11 @@ function actionRecord(page,evidenceId) {
       const active=index===statusValues.indexOf(status.value);stage.toggleAttribute('data-active',active);
       if(active)stage.setAttribute('aria-current','step');else stage.removeAttribute('aria-current');
     });
-    [target,reviewValue,reviewedAt].forEach(control=>control.required=status.value==='verified');
+    [target,reviewValue,reviewedAt].forEach(control=>{
+      control.required=status.value==='verified';
+      if(!control.required)control.setCustomValidity('');
+      if(control.getAttribute('aria-invalid')==='true'&&control.validity.valid)clearFieldError(control);
+    });
     return dirty;
   };
   function trackChanges() {
@@ -2569,7 +2592,7 @@ function actionRecord(page,evidenceId) {
     showReceipt(dirty?'更改尚未保存；切页暂存，刷新后会丢失。':simulatedActionState[key]?.updatedAt?
       `已保存至此浏览器：${simulatedActionState[key].updatedAt}`:'尚未记录；保存后仅在此浏览器保留。',dirty?'draft':'saved');
   }
-  form.addEventListener('input',event=>{event.target.setCustomValidity('');event.target.removeAttribute('aria-invalid');event.target.removeAttribute('aria-describedby');trackChanges();});
+  form.addEventListener('input',event=>{event.target.setCustomValidity('');clearFieldError(event.target);trackChanges();});
   status.addEventListener('change',()=>{if(['resolved','verified'].includes(status.value))reviewDetails.open=true;trackChanges();});
   updateStage();
   showReceipt(draft?'更改尚未保存；切页暂存，刷新后会丢失。':current.updatedAt?`已保存至此浏览器：${current.updatedAt}`:'尚未记录；保存后仅在此浏览器保留。',draft?'draft':'saved');
@@ -2584,10 +2607,12 @@ function actionRecord(page,evidenceId) {
     const invalid=controls.filter(control=>!control.checkValidity());
     if(invalid.length) {
       reviewDetails.open=true;
-      const labels={target:'验收条件',reviewValue:'复查实测值',reviewedAt:'实际复查日'};
-      showReceipt(invalid.map(control=>control.validity.rangeOverflow?`${labels[control.name]}不能晚于今天`:`请填写${labels[control.name]??'有效信息'}`).join('；'),'error');
-      invalid.forEach(control=>{control.setAttribute('aria-invalid','true');control.setAttribute('aria-describedby',receipt.id);});
-      invalid[0].focus();invalid[0].reportValidity();
+      showReceipt(invalid.map(fieldErrorText).join('；'),'error');
+      invalid.forEach(control=>{
+        const error=fieldErrors.get(control);error.textContent=fieldErrorText(control);error.hidden=false;
+        control.setAttribute('aria-invalid','true');control.setAttribute('aria-describedby',error.id);
+      });
+      invalid[0].focus();
       return;
     }
     const updatedAt=new Date().toLocaleString('zh-CN',{hour12:false});
@@ -2598,7 +2623,7 @@ function actionRecord(page,evidenceId) {
       actionDrafts.set(key,{...readFields(),baseline,baselineAt});updateActionDraftWarning();
       showReceipt('浏览器存储不可用，未保存；内容仍暂存在当前页面会话，刷新会丢失。','error');return;
     }
-    controls.forEach(control=>{control.value=record[control.name];control.setCustomValidity('');control.removeAttribute('aria-invalid');control.removeAttribute('aria-describedby');});
+    controls.forEach(control=>{control.value=record[control.name];control.setCustomValidity('');clearFieldError(control);});
     savedFingerprint=JSON.stringify(readFields());actionDrafts.delete(key);updateActionDraftWarning();updateStage();
     showReceipt(`已保存至此浏览器：${updatedAt} · ${status.selectedOptions[0].textContent}`,'saved');
   });
