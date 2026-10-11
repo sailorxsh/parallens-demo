@@ -52,4 +52,13 @@ A–G诊断工作区：顶部保留四张关键指标卡；左侧约2/3宽度切
 
 加载体验：主内容框架阻止加载卡片外边距折叠，并为完整桌面视口保留高度，避免初始化时主内容和页脚跳动。17组数据最多6个并发，完成一个就补上一个，全部准备齐再呈现看板；进度、失败重试及原URL中的筛选、指标和问题单保留。失败时先等待已发出的请求结束，再开放重试，避免旧请求干扰新进度。
 
+图表资源：本地ECharts仍为5.5.1，按实际使用保留折线、柱、散点、箱线、热力图及SVG渲染、图例、提示、标记线／区间与标签布局。按需包约623KB，版权和依赖声明随包保留；页面不请求外部图表CDN。普通发布仍直接复制已提交资源，无新增在线构建依赖。新增图型时先更新`scripts/chart-library-entry.mjs`并复建、验证。
+
+手动复建图表包：在项目之外的临时目录准备固定版本，再将其`node_modules`路径交给脚本。它校验ECharts、ZRender、tslib和esbuild版本，避免意外升级；同版本复建结果可用SHA-256核对。
+
+```sh
+npm install --prefix /tmp/parallens-chart-build --ignore-scripts --no-audit --no-fund echarts@5.5.1 esbuild@0.25.11
+node scripts/build-chart-library.cjs /tmp/parallens-chart-build/node_modules
+```
+
 模拟数据重建：基础生成器保留周×型号×固件触发计数；筛选策略生成器保留空触发指标国家/季节待补明细的边界。运行 `python3 scripts/verify_event_generation.py` 会在临时副本中核对10份基础/策略文件与当前数据一致，并确认已审阅的目录、口径及专题证据没有被覆盖。

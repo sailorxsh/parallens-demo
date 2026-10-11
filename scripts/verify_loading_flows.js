@@ -15,7 +15,7 @@ async(page)=>{
  try {
   let releaseLibrary;
   const libraryGate=new Promise(resolve=>{releaseLibrary=resolve;});
-  await p.route('**/vendor/echarts.min.js',async route=>{await libraryGate;await route.continue();});
+  await p.route('**/vendor/echarts.min.js*',async route=>{await libraryGate;await route.continue();});
   try {
    // DOMContentLoaded waits for deferred scripts, so inspect this intentional gap before it.
    await p.goto(base,{waitUntil:'commit'});
@@ -25,7 +25,7 @@ async(page)=>{
    check(!await p.locator('.home-results').count(),'Data alone presents a partially initialized dashboard');
   } finally {releaseLibrary();}
   await p.locator('#statusChart svg').waitFor();
-  await p.unroute('**/vendor/echarts.min.js');
+  await p.unroute('**/vendor/echarts.min.js*');
   await p.route('**/data/*.json',async route=>{await new Promise(resolve=>setTimeout(resolve,250));await route.continue();});
   for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
    await p.setViewportSize({width,height});
@@ -88,7 +88,7 @@ async(page)=>{
   await p.unroute('**/data/*.json');
   // A failed library can finish before the delayed app; neither engine may wait forever.
   await p.route('**/app.js*',async route=>{await new Promise(resolve=>setTimeout(resolve,500));await route.continue();});
-  await p.route('**/vendor/echarts.min.js',route=>route.abort());
+  await p.route('**/vendor/echarts.min.js*',route=>route.abort());
   await p.goto(base,{waitUntil:'domcontentloaded'});
   await p.locator('.home-results').waitFor();
   check(await p.locator('#main').getAttribute('aria-busy')==='false','Library failure leaves the dashboard busy');
@@ -96,6 +96,8 @@ async(page)=>{
   await p.locator('.trend-table-wrap > summary').click();
   check(await p.locator('.trend-table-wrap tbody tr').count()===12,'Library failure loses weekly evidence');
   await p.locator('.nav-link[data-page="E"]').click();await p.locator('.income-workspace').waitFor();
+  await p.waitForFunction(()=>lastRenderedHash===location.hash&&location.hash.startsWith('#/E'));
+  await p.locator('.income-panel:not([hidden]) .chart-fallback').first().waitFor();
   check(await p.locator('.income-panel:not([hidden]) .chart-fallback').count()>0,'Fallback navigation fails without the library');
   await p.locator('.income-panel:not([hidden]) .workspace-calculation > summary').first().click();
   check(await p.locator('.income-panel:not([hidden]) .workspace-calculation table').first().isVisible(),'Fallback loses calculation evidence');
