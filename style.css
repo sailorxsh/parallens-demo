@@ -227,6 +227,17 @@ kbd {font:500 var(--text-xs)/1.2 'DM Sans',sans-serif;letter-spacing:.02em;color
 .filter-bar {background:#eef3e9;border:1px solid #cbd9c9;padding:1rem 1.15rem;margin:0 0 1.25rem;border-radius:.6rem}
 .filter-summary {font-size:.8rem;font-weight:700;color:#31563b;cursor:pointer}
 .filter-bar[open] .filter-content {padding-top:.8rem}
+.filter-error-notice {background:var(--paper);border:1px solid var(--line);border-inline-start:3px solid var(--orange-dark);border-radius:var(--panel-radius);padding:1rem 1.15rem;margin-bottom:.85rem}
+.filter-error-notice h2 {font-size:1.15rem;margin-bottom:.4rem}
+.filter-error-notice p {font-size:.8125rem;color:var(--ink-soft);margin-bottom:.6rem}
+.filter-error-list {list-style:none;padding:0;margin:0}
+.filter-error-item {display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;padding-block:.7rem;border-top:1px solid var(--line)}
+.filter-error-item>div:first-child {flex:1 1 20rem;min-width:0;overflow-wrap:anywhere}
+.filter-error-item strong {font-size:.875rem}
+.filter-error-item p {margin:.2rem 0 0}
+.filter-error-actions {display:flex;flex-wrap:wrap;gap:.5rem}
+.filter-field-error {color:var(--orange-dark);font-size:var(--text-xs);overflow-wrap:anywhere}
+.filter-field select[aria-invalid="true"] {border-color:var(--orange-dark)}
 .filter-bar-head {display:flex;align-items:baseline;gap:.8rem;margin-bottom:.7rem;font-size:.82rem;color:#2a4933}
 .filter-bar-head span {font-size:var(--text-xs);color:#58695b}
 .filter-reset {margin-left:auto;border:1px solid #b5c8b6;background:#fff;color:#365d3e;padding:.25rem .6rem;font-size:var(--text-xs);cursor:pointer}

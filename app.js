@@ -23,6 +23,7 @@ let dataset;
 let sourceData;
 let trialFactIndex;
 let filterState={};
+let filterErrors=[];
 const filterDisclosure=new Map();
 let startupInProgress=false;
 let appEventsBound=false;
@@ -281,10 +282,11 @@ const relevantFilters=page=>page?Object.entries(sourceData?.filterPolicy?.contro
 const selectedFilters=()=>Object.entries(filterState).filter(([,value])=>value&&value!=='All');
 function availableOptions(page,key,state=filterState) {
   const config=sourceData.filterPolicy.controls[key];
+  const productLine=sourceData.filterPolicy.controls.productLine.options.includes(state.productLine)?state.productLine:undefined;
   if(key==='week')return sourceData.weekly.map(w=>String(w.week));
-  if(key==='deviceModel'&&state.productLine)return config.options.filter(value=>
-    (value==='Hunt Pro')===(state.productLine==='Hunting'));
-  return config.optionsByProduct?(config.optionsByProduct[state.productLine]??[...new Set(Object.values(config.optionsByProduct).flat())]):
+  if(key==='deviceModel'&&productLine)return config.options.filter(value=>
+    (value==='Hunt Pro')===(productLine==='Hunting'));
+  return config.optionsByProduct?(config.optionsByProduct[productLine]??[...new Set(Object.values(config.optionsByProduct).flat())]):
     config.optionsByPage?.[page]??config.options;
 }
 const selectedFor=page=>selectedFilters().filter(([key,value])=>relevantFilters(page).includes(key)&&
@@ -296,6 +298,9 @@ const supportsPageMetric=(page,id)=>Boolean(pages[page]&&id&&
 function routeHref(page='',metricId,evidencePanel) {
   const params=new URLSearchParams();
   selectedFor(page).forEach(([key,value])=>params.set(key,value));
+  for(const error of filterErrors)if(relevantFilters(page).includes(error.key)) {
+    params.delete(error.key);error.values.forEach(value=>params.append(error.key,value));
+  }
   if (metricId) params.set('metric',String(metricId));
   const issue=activeIssueMetrics.get(issueScopeKey(page));
   if(issue)params.set('issue',String(issue));
@@ -304,17 +309,29 @@ function routeHref(page='',metricId,evidencePanel) {
   else if(page&&page===currentPage&&!metricId&&diagnosticWorkspaceView!=='change')params.set('panel',diagnosticWorkspaceView);
   return `#/${page}${params.size?`?${params}`:''}`;
 }
+function readFilters(page,params) {
+  filterState={};filterErrors=[];
+  const requested=relevantFilters(page).filter(key=>params.has(key))
+    .map(key=>({key,values:params.getAll(key)}));
+  for(const {key,values} of requested)if(values.length!==1||values[0]!=='All')filterState[key]=values[0];
+  for(const {key,values} of requested) {
+    if(values.length===1&&values[0]==='All')continue;
+    const reason=values.length>1?'同一条件包含多个值，请重新选择一个值。':
+      !availableOptions(page,key).includes(values[0])?'此值不在当前可选范围内，请重新选择或清除。':null;
+    if(reason)filterErrors.push({key,values,reason});
+  }
+}
 function readRoute() {
   const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
   diagnosticWorkspaceView=['change','groups','data'].includes(params.get('panel'))?params.get('panel'):'change';
-  filterState={};
-  for (const key of relevantFilters(pages[page]?page:'')) if(params.has(key)&&
-    availableOptions(pages[page]?page:'',key,filterState).includes(params.get(key)))filterState[key]=params.get(key);
+  readFilters(pages[page]?page:'',params);
   const issue=Number(params.get('issue'));
-  if(supportsPageMetric(page,issue))activeIssueMetrics.set(issueScopeKey(page),issue);
-  else activeIssueMetrics.delete(issueScopeKey(page));
+  if(!filterErrors.length) {
+    if(supportsPageMetric(page,issue))activeIssueMetrics.set(issueScopeKey(page),issue);
+    else activeIssueMetrics.delete(issueScopeKey(page));
+  }
   return {page:pages[page]?page:'',metricId:Number(params.get('metric'))||null};
 }
 function activeFilterDescription() {
@@ -322,9 +339,9 @@ function activeFilterDescription() {
 }
 function filterBar(page='') {
   const bar=element('details','filter-bar');bar.setAttribute('aria-label','数据筛选');
-  bar.open=filterDisclosure.get(page)??false;
+  bar.open=filterErrors.length>0||(filterDisclosure.get(page)??false);
   bar.addEventListener('toggle',()=>{if(bar.isConnected)filterDisclosure.set(page,bar.open);});
-  bar.append(element('summary','filter-summary',selectedFilters().length?`当前条件 · ${activeFilterDescription()} · 点击调整`:`筛选与分析视角 · 点击展开`));
+  bar.append(element('summary','filter-summary',filterErrors.length?'筛选条件无效 · 请修正':selectedFilters().length?`当前条件 · ${activeFilterDescription()} · 点击调整`:`筛选与分析视角 · 点击展开`));
   const content=element('div','filter-content');
   const header=element('div','filter-bar-head');
   header.append(element('strong','','当前范围与作用对象'),element('span','',
@@ -344,8 +361,19 @@ function filterBar(page='') {
     const values=key==='week'?[...availableOptions(page,key)].reverse():availableOptions(page,key);
     const options=Object.fromEntries(values.map(v=>[v,key==='week'?`W${v} · ${sourceData.weekly.find(w=>String(w.week)===v)?.weekEnd}`:optionLabel(key,v)]));
     for (const [value,text] of Object.entries(options)) {const option=element('option','',text);option.value=value;select.append(option);}
-    select.value=filterState[key]??'All';select.addEventListener('change',()=>changeFilter(page,key,select.value));
+    const error=filterErrors.find(item=>item.key===key);
+    if(error) {
+      const invalid=element('option','',`无效：${error.values.map(value=>value||'空值').join(' / ')}`);
+      invalid.value=filterState[key];invalid.disabled=true;select.append(invalid);
+      select.setAttribute('aria-invalid','true');select.setAttribute('aria-describedby',`filter-error-${key}`);
+    }
+    if(error)select.selectedIndex=select.options.length-1;
+    else select.value=filterState[key]??'All';
+    select.addEventListener('change',()=>changeFilter(page,key,select.value));
     label.append(select);
+    if(error) {
+      const note=element('small','filter-field-error',error.reason);note.id=`filter-error-${key}`;label.append(note);
+    }
     if(page) {
       const affected=sourceData.filterPolicy.metrics.filter(item=>item.page===page&&item.businessDimensions.includes(key));
       const ready=affected.filter(item=>item.demonstrableDimensions.includes(key));
@@ -358,7 +386,7 @@ function filterBar(page='') {
     }
     group.append(fields);content.append(group);
   }
-  content.append(element('p','filter-active',selectedFilters().length?
+  content.append(element('p','filter-active',filterErrors.length?'筛选尚未生效。修正或主动清除无效条件后，再展示数据与分析。':selectedFilters().length?
     `已应用：${activeFilterDescription()}。分析视角只影响对应指标；业务适用但缺演示明细时显示“待补数据”。`:
     '所有关键指标按默认业务对象展示；切换筛选后，请核对每张卡的适用状态与周期。'));
   bar.append(content);
@@ -427,12 +455,16 @@ function changeFilter(page,key,value) {
   const previousBar=document.querySelector('.filter-bar');
   if(previousBar)filterDisclosure.set(page,previousBar.open);
   const currentMetric=Number(new URLSearchParams(location.hash.split('?')[1]??'').get('metric'))||null;
-  if (!key) filterState={};
-  else if (value==='All') delete filterState[key];
-  else filterState[key]=value;
+  const params=new URLSearchParams(location.hash.split('?')[1]??'');
+  const previousErrors=new Set(filterErrors.map(error=>error.key));
+  if(!key)for(const field of relevantFilters(page))params.delete(field);
+  else if(value==='All')params.delete(key);
+  else params.set(key,value);
+  readFilters(page,params);
   if(key==='productLine') {
     for(const dependent of ['plan','deviceModel'])if(filterState[dependent]&&
-      !availableOptions(page,dependent).includes(filterState[dependent]))delete filterState[dependent];
+      !previousErrors.has(dependent)&&!availableOptions(page,dependent).includes(filterState[dependent]))params.delete(dependent);
+    readFilters(page,params);
   }
   const next=routeHref(page,currentMetric,diagnosticWorkspaceView==='change'?undefined:diagnosticWorkspaceView);
   pushRoute(next);
@@ -440,7 +472,7 @@ function changeFilter(page,key,value) {
   const nextBar=document.querySelector('.filter-bar');
   const nextControl=nextBar?.querySelector(key?`select[name="${key}"]`:'.filter-reset');
   (nextControl??nextBar?.querySelector('summary'))?.focus({preventScroll:true});
-  document.querySelector('#announcement').textContent=`筛选已更新：${activeFilterDescription()||'已重置'}`;
+  document.querySelector('#announcement').textContent=filterErrors.length?'仍有无效筛选条件，经营数据暂停展示。':`筛选已更新：${activeFilterDescription()||'已重置'}`;
 }
 const na=reason=>({kind:'na',reason});
 const pending=reason=>({kind:'na',availability:'pending',reason});
@@ -701,6 +733,11 @@ function dataQualityState(value) {
     reason:`演示阈值：事件丢失率≤${percent(thresholds.eventLossMax)}，ID映射覆盖率≥${percent(thresholds.idMappingMin)}；尚未确认生产达标标准。`};
 }
 function projectDataset() {
+  if(filterErrors.length) {
+    dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>
+      [`m${String(c.id).padStart(2,'0')}`,{...na('筛选条件无效，请修正或主动清除后查看。'),availability:'invalid-filter'}]))};
+    return;
+  }
   dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>[`m${String(c.id).padStart(2,'0')}`,projectMetric(c.id)]))};
   const statuses=dataset.metrics.m05,subscribers=dataset.metrics.m02,subscriptionRate=dataset.metrics.m06,flow=dataset.metrics.m21;
   if(statuses.kind==='group'&&subscribers.kind==='count') {
@@ -3518,13 +3555,44 @@ function disposeCharts() {
   while (sparklines.length) destroyChart(sparklines.pop());
   while (detailCharts.length) destroyChart(detailCharts.pop());
 }
+function renderInvalidFilters(page) {
+  disposeCharts();
+  const top=element('div','detail-heading');
+  top.append(element('p','eyebrow','OPERATIONS / SCOPE CHECK'),
+    element('h1','',pages[page]?.title??'经营简报'),
+    element('p','heading-sub','筛选条件需要修正，经营数据暂停展示。'));
+  const body=element('div','detail-shell invalid-filter-page');
+  const notice=element('section','filter-error-notice');notice.setAttribute('role','alert');
+  notice.setAttribute('aria-labelledby','invalid-filter-title');
+  const title=element('h2','','请修正筛选条件');title.id='invalid-filter-title';
+  notice.append(title,element('p','','以下条件无法用于当前页面。为避免把总体数据误当成所选范围，指标、图表、分析结论和问题登记已暂停；已有本地问题记录不改写，当前会话草稿保留。'));
+  const list=element('ul','filter-error-list');
+  for(const error of filterErrors) {
+    const item=element('li','filter-error-item'),copy=element('div','');
+    copy.append(element('strong','',`${filterLabels[error.key]}：${error.values.map(value=>value||'空值').join(' / ')}`),
+      element('p','',error.reason));
+    const actions=element('div','filter-error-actions');
+    const correct=element('button','filter-reset',`修正${filterLabels[error.key]}`);correct.type='button';
+    correct.addEventListener('click',()=>{
+      const bar=body.querySelector('.filter-bar');bar.open=true;
+      bar.querySelector(`select[name="${error.key}"]`).focus();
+    });
+    const clear=element('button','filter-reset','清除此条件');clear.type='button';
+    clear.setAttribute('aria-label',`清除${filterLabels[error.key]}条件`);
+    clear.addEventListener('click',()=>changeFilter(page,error.key,'All'));
+    actions.append(correct,clear);item.append(copy,actions);list.append(item);
+  }
+  notice.append(list);body.append(notice,filterBar(page));main.replaceChildren(top,body);
+}
 function renderRoute({preserveScroll=false}={}) {
   selectReadingEntry();readingRevision++;
   document.querySelector('#metric-search')?.close();
   const {page:route,metricId}=readRoute();
   projectDataset();
   closeDefinitionPopover();
-  if (route && pages[route]) {
+  if(filterErrors.length) {
+    renderInvalidFilters(route);document.title=`筛选待修正 · ${pages[route]?.title??'经营总览'} · Parallens`;
+  } else if (route && pages[route]) {
     const requested=supportsPageMetric(route,metricId)?
       metricId:null;
     const observed=selectedFilters().length?filteredFinding(route)?.id:null;
@@ -3544,7 +3612,7 @@ function renderRoute({preserveScroll=false}={}) {
   if(metricId&&route&&!preserveScroll) requestAnimationFrame(()=>document.querySelector(`#metric-evidence-${metricId}`)?.scrollIntoView({block:'start'}));
   else if(!preserveScroll)scrollTo({top:0,behavior:'instant'});
   requestAnimationFrame(updateSectionNavigation);
-  document.querySelector('#announcement').textContent=route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
+  document.querySelector('#announcement').textContent=filterErrors.length?'筛选条件无效，经营数据暂停展示。请修正或主动清除。':route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
   lastRenderedHash=location.hash;
 }
 function handleRouteChange(event) {
