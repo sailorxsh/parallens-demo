@@ -727,7 +727,10 @@ article.trial-sample-item {cursor:auto}
 .home-dashboard .panel-header h3 {font-size:1.35rem;font-weight:650;margin:.15rem 0 .35rem}
 .home-dashboard .trend-heading .panel-sub {font-size:var(--text-xs)}
 .home-dashboard #trendChart {height:15rem;min-height:15rem;flex:1}
+.home-dashboard #trendChart.chart-fallback {height:auto;min-height:0;flex:none}
+.home-dashboard #trendChart.chart-fallback ~ .trend-table-wrap {margin-top:.75rem}
 .home-dashboard .chart-scale-note {background:transparent;border:0;padding:0;font-size:var(--text-xs);font-weight:400;margin:.5rem 0 .75rem}
+.home-dashboard .chart-scale-note[hidden] {display:none}
 .home-dashboard .trend-table-wrap {font-size:.75rem;margin-top:auto}
 .home-dashboard .insight-panel {min-width:0;padding:.9rem 1rem}
 .home-dashboard .signal-heading {font-size:1.1rem;margin:0 0 .6rem;font-weight:650}

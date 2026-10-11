@@ -424,10 +424,12 @@ assert.ok(activeAxes[1].min>40000&&activeAxes[1].max>=46800&&activeAxes[1].max<5
 const revenueAxis=evaluate('trendAxisDomain(sourceData.diagnostics.E.extraCharts[0].series,"美元\/人")');
 assert.ok(revenueAxis.min>0&&revenueAxis.max<10);
 evaluate('window.echarts={init:()=>({setOption:option=>window.__chartOptions=option})}');
-evaluate('drawDetailChart({clientWidth:800},sourceData.diagnostics.G.extraCharts[0])');
+// This calculation-only DOM fixture represents a fresh chart host, before any fallback class exists.
+evaluate('window.__chartTestBox={clientWidth:800,classList:{contains:()=>false}}');
+evaluate('drawDetailChart(window.__chartTestBox,sourceData.diagnostics.G.extraCharts[0])');
 assert.equal(evaluate('window.__chartOptions.yAxis.min'),lossAxis.min);
 assert.equal(evaluate('window.__chartOptions.yAxis.max'),lossAxis.max);
-evaluate('drawDetailChart({clientWidth:800},diagnosticChartFacts("E",sourceData.diagnostics.E.extraCharts[1]))');
+evaluate('drawDetailChart(window.__chartTestBox,diagnosticChartFacts("E",sourceData.diagnostics.E.extraCharts[1]))');
 assert.equal(evaluate('window.__chartOptions.xAxis.min'),0);
 assert.equal(evaluate('window.__chartOptions.xAxis.max'),100);
 assert.equal(evaluate('window.__chartOptions.legend.selectedMode'),false);
@@ -438,12 +440,12 @@ for(const page of ['A','C','D']) {
   for(const line of spec.series)for(const [index,detail] of line.details.entries())
     assert.ok(Math.abs(line.values[index]-detail.numerator/detail.denominator*100)<.051,`${page} ${line.name} W${index+1}: displayed rate contradicts point facts`);
 }
-evaluate('drawDetailChart({clientWidth:800},diagnosticChartFacts("C",sourceData.diagnostics.C.chart))');
+evaluate('drawDetailChart(window.__chartTestBox,diagnosticChartFacts("C",sourceData.diagnostics.C.chart))');
 const triggerTooltip=evaluate('window.__chartOptions.tooltip.formatter([{dataIndex:11,seriesIndex:1,seriesName:"K6 · 固件2.8",value:82,marker:""}])');
 assert.match(triggerTooltip,/3,280次 \/ 4,000次/);
 assert.match(evaluate('window.__chartOptions.series[1].endLabel.formatter({value:82})'),/K6 · 固件2.8 82.0%/);
 assert.ok(evaluate('Number.isFinite(window.__chartOptions.grid.right)'));
-evaluate('drawDetailChart({clientWidth:800},{kind:"heatmap",title:"Contrast fixture",unit:"%",labels:["fixture"],dimensions:Array.from({length:101},(_,index)=>String(index)),series:[{values:[Array.from({length:101},(_,index)=>index)]}]})');
+evaluate('drawDetailChart(window.__chartTestBox,{kind:"heatmap",title:"Contrast fixture",unit:"%",labels:["fixture"],dimensions:Array.from({length:101},(_,index)=>String(index)),series:[{values:[Array.from({length:101},(_,index)=>index)]}]})');
 const heatmap=evaluate('window.__chartOptions');
 const rgb=hex=>{const raw=hex.slice(1),full=raw.length===3?[...raw].map(char=>char+char).join(''):raw;return [0,2,4].map(index=>parseInt(full.slice(index,index+2),16));};
 const luminance=channels=>channels.map(channel=>channel/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0);
@@ -457,7 +459,7 @@ for(const cell of heatmap.series[0].data) {
 }
 // This configuration probe has no evidence-table DOM; pointer/table behavior is
 // exercised in verify_home_chart_selection_flows.js with a real browser.
-evaluate('document.querySelector=selector=>selector===".trend-table-wrap table"?null:{};drawTrend()');
+evaluate('document.querySelector=selector=>selector===".trend-table-wrap table"?null:selector==="#trendChart"?window.__chartTestBox:{};drawTrend()');
 assert.ok(evaluate('window.__chartOptions.yAxis.min')>0);
 assert.ok(evaluate('window.__chartOptions.yAxis.max')<100);
 evaluate('chart=null;drawTrend(18)');

@@ -83,6 +83,9 @@ const chartSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(en
   }
 })):null;
 function createChart(box) {
+  if(box.classList.contains('chart-fallback')) {
+    box.classList.remove('chart-fallback');box.replaceChildren();box.setAttribute('role','img');
+  }
   const instance=window.echarts.init(box,null,{renderer:'svg'});
   chartSizeObserver?.observe(box);return instance;
 }
@@ -1456,7 +1459,7 @@ function renderHome() {
     overview.setAttribute('aria-pressed',String(!selected));
     signals.querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.metricId)===id)));
     const axis=trendAxisDomain(selected?[selected.series,[selected.beforeRate,selected.afterRate]]:[trendValues(13),trendValues(18)],'%');
-    scaleNote.hidden=!axis;scaleNote.textContent=axis?`${trendAxisNote(axis,'%')} ${weeklyAxisNote}`:'';
+    scaleNote.hidden=!axis||!window.echarts;scaleNote.textContent=axis?`${trendAxisNote(axis,'%')} ${weeklyAxisNote}`:'';
     chartBox.setAttribute('aria-label',`${heading.textContent}，12个观察周；${selected?`${selected.beforeLabel}${selected.beforeRate.toFixed(1)}%，${selected.afterLabel}${selected.afterRate.toFixed(1)}%，变化${homeComparisonChange(selected)}；`:''}${scaleNote.textContent}`);
     context.replaceChildren();
     if(selected) {
@@ -3682,6 +3685,7 @@ async function start() {
   startupInProgress=true;
   let ready=0;
   let dataLoaded=false;
+  let viewDataFirst=false;
   try {
     showLoadingState();
     main.setAttribute('aria-busy','true');
@@ -3695,10 +3699,25 @@ async function start() {
     });
     sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name,parts[index]]));
     dataLoaded=true;
-    if(!window.echarts)document.querySelector('#load-status').textContent='经营数据已齐，正在准备图表…';
-    await libraryReady;
+    if(!window.echarts) {
+      document.querySelector('#load-title').textContent='经营数据已准备好';
+      document.querySelector('#load-status').textContent='经营数据已齐，正在准备图表…';
+      document.querySelector('.load-hint').textContent='可以继续等待图表，或先用完整数据表核对指标。';
+      const viewData=element('button','load-retry','先查看数据表');viewData.type='button';
+      const dataRequested=new Promise(resolve=>viewData.addEventListener('click',()=>resolve('data'),{once:true}));
+      document.querySelector('.load-panel').append(viewData);
+      viewDataFirst=await Promise.race([libraryReady,dataRequested])==='data';
+    } else await libraryReady;
     bindAppEvents();
     renderRoute();
+    if(viewDataFirst) {
+      const dataTab=main.querySelector('.income-tabs [aria-controls$="-panel-data"]');
+      if(dataTab)dataTab.click();
+      else {
+        const trendTable=main.querySelector('.trend-table-wrap');
+        if(trendTable)trendTable.open=true;
+      }
+    }
   } catch(error) {
     const panel=element('section','load-panel load-error');panel.setAttribute('role','alert');
     panel.append(element('h1','',dataLoaded?'看板暂时无法显示':'数据未能完整加载'),
