@@ -12,7 +12,7 @@ async (parent) => {
   };
   const selected=page=>p.locator(`#${page}-tab-data`);
   const tableCases=[['A',7],['A',12],['B',26],['B',28],['B',30],['B',31],['C',8],['C',43],['C',45],
-    ['D',5],['D',20],['D',22],['D',32],['D',33],['E',36],['E',37],['E',38],['E',40],['F',51]];
+    ['D',20],['D',22],['D',32],['D',33],['E',36],['E',37],['E',38],['E',40],['F',51]];
   try {
     for(const width of [1366,1600,1920]) {
       await p.setViewportSize({width,height:1000});
@@ -25,7 +25,7 @@ async (parent) => {
         check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`#${id} introduces page overflow`);
         results.push({width,page,id,view:'data'});
       }
-      for(const [page,id,title] of [['A',14,'绑定→首图时长 · 演示分布'],['D',21,'有效订阅人数流转 · 9/1–9/24'],['F',50,'设备交叉状态 · 当前快照']]) {
+      for(const [page,id,title] of [['A',14,'绑定→首图时长 · 演示分布'],['D',5,'产品线订阅状态 · 当前快照'],['D',21,'有效订阅人数流转 · 9/1–9/24'],['F',50,'设备交叉状态 · 当前快照']]) {
         await open(`${page}?metric=${id}`);
         check(await p.locator(`#${page}-tab-groups`).getAttribute('aria-selected')==='true',`#${id} hides its real chart`);
         const chart=p.locator(`#${page}-panel-groups .detail-chart-panel[data-evidence-metric="${id}"] .detail-chart`);
@@ -39,6 +39,7 @@ async (parent) => {
         if(id===50)check(JSON.stringify(state.values[0])===JSON.stringify([source.value.boundActivated,source.value.boundNotActivated,source.value.activatedUnbound]),'Device state chart disagrees with source states');
         if(id===14)check(state.optionTypes.includes('boxplot')&&state.values[0][0][2]===source.value.p50Minutes,'First-image distribution lost its source median');
         if(id===21)check(state.optionTypes.includes('bar')&&state.optionTypes.includes('scatter'),'Subscription flow lost its stock/change encoding');
+        if(id===5)check(state.values.length===6&&[0,1].every(index=>Math.abs(state.values.reduce((sum,line)=>sum+line[index],0)-100)<1e-9),'Subscription state shares do not close to 100%');
         results.push({width,page,id,view:'groups',title});
       }
       for(const page of ['A','B','C','D','E','F','G']) {
@@ -59,7 +60,7 @@ async (parent) => {
     // Opening evidence through the catalog and search uses the same landing rule.
     await p.getByRole('button',{name:'全部指标',exact:true}).click();
     await p.locator('.metric-inventory-link').getByText('订阅状态快照',{exact:true}).click();
-    await p.locator('#D-tab-data[aria-selected="true"]').waitFor();
+    await p.locator('#D-tab-groups[aria-selected="true"]').waitFor();
     await p.keyboard.press('Control+k');await p.getByRole('searchbox').fill('新设备D7');await p.keyboard.press('Enter');
     await p.locator('#metric-evidence-43').waitFor();
     check(await selected('C').getAttribute('aria-selected')==='true','Search opens unrelated technical failure evidence for device retention');
@@ -77,7 +78,7 @@ async (parent) => {
     check(await selected('C').getAttribute('aria-selected')==='true'&&
       (await p.locator('#metric-evidence-43 .evidence-meta').innerText()).includes('国家/市场 美国'),'Filtered retention destination loses its scope');
     check(!errors.length,errors.join('; '));
-    return {status:'PASS',checks:['nineteen table-only metrics at three widths','three source-related charts at three widths',
+    return {status:'PASS',checks:['eighteen table-only metrics at three widths','four source-related charts at three widths',
       'A–G default trends','explicit panel and refresh','keyboard tabs and history','catalog and search destinations',
       'auxiliary evidence preserves issue and draft','filtered table-only destination'],results};
   } finally {await context.close();}

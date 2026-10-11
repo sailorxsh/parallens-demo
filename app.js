@@ -1255,30 +1255,39 @@ function subscriptionDetails() {
   const tableWrap=element('div','data-table-scroll status-table');tableWrap.append(table);details.append(tableWrap);
   return details;
 }
+function subscriptionStatusSpec(value=metric(5).value) {
+  const keys=Object.keys(value),totals=keys.map(key=>Object.values(value[key]).reduce((sum,count)=>sum+count,0));
+  const definitions=[['Free或无权益',['free','noEntitlement'],'#9eaa9a','#263d2e'],
+    ['试用中',['trialEarly','trialNearExpiry'],'#e8b765','#263d2e'],
+    ['付费中',['paidCurrent'],'#356d51','#ffffff'],['已取消未到期',['cancelledButEntitled'],'#e8963c','#263d2e'],
+    ['支付失败',['paymentFailed'],'#e5484d','#ffffff'],['已过期',['expired'],'#718078','#ffffff']];
+  const series=definitions.map(([name,fields,color,labelColor])=>{
+    const counts=keys.map(key=>fields.reduce((sum,field)=>sum+(value[key][field]??0),0));
+    return {name,color,labelColor,values:counts.map((count,index)=>totals[index]>0?count/totals[index]*100:null),
+      details:counts.map((count,index)=>({numerator:count,denominator:totals[index],
+        numeratorUnit:'人',denominatorUnit:'人',basisLabel:'状态主账号 / 产品线主账号'}))};
+  });
+  return {kind:'stacked100',metricId:5,title:'产品线订阅状态 · 当前快照',unit:'%',
+    labels:keys.map(key=>groupLabels[key]??key),series,showPercentLabels:true,
+    note:`每行按本产品线主账号合计100%；${keys.map((key,index)=>`${groupLabels[key]??key} ${number(totals[index])}人`).join('，')}。试用中合并前期与临期，Free仅适用于观鸟，无权益仅适用于狩猎；零分母不绘制比例。`};
+}
 function drawStatus(box) {
   box.dataset.drawn='1';
   if (!window.echarts) {box.removeAttribute('role');box.textContent='图表不可用；下方保留完整状态人数表。';return;}
   statusChart=createChart(box);
-  const s=metric(5).value;
-  const keys=Object.keys(s);
-  const totals=Object.fromEntries(keys.map(key=>[key,Object.values(s[key]).reduce((a,b)=>a+b,0)]));
-  const specs=[['Free或无权益','free','noEntitlement','#9eaa9a'],['试用中','trialEarly','trialNearExpiry','#e8b765'],['付费中','paidCurrent',null,'#356d51'],['已取消未到期','cancelledButEntitled',null,'#e8963c'],['支付失败','paymentFailed',null,'#e5484d'],['已过期','expired',null,'#718078']];
+  const spec=subscriptionStatusSpec();
   setChartOption(statusChart,()=>({
     animationDuration:chartAnimationDuration(450),grid:{left:42,right:26,top:12,bottom:62},
     xAxis:{type:'value',max:100,axisLabel:{formatter:'{value}%',color:'#58695b'},splitLine:{lineStyle:{color:'#e4eae2'}}},
-    yAxis:{type:'category',data:keys.map(key=>key==='bird'?'观鸟':'狩猎'),axisLabel:{color:'#506455'},axisLine:{show:false},axisTick:{show:false}},
+    yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisLine:{show:false},axisTick:{show:false}},
     legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:chartText(12),color:'#596b5e'}},
     tooltip:{...chartTooltipStyle(),trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
-      const key=keys[params[0]?.dataIndex];
-      if(!key)return '';
-      return `${key==='bird'?'观鸟':'狩猎'} · 主账号 ${number(totals[key])}人<br>${params.map(item=>
-        `${item.marker}${item.seriesName}：${Number(item.value).toFixed(1)}% · ${number(Math.round(item.value/100*totals[key]))}人`).join('<br>')}`;
+      const index=params[0]?.dataIndex;
+      if(index===undefined)return '';
+      return `${spec.labels[index]} · 主账号 ${number(spec.series[0].details[index].denominator)}人<br>${params.map(item=>
+        `${item.marker}${item.seriesName}：${chartValue(item.value,'%')} · ${number(spec.series[item.seriesIndex].details[index].numerator)}人`).join('<br>')}`;
     }},
-    series:specs.map(([name,birdKey,huntingKey,color])=>({name,type:'bar',stack:'status',barWidth:25,itemStyle:{color},
-      data:keys.map(key=>{const item=s[key];const value=key==='bird'?
-        (item[birdKey]??0)+(birdKey==='trialEarly'?item.trialNearExpiry:0):
-        (item[huntingKey??birdKey]??0)+(birdKey==='trialEarly'?item.trialEarly:0);
-        return totals[key]?value/totals[key]*100:0;})})),
+    series:spec.series.map(line=>({name:line.name,type:'bar',stack:'status',barWidth:25,itemStyle:{color:line.color},data:line.values})),
   }));
 }
 function miniCard({id,label,page,value,note='',critical=false,alert=false}) {
@@ -2122,7 +2131,9 @@ function drawDetailChart(box,spec) {
       xAxis:{type:'value',min:0,max:100,axisLabel:{formatter:'{value}%',color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}}},
       yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
     series:spec.series.map((line,index)=>({name:line.name,type:'bar',stack:'total',barWidth:38,
-        data:line.values,itemStyle:{color:line.color??colors[index%colors.length]}})),
+        data:line.values,itemStyle:{color:line.color??colors[index%colors.length]},
+        label:{show:!!spec.showPercentLabels,position:'inside',color:line.labelColor??'#263d2e',fontSize:chartText(12),
+          formatter:params=>Number.isFinite(params.value)&&params.value>=8?`${params.value.toFixed(1)}%`:''}})),
     }));
     return instance;
   }
@@ -2203,6 +2214,14 @@ function flattenMeasure(value,path='',rows=[],field='',unit=groupValueUnit(field
   const formatted=groupText(value,field,unit),isResult=unit==='%'||unit==='美元/人'||typeof value!=='number';
   rows.push([path||'结果',isResult?'—':formatted,'—',isResult?formatted:'—']);return rows;
 }
+function compactMetricValueTable(spec) {
+  if(!spec.rows.length)return spec;
+  const keep=spec.columns.map((_,index)=>index).filter(index=>index===0||spec.rows.some(row=>row[index]!=='—'));
+  const columns=keep.map(index=>index===1&&!keep.includes(2)&&spec.columns[index]==='分子 / 数量'?'数值':spec.columns[index]);
+  const partialRatios=spec.rows.some(row=>row[1]==='—'&&row[2]==='—'&&/%$/.test(row[3]));
+  return {...spec,columns,rows:spec.rows.map(row=>keep.map(index=>row[index])),
+    note:`${spec.note}${partialRatios?' 仅有结果的比例项未提供同口径分子、分母明细。':''}`};
+}
 function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
@@ -2252,6 +2271,11 @@ function metricEvidence(id,page) {
       rows:[['基础订阅',`$${number(sourceData.snapshot.baseMRR)}`],['增值Pack',`$${number(sourceData.snapshot.packMRR)}`],
         ['合计',`$${number(sourceData.snapshot.totalMRR)}`]],
       note:'基础订阅与增值Pack按快照加总；月内实际付款人数使用另一个统计窗口。'}));
+  }
+  if(id===5&&value.kind==='group') {
+    const spec=subscriptionStatusSpec(value.value);
+    const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',`${spec.title}；${spec.note}`);
+    panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
   }
   if(id===42&&!selectedFilters().length)panel.append(dataTable(deviceEventContributionTable()));
   if(id===18&&value.kind==='rate') {
@@ -2382,8 +2406,8 @@ function metricEvidence(id,page) {
       }),note:groupNote});
     }
   }
-  const fullValue=dataTable(id===39?modelCalculationTable():{title:`${item.name} · 当前筛选完整值`,columns:['子项','分子 / 数量','分母','结果 / 说明'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
-    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`},id===39?'model-calculation':'');
+  const fullValue=dataTable(id===39?modelCalculationTable():compactMetricValueTable({title:`${item.name} · 当前筛选完整值`,columns:['子项',id===5?'主账号人数（人）':'分子 / 数量','分母','结果 / 说明'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
+    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===39?'model-calculation':'');
   fullValue.dataset.evidenceKind='data';panel.append(fullValue);
   return {node:panel,specs};
 }
@@ -2979,7 +3003,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(spec)chartPanel.append(element('h3','workspace-chart-title',spec.title));
       chartPanel.append(node);
       const scale=spec&&chartScaleNote(spec);if(scale)chartPanel.append(element('p','chart-scale-note',scale));
-      if(spec?.kind==='periodComparison')chartPanel.append(chartTable(spec));
+      if(['periodComparison','stacked100'].includes(spec?.kind))chartPanel.append(chartTable(spec));
       panels.get(kind).append(chartPanel);
       continue;
     }
