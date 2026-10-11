@@ -1635,7 +1635,7 @@ function chartScaleNote(spec) {
   return axis?`${trendAxisNote(axis,spec.unit)}${spec.labels.some(label=>/^W\d+$/.test(label))?` ${weeklyAxisNote}`:''}`:'';
 }
 function chartNote(spec) {
-  return [spec.note,chartScaleNote(spec)].filter(Boolean).join(' ');
+  return [spec.scopeNote??spec.note,chartScaleNote(spec)].filter(Boolean).join(' ');
 }
 function fitChartLegend(frame,instance) {
   const controls=frame.querySelector('.chart-legend');
@@ -2338,7 +2338,9 @@ function metricEvidence(id,page) {
     const plot=element('div','evidence-plot');
     const box=element('div','detail-chart');box.setAttribute('role','img');
     box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
-    plot.append(element('h3','evidence-plot-title',spec.title),box);
+    plot.append(element('h3','evidence-plot-title',spec.title));
+    if(spec.scopeNote)plot.append(element('p','table-note group-evidence-context',spec.scopeNote));
+    plot.append(box);
     const scaleNote=chartScaleNote(spec);
     if(scaleNote)plot.append(element('p','chart-scale-note',scaleNote));
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
@@ -2495,7 +2497,8 @@ function metricEvidence(id,page) {
       const vals=projected.map(part=>part.kind==='na'?null:part.kind==='rate'?part.value*100:part.value);
       const countUnit=metricCountUnits[id]??'';
       const groupNote=id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。';
-      const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote};
+      const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote,
+        scopeNote:`${actionBaselineWindow(id)} · 比较当前分组水平，不表示跨期变化贡献。${groupNote}`};
       appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
         const cells=flattenMeasure(part)[0]??[];return [labels[index],cells[1]??'—',cells[2]??'—',part.kind==='rate'?percent(part.value):part.kind==='na'?'不适用':part.kind==='usd'?`$${number(part.value)}`:number(part.value)];
       }),note:groupNote});
