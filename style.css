@@ -774,8 +774,6 @@ article.trial-sample-item {cursor:auto}
 .home-dashboard .journey-card::after {display:none}
 @media (max-width:1280px) {
   .home-result {padding-inline:.75rem}
-  .home-results {grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem 0}
-  .home-result:nth-child(3) {border-left:0}
   .home-dashboard .story-panel {grid-template-columns:minmax(0,1.65fr) minmax(19rem,1fr)}
   .home-dashboard .journey-rail {grid-template-columns:repeat(3,minmax(0,1fr))}
 }

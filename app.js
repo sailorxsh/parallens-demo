@@ -2588,8 +2588,18 @@ function actionRecord(page,evidenceId) {
     (simulatedActionState[`record:${page}:${scope}:${item.id}`]||actionDrafts.has(`record:${page}:${scope}:${item.id}`))).map(item=>item.id)])];
   const switchLabel=element('label','issue-switch','同一界面条件下的问题单');
   const switcher=element('select','');switcher.name='issueMetric';
-  issueIds.forEach(id=>{const option=element('option','',`#${id} ${catalogItem(id).name}${actionDrafts.has(`record:${page}:${scope}:${id}`)?' · 未保存草稿':simulatedActionState[`record:${page}:${scope}:${id}`]?' · 已保存':''}`);option.value=String(id);switcher.append(option);});
+  const issueOptionLabel=id=>{
+    const issueKey=`record:${page}:${scope}:${id}`;
+    const state=actionDrafts.has(issueKey)?'未保存草稿':simulatedActionState[issueKey]?'已保存':'';
+    return `${state?`${state} · `:''}#${id} ${catalogItem(id).name}`;
+  };
+  issueIds.forEach(id=>{const option=element('option','',issueOptionLabel(id));option.value=String(id);switcher.append(option);});
   switcher.value=String(evidenceId);switcher.addEventListener('change',()=>registerIssue(page,Number(switcher.value)));
+  const updateIssueLabels=()=>{
+    for(const option of switcher.options)option.textContent=issueOptionLabel(Number(option.value));
+    switcher.title=switcher.selectedOptions[0]?.textContent??'';
+  };
+  updateIssueLabels();
   switchLabel.append(switcher);form.append(switchLabel);
   if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note',
     `当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
@@ -2663,7 +2673,7 @@ function actionRecord(page,evidenceId) {
   function trackChanges() {
     const dirty=updateStage();
     if(dirty)actionDrafts.set(key,{...readFields(),baseline,baselineAt});else actionDrafts.delete(key);
-    updateActionDraftWarning();
+    updateIssueLabels();updateActionDraftWarning();
     showReceipt(dirty?'更改尚未保存；切页暂存，刷新后会丢失。':simulatedActionState[key]?.updatedAt?
       `已保存至此浏览器：${simulatedActionState[key].updatedAt}`:'尚未记录；保存后仅在此浏览器保留。',dirty?'draft':'saved');
   }
@@ -2695,11 +2705,11 @@ function actionRecord(page,evidenceId) {
       due:due.value,target:target.value.trim(),linkedSample:linkedSample.value.trim(),reviewValue:reviewValue.value.trim(),reviewedAt:reviewedAt.value,
       updatedAt,page,evidenceId,scope,filters:{...filterState},baseline,baselineAt,reviewMetric:evidenceId};
     if(!saveActionState(key,record)) {
-      actionDrafts.set(key,{...readFields(),baseline,baselineAt});updateActionDraftWarning();
+      actionDrafts.set(key,{...readFields(),baseline,baselineAt});updateIssueLabels();updateActionDraftWarning();
       showReceipt('浏览器存储不可用，未保存；内容仍暂存在当前页面会话，刷新会丢失。','error');return;
     }
     controls.forEach(control=>{control.value=record[control.name];control.setCustomValidity('');clearFieldError(control);});
-    savedFingerprint=JSON.stringify(readFields());actionDrafts.delete(key);updateActionDraftWarning();updateStage();
+    savedFingerprint=JSON.stringify(readFields());actionDrafts.delete(key);updateIssueLabels();updateActionDraftWarning();updateStage();
     showReceipt(`已保存至此浏览器：${updatedAt} · ${status.selectedOptions[0].textContent}`,'saved');
   });
   return form;
