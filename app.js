@@ -2960,8 +2960,9 @@ function updateSectionNavigation() {
   const readingLine=visibleTop+Math.max(16,Math.min(160,(innerHeight-visibleTop)*0.15));
   let current=entries[0];
   for(const item of entries)if(item.rect.top<=readingLine)current=item;
-  if(scrollY>0&&innerHeight+scrollY>=document.documentElement.scrollHeight-2) {
-    // A short collapsed catalog at the bottom does not represent the main visible section.
+  if(scrollY>0&&(current.rect.top<visibleTop||innerHeight+scrollY>=document.documentElement.scrollHeight-2)) {
+    // After a heading has passed the navigation, follow the main visible content.
+    // This also avoids treating a short collapsed catalog as the section at the page bottom.
     const visibleHeight=item=>Math.max(0,Math.min(innerHeight,item.rect.bottom)-Math.max(visibleTop,item.rect.top));
     current=entries.reduce((best,item)=>visibleHeight(item)>visibleHeight(best)?item:best);
   }
@@ -3164,6 +3165,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     updateSectionNavigation();
   };
   const activate=(key,{focus=false,push=false}={})=>{
+    const viewport=push?{left:scrollX,top:scrollY,behavior:'instant'}:null;
     diagnosticWorkspaceView=key;
     for(const [name,panel] of panels) {
       panel.hidden=name!==key;buttons.get(name).setAttribute('aria-selected',String(name===key));
@@ -3176,7 +3178,12 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     }
     if(focus)buttons.get(key).focus({preventScroll:true});
     syncWorkspaceLinks();
-    requestAnimationFrame(drawVisible);
+    requestAnimationFrame(()=>{
+      if(!workspace.isConnected||diagnosticWorkspaceView!==key)return;
+      drawVisible();
+      // Safari can move the viewport when the focused tab's panel changes height.
+      if(viewport){scrollTo(viewport);updateSectionNavigation();}
+    });
   };
   for(const [key,button] of buttons) {
     button.addEventListener('click',()=>activate(key,{push:true}));
