@@ -102,10 +102,16 @@ async(parent)=>{
     check(await p.locator('#metric-evidence-39 > .na-note').count()===0,'Restored valid counts retain a stale missing-data reason');
     for(const [id,page] of [[38,'E'],[40,'E'],[35,'E']]) {
       await p.goto(`${base}#/${page}?metric=${id}&panel=data`);await p.locator(`#metric-evidence-${id}`).waitFor();
-      const rows=await p.locator(`#${page}-panel-data > .data-table-scroll tbody tr`).evaluateAll(nodes=>nodes.map(row=>[...row.children].map(cell=>cell.textContent)));
-      check(rows.every(row=>!row[1]?.endsWith('%')),'A ratio is mislabeled as a numerator');
-      if(id===38)check(rows.filter(row=>row[3].endsWith('%')).length===10,'Share dimensions lost their percentage units');
-      if(id===40)check(rows.filter(row=>row[3].includes('/人')).length===2,'Channel ARPPU lost its currency per payer unit');
+      const table=await p.locator(`#${page}-panel-data > .data-table-scroll`).evaluate(node=>({
+        columns:[...node.querySelectorAll('thead th')].map(cell=>cell.textContent),
+        rows:[...node.querySelectorAll('tbody tr')].map(row=>[...row.children].map(cell=>cell.textContent))}));
+      const numerator=table.columns.indexOf('分子 / 数量'),result=table.columns.findIndex(column=>column.startsWith('结果'));
+      check(result>=0,'Semantic result column is missing');
+      check(table.rows.every(row=>row.every((cell,index)=>!cell.endsWith('%')||index===result)),
+        'A percentage is outside the semantic result column');
+      if(numerator>=0)check(table.rows.every(row=>!row[numerator]?.endsWith('%')),'A ratio is mislabeled as a numerator');
+      if(id===38)check(table.rows.filter(row=>row[result].endsWith('%')).length===10,'Share dimensions lost their percentage units');
+      if(id===40)check(table.rows.filter(row=>row[result].includes('/人')).length===2,'Channel ARPPU lost its currency per payer unit');
     }
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['21 desktop and source-cohort states','source counts and weighted rates',

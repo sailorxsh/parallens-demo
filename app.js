@@ -1658,7 +1658,7 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
     xAxis:{type:'category',boundaryGap:false,data:weeks.map(w=>`W${w.week}`),axisLine:{lineStyle:{color:'#bed0bf'}},axisTick:{show:false},
       axisLabel:{color:'#58695b',formatter:weeklyAxisLabel,rich:weeklyAxisText(),showMinLabel:true,showMaxLabel:true,hideOverlap:true}},
     yAxis:{type:'value',min:axis.min,max:axis.max,interval:axis.step,axisLabel:{formatter:value=>`${Number(value).toFixed(axis.step<.1?2:1)}%`,color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false}},
-    series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:5,
+    series:lines.map(item=>({name:item.name,type:'line',smooth:false,symbolSize:6,
       symbol:item.id===18?'rect':'circle',lineStyle:{width:2.5,type:item.pattern},
       data:item.values.map(value=>Number.isFinite(value)?Number(value.toFixed(1)):null),
       endLabel:{show:true,formatter:params=>`${Number(params.value).toFixed(1)}%`,color:chartLabelColor(item.color),fontSize:chartText(12),fontWeight:600},
@@ -1920,11 +1920,11 @@ function chartTable(spec) {
     }));
   }
   if (spec.kind==='heatmap') {
-    columns=spec.sampleSizes?['型号','主账号','活跃主账号','订阅主账号',...spec.dimensions]:['型号',...spec.dimensions];
+    columns=spec.sampleSizes?['型号','主账号（人）','活跃（人）','订阅（人）',...spec.dimensions]:['型号',...spec.dimensions];
     rows.splice(0,rows.length,...spec.labels.map((label,index)=>
       [label,...(spec.sampleSizes?[spec.sampleSizes[index],
-        Math.round(spec.sampleSizes[index]*spec.series[0].values[index][0]/100),
-        Math.round(spec.sampleSizes[index]*spec.series[0].values[index][1]/100)]:[]),
+        ...spec.series[0].values[index].map((value,column)=>spec.sampleCounts?.[index]?.[column]??
+          Math.round(spec.sampleSizes[index]*value/100))]:[]),
         ...spec.series[0].values[index].map(value=>`${Number(value).toFixed(1)}%`)]));
   }
   if(spec.kind==='waterfall') {
@@ -1950,8 +1950,8 @@ function chartTable(spec) {
 }
 function drawEvidenceChart(box,spec) {
   const instance=drawDetailChart(box,spec);
-  const panel=box.closest('.detail-chart-panel');
-  const details=panel?.querySelector('.chart-data');
+  const panel=box.closest('.detail-chart-panel,.evidence-pair');
+  const details=panel?.querySelector(':scope > .chart-data,:scope > .workspace-calculation');
   if(!instance||!details)return;
   const feedback=element('p','chart-selection');feedback.setAttribute('aria-live','polite');
   panel.insertBefore(feedback,details);
@@ -1963,7 +1963,8 @@ function drawEvidenceChart(box,spec) {
     details.open=true;
     details.querySelectorAll('.chart-selected').forEach(item=>item.classList.remove('chart-selected'));
     row.classList.add('chart-selected');
-    feedback.textContent=`图中临时选中：${spec.labels[index]}。已展开对应数据行；全局筛选保持不变。`;
+    const dimension=spec.kind==='heatmap'?spec.dimensions[params.value?.[0]]:null;
+    feedback.textContent=`图中临时选中：${spec.labels[index]}${dimension?` · ${dimension}`:''}。已展开对应数据行；全局筛选保持不变。`;
     requestAnimationFrame(()=>row.scrollIntoView({block:'nearest'}));
   });
 }
@@ -2189,7 +2190,7 @@ function drawDetailChart(box,spec) {
       axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
     series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
       data:spec.unit==='个百分点'?line.values.map(value=>({value,label:{position:value<0?'bottom':'top',color:value<0?'#97541c':value>0?'#315e41':'#58695b'},
-        itemStyle:{color:value<0?'#bc6a20':value>0?'#356d51':'#718078'}})):line.values,smooth:false,symbolSize:5,
+        itemStyle:{color:value<0?'#bc6a20':value>0?'#356d51':'#718078'}})):line.values,smooth:false,symbolSize:6,
       barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
       lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
       endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
@@ -3005,7 +3006,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(spec)chartPanel.append(element('h3','workspace-chart-title',spec.title));
       chartPanel.append(node);
       const scale=spec&&chartScaleNote(spec);if(scale)chartPanel.append(element('p','chart-scale-note',scale));
-      if(['periodComparison','stacked100'].includes(spec?.kind))chartPanel.append(chartTable(spec));
+      if(spec)chartPanel.append(chartTable(spec));
       panels.get(kind).append(chartPanel);
       continue;
     }
