@@ -394,6 +394,7 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .filtered-trends .detail-chart-panel {min-width:0}
 .chart-selection {min-height:1.1rem;margin:.25rem 0;font-size:var(--text-xs);color:#385a41}
 .chart-selected {background:#e6f0dc;outline:2px solid #597747;outline-offset:-2px}
+.chart-selected-cell {font-weight:700;box-shadow:inset 0 0 0 2px #597747}
 .metric-evidence {padding:.9rem 1rem;container-type:inline-size}
 .evidence-pair {display:grid;grid-template-columns:minmax(0,1.65fr) minmax(22rem,1fr);gap:.85rem;align-items:stretch;margin:.8rem 0 1rem}
 .evidence-plot {display:flex;flex-direction:column;min-width:0}

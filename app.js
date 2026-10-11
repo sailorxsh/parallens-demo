@@ -1237,7 +1237,7 @@ function subscriptionDetails() {
   const box=element('div','status-chart'); box.id='statusChart';
   box.setAttribute('role','img');box.setAttribute('aria-label','观鸟和狩猎两线的互斥订阅状态占比');
   details.append(box);
-  const table=element('table','');table.append(element('caption','','分产品线状态人数'));
+  const table=element('table','');table.append(element('caption','','分产品线状态人数（人）'));
   const head=element('thead','');const row=element('tr','');
   ['产品线','Free或无权益','试用中','付费中','已取消未到期','支付失败','已过期','合计'].forEach(label=>{
     const header=element('th','',label);header.scope='col';row.append(header);
@@ -1289,6 +1289,12 @@ function drawStatus(box) {
     }},
     series:spec.series.map(line=>({name:line.name,type:'bar',stack:'status',barWidth:25,itemStyle:{color:line.color},data:line.values})),
   }));
+  const table=box.closest('.status-details').querySelector('.status-table table');
+  bindChartTableSelection(statusChart,table,params=>{
+    const line=spec.series[params.seriesIndex],detail=line.details[params.dataIndex];
+    return `${spec.labels[params.dataIndex]} · ${line.name} ${number(detail.numerator)}人（${chartValue(params.value,'%')}）`;
+  },{resolvePoint:params=>stackedChartPoint(statusChart,spec,params),indexFor:params=>[...table.querySelectorAll('tbody tr')].findIndex(row=>
+    row.firstElementChild.textContent===spec.labels[params.dataIndex]),columnFor:params=>params.seriesIndex+1});
 }
 function miniCard({id,label,page,value,note='',critical=false,alert=false}) {
   const article=element('article',`mini-card${alert?' alert-card':''}${critical?' critical':''}`);
@@ -1507,13 +1513,16 @@ function createTrendTable() {
   const table=element('table','');
   table.append(element('caption','','近12个完整周过程指标（各自独立分母）'));
   const head=element('thead',''); const row=element('tr','');
-  ['周','观鸟线7日价值激活率','试用→转正率'].forEach(label=>row.append(element('th','',label)));
+  ['周','观鸟线7日价值激活率','试用→转正率'].forEach(label=>{
+    const cell=element('th','',label);cell.scope='col';row.append(cell);
+  });
   head.append(row); table.append(head);
   const body=element('tbody','');
   const activation=trendValues(13),conversion=trendValues(18);
   dataset.weekly.forEach((w,index)=>{
     const r=element('tr','');
-    r.append(element('td','',periodLabel(`W${w.week}`)),
+    const week=element('th','',periodLabel(`W${w.week}`));week.scope='row';
+    r.append(week,
              element('td','',Number.isFinite(activation?.[index])?`${activation[index].toFixed(1)}%`:'不适用'),
              element('td','',conversion?.[index]!=null?`${conversion[index].toFixed(1)}%`:'不适用'));
     body.append(r);
@@ -1673,6 +1682,9 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
     })),
   }));
   interactiveChartLegend(node,chart,lines,'激活与转正周度趋势',44);
+  bindChartTableSelection(chart,document.querySelector('.trend-table-wrap table'),params=>
+    `${periodLabel(`W${weeks[params.dataIndex].week}`)} · ${lines[params.seriesIndex].name} ${chartValue(params.value,'%')}`,
+    {columnFor:params=>lines[params.seriesIndex].id===13?1:2});
 }
 const groupLabels={
   bird:'观鸟',hunting:'狩猎',free:'Free',noEntitlement:'无权益',trialEarly:'试用前期',trialNearExpiry:'试用临期',paidCurrent:'付费中',cancelledButEntitled:'已取消未到期',paymentFailed:'支付失败',expired:'已过期',
@@ -1948,25 +1960,60 @@ function chartTable(spec) {
   details.append(element('summary','','查看图表完整数据表'),table);
   return details;
 }
+function stackedChartPoint(instance,spec,params) {
+  const event=params.event?.event;
+  if(!Number.isFinite(event?.clientX)||!Number.isFinite(event?.clientY))return params;
+  const rect=instance.getDom().getBoundingClientRect();
+  const pixel=[(event.clientX-rect.left)*instance.getWidth()/rect.width,
+    (event.clientY-rect.top)*instance.getHeight()/rect.height];
+  if(!instance.containPixel({gridIndex:0},pixel))return null;
+  // SVG click offsetX can round differently from pointer movement in WebKit.
+  // Use the actual viewport position and exact shares, without widening a band.
+  const [value,index]=instance.convertFromPixel({gridIndex:0},pixel);
+  if(!Number.isInteger(index)||!spec.labels[index])return null;
+  let end=0;
+  const seriesIndex=spec.series.findIndex(line=>{
+    const start=end;end+=line.values[index]??0;
+    return value>=start&&value<end;
+  });
+  return seriesIndex<0?null:{...params,dataIndex:index,seriesIndex,value:spec.series[seriesIndex].values[index]};
+}
+function bindChartTableSelection(instance,table,describe,{indexFor=params=>params.dataIndex,columnFor,resolvePoint=params=>params}={}) {
+  if(!instance||!table)return;
+  const details=table.closest('details'),anchor=details??table.closest('.data-table-scroll')??table;
+  const previous=anchor.previousElementSibling;
+  const feedback=previous?.matches('.chart-selection')?previous:element('p','chart-selection');
+  feedback.setAttribute('aria-live','polite');if(feedback!==previous)anchor.before(feedback);
+  const clear=()=>{
+    table.querySelectorAll('.chart-selected,.chart-selected-cell').forEach(node=>node.classList.remove('chart-selected','chart-selected-cell'));
+    feedback.textContent='';
+  };
+  clear();instance.on('legendselectchanged',clear);
+  instance.on('click',params=>{
+    params=resolvePoint(params);if(!params)return;
+    const index=indexFor(params);
+    if(!Number.isInteger(index))return;
+    const row=table.querySelectorAll('tbody tr')[index];
+    if(!row)return;
+    clear();if(details)details.open=true;
+    row.classList.add('chart-selected');
+    const column=columnFor?.(params);if(Number.isInteger(column))row.children[column]?.classList.add('chart-selected-cell');
+    feedback.textContent=`图中临时选中：${describe(params)}。${details?'已展开':'已标亮'}对应数据行；全局筛选保持不变。`;
+    requestAnimationFrame(()=>{if(row.isConnected&&row.classList.contains('chart-selected'))row.scrollIntoView({block:'nearest'});});
+  });
+}
 function drawEvidenceChart(box,spec) {
   const instance=drawDetailChart(box,spec);
   const panel=box.closest('.detail-chart-panel,.evidence-pair');
   const details=panel?.querySelector(':scope > .chart-data,:scope > .workspace-calculation');
   if(!instance||!details)return;
-  const feedback=element('p','chart-selection');feedback.setAttribute('aria-live','polite');
-  panel.insertBefore(feedback,details);
-  instance.on('click',params=>{
-    const index=spec.kind==='heatmap'?params.value?.[1]:params.dataIndex;
-    if(!Number.isInteger(index))return;
-    const row=details.querySelectorAll('tbody tr')[index];
-    if(!row)return;
-    details.open=true;
-    details.querySelectorAll('.chart-selected').forEach(item=>item.classList.remove('chart-selected'));
-    row.classList.add('chart-selected');
-    const dimension=spec.kind==='heatmap'?spec.dimensions[params.value?.[0]]:null;
-    feedback.textContent=`图中临时选中：${spec.labels[index]}${dimension?` · ${dimension}`:''}。已展开对应数据行；全局筛选保持不变。`;
-    requestAnimationFrame(()=>row.scrollIntoView({block:'nearest'}));
-  });
+  const indexFor=params=>spec.kind==='heatmap'?params.value?.[1]:params.dataIndex;
+  bindChartTableSelection(instance,details.querySelector('table'),params=>{
+    const index=indexFor(params);
+    const dimension=spec.kind==='heatmap'?spec.dimensions[params.value?.[0]]:
+      spec.kind==='stacked100'?spec.series[params.seriesIndex].name:null;
+    return `${spec.labels[index]}${dimension?` · ${dimension}`:''}`;
+  },{indexFor,resolvePoint:params=>spec.kind==='stacked100'?stackedChartPoint(instance,spec,params):params});
 }
 function structureExplorer(views) {
   const section=element('section','structure-explorer');

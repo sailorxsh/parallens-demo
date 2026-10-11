@@ -455,7 +455,9 @@ for(const cell of heatmap.series[0].data) {
   const contrast=(Math.max(light,foreground)+.05)/(Math.min(light,foreground)+.05);
   assert.ok(contrast>=4.5,`Heatmap text contrast ${contrast.toFixed(2)} at ${cell.value[2]}%`);
 }
-evaluate('document.querySelector=()=>({});drawTrend()');
+// This configuration probe has no evidence-table DOM; pointer/table behavior is
+// exercised in verify_home_chart_selection_flows.js with a real browser.
+evaluate('document.querySelector=selector=>selector===".trend-table-wrap table"?null:{};drawTrend()');
 assert.ok(evaluate('window.__chartOptions.yAxis.min')>0);
 assert.ok(evaluate('window.__chartOptions.yAxis.max')<100);
 evaluate('chart=null;drawTrend(18)');
