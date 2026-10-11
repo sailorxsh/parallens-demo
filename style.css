@@ -1,4 +1,4 @@
-@font-face {font-family:'DM Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('./vendor/fonts/dm-sans-variable.ttf') format('truetype')}
+@font-face {font-family:'DM Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('./vendor/fonts/dm-sans-variable.woff2') format('woff2'),url('./vendor/fonts/dm-sans-variable.ttf') format('truetype')}
 
 :root {
   --forest:#14251f; --forest-soft:#213b31; --cream:#f7f5ee; --paper:#fffefa;
