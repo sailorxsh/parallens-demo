@@ -1157,7 +1157,7 @@
     "name": "主账号设备数",
     "page": "F",
     "entity": "Owner用户",
-    "window": "最近完整月或指标定义中的月窗口",
+    "window": "2026-09-24 主账号当前绑定关系快照；多设备占比以绑定主账号为分母",
     "dimensions": [
       "country",
       "appPlatform",
@@ -1287,7 +1287,7 @@
     "id": 53,
     "name": "异常情况总览",
     "page": "G",
-    "entity": "小时/日",
+    "entity": "异常事件",
     "window": "2026-09-24 当日演示异常事件数；基线为近4周同时间段",
     "dimensions": [
       "country",

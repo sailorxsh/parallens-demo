@@ -710,6 +710,8 @@ for item in catalog[1:]:
     mid = item["id"]
     measure = values[f"m{mid:02d}"]
     entity = str(item["grain"]).split("×")[0].strip()
+    if mid == 53:
+        entity = "异常事件"
     if mid in cohort_ids:
         window = windows["cohort"]
     elif mid in week_ids:
@@ -718,6 +720,8 @@ for item in catalog[1:]:
         window = windows["month"]
     else:
         window = windows["day"]
+    if mid == 48:
+        window = "2026-09-24 主账号当前绑定关系快照；多设备占比以绑定主账号为分母"
     if measure["kind"] == "rate":
         numerator, denominator = measure["numerator"], measure["denominator"]
     elif measure["kind"] == "group":

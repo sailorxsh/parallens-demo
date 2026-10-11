@@ -1708,6 +1708,7 @@ const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU
     15:'绑定后未产首图设备',18:'成熟试用转正率',21:'有效订阅净增',25:'日活主账号（DAU）',
     29:'季节阈值未使用率',34:'付费权益主账号',35:'订阅ARPPU',48:'多设备主账号占比',
     49:'设备共享率',52:'流失高危主账号',53:'当日异常事件数',54:'事件丢失率'};
+const metricCountUnits={2:'人',4:'人',9:'人',15:'台',16:'台',34:'人',52:'人',53:'条'};
 const metricSearchSubitems={
   7:['当前绑定主账号'],8:['当前绑定设备'],
   25:['WAU 周活主账号','MAU 月活主账号'],
@@ -1730,7 +1731,7 @@ function metricCardSummary(id) {
   const value=metric(id),item=catalogItem(id);
   const summary={label:metricCardLabels[id]??item.name,text:displayValue(id),unit:'',context:'',fields:[]};
   if(value.kind==='na'||value.kind==='group'&&JSON.stringify(value).includes('"kind":"na"'))return summary;
-  if(value.kind==='count')summary.unit=({2:'人',4:'人',9:'人',15:'台',34:'人',52:'人',53:'条'})[id]??'';
+  if(value.kind==='count')summary.unit=metricCountUnits[id]??'';
   const contexts={3:'月化经常性收入，非本月实际收款',4:'最近30天复合活跃主账号去重',
     10:'已满72小时观察的新注册批次',13:'已满7日观察的观鸟注册批次',15:'绑定已超过3天，仍未产出首图',
     34:'当前有效付费权益，含订阅或增值Pack',48:'绑定2台及以上的主账号占比',49:'至少共享给1人的主账号绑定设备占比',
@@ -2372,7 +2373,7 @@ function metricEvidence(id,page) {
       const projected=options.map(option=>projectMetric(id,{...filterState,[dimension]:option}));
       const labels=options.map(option=>optionLabels[option]??option);
       const vals=projected.map(part=>part.kind==='na'?null:part.kind==='rate'?part.value*100:part.value);
-      const countUnit=/设备|固件/.test(contract.entity)?'台':/事件|异常/.test(contract.entity)?'条':'人';
+      const countUnit=metricCountUnits[id]??'';
       const groupNote=id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。';
       const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote};
       appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
