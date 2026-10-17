@@ -226,6 +226,7 @@ window.addEventListener('resize',()=>{
   });
   updateScrollableTables();
   updateSectionNavigation();
+  positionDefinitionPopover();
 },{passive:true});
 const number = value => Number(value).toLocaleString('zh-CN');
 const percent = value => `${(value * 100).toFixed(1)}%`;
@@ -902,39 +903,60 @@ function definition(id,label=catalogItem(id)?.name ?? '指标') {
     const popover=document.querySelector('#metric-definition-popover');
     popover.replaceChildren();
     const heading=element('div','definition-popover-head');
-    heading.append(element('strong','',`${label} · 指标口径`));
+    const title=element('strong','',`${label} · 指标口径`);title.id='metric-definition-title';
+    heading.append(title);popover.setAttribute('aria-labelledby',title.id);
     const close=element('button','definition-close','×');
     close.type='button';close.setAttribute('aria-label','关闭指标口径');
     close.addEventListener('click',()=>closeDefinitionPopover());
     heading.append(close);popover.append(heading);
+    const body=element('div','definition-popover-body');body.tabIndex=0;
+    body.setAttribute('role','region');body.setAttribute('aria-label',`${label}定义、计算与来源`);
     for (const [name,value] of [['定义',item?.definition],['计算方法',item?.formula],['数据粒度',item?.grain],['数据来源',item?.source]]) {
       if (!value) continue;
       const row=element('div','definition-popover-row');
-      row.append(element('span','',name),element('p','',value));popover.append(row);
+      row.append(element('span','',name),element('p','',value));body.append(row);
     }
+    popover.append(body);popover.scrollTop=0;
     if (popover.showPopover) {
       if(popover.matches(':popover-open'))popover.hidePopover();
       popover.hidden=false;popover.showPopover();
     }
     else {popover.hidden=false;popover.classList.add('definition-fallback-open');}
-    const rect=button.getBoundingClientRect();
-    const width=Math.min(440,window.innerWidth-32);
-    const left=Math.min(Math.max(16,rect.left),window.innerWidth-width-16);
-    popover.style.width=`${width}px`;
-    popover.style.left=`${left}px`;
-    popover.style.top=`${Math.min(rect.bottom+10,window.innerHeight-100)}px`;
-    if (popover.getBoundingClientRect().bottom>window.innerHeight-16)
-      popover.style.top=`${Math.max(16,rect.top-popover.offsetHeight-10)}px`;
-    close.focus();
+    positionDefinitionPopover();close.focus({preventScroll:true});
   });
   return button;
 }
+function definitionPopoverIsOpen(popover=document.querySelector('#metric-definition-popover')) {
+  return Boolean(popover&&(popover.showPopover?popover.matches(':popover-open'):!popover.hidden&&popover.classList.contains('definition-fallback-open')));
+}
+function positionDefinitionPopover() {
+  const popover=document.querySelector('#metric-definition-popover');
+  if(!definitionPopoverIsOpen(popover)||!definitionReturnFocus?.isConnected)return;
+  const rect=definitionReturnFocus.getBoundingClientRect(),width=popover.offsetWidth,height=popover.offsetHeight;
+  const left=Math.min(Math.max(16,rect.left),window.innerWidth-width-16);
+  const below=rect.bottom+10;
+  const top=below+height<=window.innerHeight-16?below:Math.max(16,rect.top-height-10);
+  popover.style.left=`${left}px`;popover.style.top=`${Math.min(top,Math.max(16,window.innerHeight-height-16))}px`;
+}
+const definitionSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(positionDefinitionPopover):null;
 function closeDefinitionPopover() {
   const popover=document.querySelector('#metric-definition-popover');
-  const wasOpen=popover&&(popover.showPopover?popover.matches(':popover-open'):!popover.hidden);
+  const wasOpen=definitionPopoverIsOpen(popover);
   if (popover?.showPopover && popover.matches(':popover-open')) popover.hidePopover();
   else if (popover) {popover.hidden=true;popover.classList.remove('definition-fallback-open');}
-  if(wasOpen&&definitionReturnFocus?.isConnected) definitionReturnFocus.focus({preventScroll:true});
+  if(wasOpen&&definitionReturnFocus?.isConnected) {
+    definitionReturnFocus.focus({preventScroll:true});
+    const rect=definitionReturnFocus.getBoundingClientRect();
+    const navigation=document.querySelector('.section-navigation')?.getBoundingClientRect();
+    const covered=navigation&&navigation.top<=0&&rect.top<navigation.bottom;
+    if(covered||rect.top<0||rect.bottom>innerHeight||rect.left<0||rect.right>innerWidth) {
+      definitionReturnFocus.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+      const moved=definitionReturnFocus.getBoundingClientRect();
+      const top=navigation&&navigation.top<=0?navigation.bottom+8:8;
+      if(moved.top<top)scrollBy({top:moved.top-top,behavior:'instant'});
+      else if(moved.bottom>innerHeight-8)scrollBy({top:moved.bottom-innerHeight+8,behavior:'instant'});
+    }
+  }
 }
 function card({id,label,value,page,detail,status='',severity='neutral',star=false,kind='snapshot'}) {
   const article = element('article',kind==='journey' ? `journey-card${star?' star':''}` : 'snapshot-card');
@@ -3219,6 +3241,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const availability=metric(selectedMetric).kind==='na'?original.find(node=>node.matches('.na-note')):null;
   if(availability)availability.id=`${page}-metric-availability-${selectedMetric}`;
   const heading=original[0];heading.querySelector('.section-kicker')?.remove();
+  const metricHeading=heading.firstElementChild;metricHeading.classList.add('workspace-metric-heading');
+  metricHeading.append(definition(selectedMetric,catalogItem(selectedMetric).name));
   const register=original.find(node=>node.matches('.issue-register'));if(register)heading.append(register);
   const tabs=element('div','income-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label',`${pages[page].title}证据`);
   const panels=new Map(),buttons=new Map();
@@ -3835,6 +3859,7 @@ function bindAppEvents() {
   const input=document.querySelector('#metric-search-input');
   const trigger=document.querySelector('#open-metric-search');
   const savedIssues=document.querySelector('#saved-issues'),savedTrigger=document.querySelector('#open-saved-issues');
+  definitionSizeObserver?.observe(document.querySelector('#metric-definition-popover'));
   savedTrigger.disabled=false;updateSavedIssueSummary();
   savedTrigger.addEventListener('click',()=>{
     if(savedIssues.open)return;
@@ -3896,7 +3921,7 @@ function bindAppEvents() {
       }
       if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k') {event.preventDefault();openSearch();return;}
       if(event.key==='Escape'&&search.open) {event.preventDefault();search.close();return;}
-      if(event.key==='Escape'&&document.querySelector('#metric-definition-popover')?.matches(':popover-open')) {
+      if(event.key==='Escape'&&definitionPopoverIsOpen()) {
         event.preventDefault();closeDefinitionPopover();
       }
     });

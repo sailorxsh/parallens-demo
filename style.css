@@ -217,10 +217,15 @@ kbd {font:500 var(--text-xs)/1.2 'DM Sans',sans-serif;letter-spacing:.02em;color
 .definition-trigger {border:1px solid #cbd7cb;border-radius:50%;width:1.5rem;height:1.5rem;min-width:1.5rem;line-height:1;background:transparent;color:#58695b;font-size:var(--text-xs);font-weight:700;cursor:pointer;padding:0}
 .definition-trigger:hover {color:#875418;border-color:#b78a59;background:#fff5e8}
 .snapshot-card:first-child .definition-trigger {color:#d2dfd0;border-color:#6d8978}
-#metric-definition-popover {position:fixed;inset:auto;margin:0;z-index:9999;max-height:min(65vh,35rem);overflow:auto;border:1px solid #a9bea9;border-radius:.55rem;padding:1rem 1.1rem;background:#fffefa;color:#203527;box-shadow:0 20px 50px #0a201a44;font-size:.82rem}
+#metric-definition-popover {position:fixed;inset:auto;margin:0;z-index:9999;width:min(27.5rem,calc(100vw - 2rem));max-height:min(65vh,35rem);overflow:hidden;border:1px solid #a9bea9;border-radius:.55rem;padding:1rem 1.1rem;background:#fffefa;color:#203527;box-shadow:0 20px 50px #0a201a44;font-size:.82rem}
+#metric-definition-popover:is(:popover-open,.definition-fallback-open) {display:flex;flex-direction:column}
 #metric-definition-popover::backdrop {background:transparent}
-.definition-popover-head {display:flex;justify-content:space-between;gap:1rem;align-items:start;border-bottom:1px solid var(--line);padding-bottom:.65rem;margin-bottom:.65rem}
-.definition-close {border:0;background:transparent;color:#526457;font-size:1.2rem;cursor:pointer;line-height:1;padding:.1rem .3rem}
+.definition-popover-head {display:flex;flex:none;justify-content:space-between;gap:1rem;align-items:start;border-bottom:1px solid var(--line);padding-bottom:.65rem;margin-bottom:.65rem}
+.definition-popover-body {min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.definition-popover-body:focus-visible {outline:2px solid var(--focus);outline-offset:-2px}
+.definition-close {display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:1.5rem;min-height:1.5rem;border:0;background:transparent;color:#526457;font-size:1.2rem;cursor:pointer;line-height:1;padding:.1rem .3rem}
+.workspace-metric-heading {display:flex;align-items:center;gap:.4rem;min-width:0}
+.workspace-metric-heading h2 {min-width:0}
 .definition-popover-row {display:grid;grid-template-columns:4.3rem 1fr;gap:.7rem;padding:.3rem 0}
 .definition-popover-row span {color:#687b6e;font-weight:600}
 .definition-popover-row p {margin:0;overflow-wrap:anywhere}
