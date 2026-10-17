@@ -51,9 +51,9 @@ async (page) => {
     check(p.url().includes('country=US')&&p.url().includes('metric=25'),'Alias selection lost the supported filter or metric');
     check(!await dialog.evaluate(node=>node.open),'Search remained open after selection');
     await p.keyboard.press('Control+k');await lookup('事件丢失率');await p.keyboard.press('Enter');
-    await p.locator('#metric-evidence-54 .na-note').waitFor();
+    await p.locator('#G-metric-availability-54').waitFor();
     check(p.url().includes('country=US')&&p.url().includes('metric=54'),'Unavailable metric lookup discarded its scope');
-    check((await p.locator('#metric-evidence-54 .na-note').innerText()).startsWith('待补数据：'),'Search disguised missing data');
+    check((await p.locator('#G-metric-availability-54').innerText()).startsWith('待补数据：'),'Search disguised missing data');
     await p.goto(`${base}#/C?functionType=Upload`);await p.locator('.detail-kpi').first().waitFor();
     await p.keyboard.press('Control+k');
     check((await lookup('直播成功率')).includes(46),'A selected function hides another searchable subitem');

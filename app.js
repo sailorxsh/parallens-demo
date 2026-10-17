@@ -1490,13 +1490,15 @@ function drawStatus(box) {
   },{resolvePoint:params=>stackedChartPoint(statusChart,spec,params),indexFor:params=>[...table.querySelectorAll('tbody tr')].findIndex(row=>
     row.firstElementChild.textContent===spec.labels[params.dataIndex]),columnFor:params=>params.seriesIndex+1});
 }
-function miniCard({id,label,page,value,note='',critical=false,alert=false}) {
+function miniCard({id,label,page,value,unit='',note='',critical=false,alert=false}) {
   const article=element('article',`mini-card${alert?' alert-card':''}${critical?' critical':''}`);
   let body=article;
   if (alert) { article.append(element('span','alert-icon')); body=element('div',''); article.append(body); }
   const heading=element('div','metric-heading');heading.append(element('div','metric-label',label),definition(id,label));body.append(heading);
   const link=element('a','card-link'); link.href=routeHref(page,id);
-  link.append(element('div','metric-value',value));
+  const valueNode=element('div','metric-value',value);
+  if(unit&&metric(id).kind!=='na')valueNode.append(element('span','metric-value-unit',unit));
+  link.append(valueNode);
   if (note) link.append(element('p','',note));
   body.append(link);
   return article;
@@ -1686,10 +1688,10 @@ function renderHome() {
   const alert=element('section','home-alerts'); alert.append(sectionTitle('05  /  ACTION QUEUE','预警与行动入口'));
   const alertCards=element('div','alert-grid');
   [
-    {id:15,label:'绑定未激活设备',page:'A',value:displayValue(15),note:'已绑定超过3天，仍无首图',alert:true,critical:true},
-    {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),note:'去重风险信号命中',alert:true,critical:true},
-    {id:29,label:'季节阈值未使用',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',note:`连续${metric(29).thresholdDays??21}天`,alert:true},
-    {id:22,label:'Free权益用满',page:'D',value:metric(22).kind==='group'?number(metric(22).value.anyExhausted.numerator):'不适用',note:'观鸟线 · 升级机会',alert:true},
+    {id:15,label:'绑定未激活设备',page:'A',value:displayValue(15),unit:metricCountUnits[15],note:'已绑定超过3天，仍无首图',alert:true,critical:true},
+    {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),unit:metricCountUnits[52],note:'去重风险信号命中',alert:true,critical:true},
+    {id:29,label:'季节阈值未使用主账号',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',unit:'人',note:`连续${metric(29).thresholdDays??21}天`,alert:true},
+    {id:22,label:'Free权益用满主账号',page:'D',value:metric(22).kind==='group'?number(metric(22).value.anyExhausted.numerator):'不适用',unit:'人',note:'观鸟线 · 升级机会',alert:true},
   ].forEach(item=>alertCards.append(miniCard({...item,note:selectedFilters().length?'按当前筛选模拟分片':item.note})));
   alert.append(alertCards);dash.append(alert);
   main.append(dash);
@@ -1927,6 +1929,7 @@ const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU
 const metricCountUnits={2:'人',4:'人',9:'人',15:'台',16:'台',34:'人',52:'人',53:'条'};
 const metricSearchSubitems={
   7:['当前绑定主账号'],8:['当前绑定设备'],
+  22:['Free权益用满主账号'],29:['季节阈值未使用主账号'],
   25:['WAU 周活主账号','MAU 月活主账号'],
   35:['月内订阅付款主账号'],39:['型号订阅率最高','所选型号订阅率','同型号活跃率'],
   46:['关键功能最低成功率','上传成功率','直播成功率','推送成功率'],54:['ID映射覆盖率']
