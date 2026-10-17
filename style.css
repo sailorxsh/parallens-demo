@@ -113,6 +113,7 @@ th:first-child,td:first-child {text-align:left}
 .mini-card {background:var(--paper);border:1px solid var(--line);padding:1rem 1.1rem;min-height:8.5rem}
 .mini-card .metric-value {font-size:1.95rem;margin:.5rem 0 .2rem}
 .mini-card .card-link {min-height:4.8rem}
+.mini-card .card-link > p {text-wrap:pretty}
 .alert-card {display:flex;gap:.8rem;align-items:flex-start}
 .alert-icon {width:.55rem;height:.55rem;border-radius:50%;background:var(--yellow);margin-top:.42rem;flex:none}
 .alert-card.critical .alert-icon {background:var(--red)}
@@ -837,6 +838,8 @@ article.trial-sample-item {cursor:auto}
 }
 /* Reflow according to the reading space, including enlarged desktop text. */
 @container content (max-width:63rem) {
+  .lower-grid {grid-template-columns:minmax(0,1fr)}
+  .home-alerts .alert-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
   .home-field-heading {grid-template-columns:minmax(0,1fr)}
   .home-field-heading .field-landscape {display:none}
   .home-field-heading .heading-meta {justify-self:start;justify-content:start;max-width:100%}
@@ -850,4 +853,7 @@ article.trial-sample-item {cursor:auto}
   .income-workspace-grid {grid-template-columns:minmax(0,1fr)}
   .income-context {position:static;max-height:none;overflow:visible}
   .filter-fields {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@container content (max-width:29rem) {
+  .foundation-grid,.home-alerts .alert-grid {grid-template-columns:minmax(0,1fr)}
 }

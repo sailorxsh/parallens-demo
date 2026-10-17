@@ -1491,6 +1491,7 @@ function drawStatus(box) {
     row.firstElementChild.textContent===spec.labels[params.dataIndex]),columnFor:params=>params.seriesIndex+1});
 }
 function miniCard({id,label,page,value,unit='',note='',critical=false,alert=false}) {
+  const measure=metric(id),filterContext=metricFilterContext(id);
   const article=element('article',`mini-card${alert?' alert-card':''}${critical?' critical':''}`);
   let body=article;
   if (alert) { article.append(element('span','alert-icon')); body=element('div',''); article.append(body); }
@@ -1499,7 +1500,19 @@ function miniCard({id,label,page,value,unit='',note='',critical=false,alert=fals
   const valueNode=element('div','metric-value',value);
   if(unit&&metric(id).kind!=='na')valueNode.append(element('span','metric-value-unit',unit));
   link.append(valueNode);
-  if (note) link.append(element('p','',note));
+  const explanation=measure.kind==='na'?measure.reason:note;
+  if(explanation)link.append(element('p','',explanation));
+  let scope='';
+  if(filterContext.ignored.length) {
+    scope=filterContext.applied.length?
+      `${measure.kind==='na'?'本项条件':'本项应用'}：${filterContext.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、')}`:
+      '本项仍为总体范围';
+    scope+=`；未应用：${filterContext.ignoredText}`;
+  }
+  const source=measure.kind!=='na'&&filterContext.applied.length?
+    (id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
+  const context=[scope,source].filter(Boolean).join('；');
+  if(context)link.append(element('p','metric-filter-scope',context));
   body.append(link);
   return article;
 }
@@ -1682,7 +1695,7 @@ function renderHome() {
     {id:42,label:'空触发率',page:'C',value:formatMetric(42),note:'观鸟线 · K6 固件2.8集中偏高'},
     {id:48,label:'多设备用户占比',page:'F',value:formatMetric(48),note:'已绑定主账号'},
     {id:49,label:'设备共享率',page:'F',value:formatMetric(49),note:'当前绑定设备'},
-  ].forEach(item=>foundationCards.append(miniCard({...item,note:selectedFilters().length?'按当前筛选模拟分片':item.note})));
+  ].forEach(item=>foundationCards.append(miniCard(item)));
   foundation.append(foundationCards);
   lower.append(subscriptionDetails(),foundation);dash.append(lower);
   const alert=element('section','home-alerts'); alert.append(sectionTitle('05  /  ACTION QUEUE','预警与行动入口'));
@@ -1692,7 +1705,7 @@ function renderHome() {
     {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),unit:metricCountUnits[52],note:'去重风险信号命中',alert:true,critical:true},
     {id:29,label:'季节阈值未使用主账号',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',unit:'人',note:`连续${metric(29).thresholdDays??21}天`,alert:true},
     {id:22,label:'Free权益用满主账号',page:'D',value:metric(22).kind==='group'?number(metric(22).value.anyExhausted.numerator):'不适用',unit:'人',note:'观鸟线 · 升级机会',alert:true},
-  ].forEach(item=>alertCards.append(miniCard({...item,note:selectedFilters().length?'按当前筛选模拟分片':item.note})));
+  ].forEach(item=>alertCards.append(miniCard(item)));
   alert.append(alertCards);dash.append(alert);
   main.append(dash);
   document.querySelectorAll('.node-sparkline').forEach(box=>{
