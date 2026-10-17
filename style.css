@@ -316,7 +316,7 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .heading-sub {font-size:.78rem}
 .heading-meta {max-width:45rem}
 .home-field-heading {grid-template-columns:minmax(0,1fr) 9rem auto}
-.field-landscape {display:block;width:9rem;height:4.5rem;object-fit:contain;pointer-events:none;color:transparent}
+.field-landscape {display:block;width:9rem;height:4.5rem;object-fit:contain;pointer-events:none;color:transparent;filter:brightness(2.2) saturate(.72)}
 .home-field-heading .eyebrow,.home-field-heading .heading-sub {color:#d5dfd4}
 @media(max-width:1200px) {
   .home-field-heading {grid-template-columns:minmax(0,1fr) auto}

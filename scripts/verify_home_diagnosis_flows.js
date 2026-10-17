@@ -15,10 +15,15 @@ async(page)=>{
    const groups=[target,row=>!target(row)].filter(matches=>rows.some(matches));
    const converted=list=>list.filter(row=>row.converted).length;
    const expected=groups.map(matches=>(converted(current.filter(matches))/current.length-converted(previous.filter(matches))/previous.length)*100);
+   const drawn=[...node.querySelectorAll('svg text')];
    return {values:option.series[0].data.map(item=>typeof item==='number'?item:item.value),expected,
     overall:(converted(current)/current.length-converted(previous)/previous.length)*100,
     min:option.yAxis[0].min,max:option.yAxis[0].max,labels:option.xAxis[0].data,
-    text:node.getAttribute('aria-label'),rect:node.getBoundingClientRect().toJSON()};
+    text:node.getAttribute('aria-label'),rect:node.getBoundingClientRect().toJSON(),
+    readable:drawn.length>0&&option.xAxis[0].data.every(label=>drawn.some(text=>text.textContent===label))&&drawn.every(text=>{
+      const r=text.getBoundingClientRect(),box=node.getBoundingClientRect();
+      return parseFloat(getComputedStyle(text).fontSize)>=12&&r.left>=box.left-2&&r.right<=box.right+2&&r.top>=box.top-2&&r.bottom<=box.bottom+2;
+    })};
   });
   check(actual.values.length===actual.expected.length&&actual.values.every((value,i)=>Math.abs(value-actual.expected[i])<1e-9),'Chart contribution disagrees with raw trial records');
   check(Math.abs(actual.values.reduce((sum,value)=>sum+value,0)-actual.overall)<1e-9,'Disjoint groups do not reconcile to the overall rate change');
@@ -44,7 +49,8 @@ async(page)=>{
      check(await table.isVisible()&&(await table.locator('caption').innerText()).includes('观鸟'),'Observation group calculation remains hidden or mixes product lines');
      const text=await table.innerText();check(text.includes('1,746')&&text.includes('534')&&text.includes('54')&&text.includes('66'),'Observation group does not match 194→178 converted and 6→22 failures per week');
      check((await p.locator('.detail-finding').innerText()).includes('观鸟 Android Plus月付组'),'Observation omits product-line scope');
-     check(values.rect.width>400&&values.rect.height>140,'Contribution chart is too small to read');
+     // The approved two-column layout can be 391px wide; verify rendered labels, not an obsolete fixed width.
+     check(values.rect.height>140&&values.readable,'Contribution chart labels are too small or clipped');
     }
     check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Journey introduces desktop overflow');
     results.push({id,width,height,url:p.url()});

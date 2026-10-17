@@ -305,6 +305,29 @@ function trialAggregate(rows) {
   return {denominator,numerator,value:denominator?numerator/denominator:null,attempts,failed};
 }
 const isBirdPlusMonthlyAndroid=row=>row.product_line==='Bird'&&row.app_platform==='Android'&&row.plan==='Plus'&&row.billing_cycle==='monthly';
+function trialGroupContributions(periodRows) {
+  if(periodRows.length!==2||periodRows.some(rows=>!Array.isArray(rows)))return null;
+  const overall=periodRows.map(trialAggregate);
+  if(overall.some(item=>item.denominator<30))return null;
+  const groups=[['观鸟 Android Plus月付',isBirdPlusMonthlyAndroid],['其他成熟试用',row=>!isBirdPlusMonthlyAndroid(row)]]
+    .map(([name,matches])=>({name,summaries:periodRows.map(rows=>trialAggregate(rows.filter(matches)))}))
+    .filter(group=>group.summaries.some(item=>item.denominator>0));
+  if(!groups.length||groups.some(group=>group.summaries.some(item=>item.denominator<30)))return null;
+  const changes=groups.map(group=>(group.summaries[1].numerator/overall[1].denominator-
+    group.summaries[0].numerator/overall[0].denominator)*100);
+  return {overall,groups,changes};
+}
+function homeTrialClue(comparison) {
+  if(comparison.id!==18||filterState.week||Math.abs(comparison.delta)<.05)return '';
+  const parts=trialGroupContributions(['previous','current'].map(period=>trialRows(filterState,period).rows));
+  if(!parts||Math.abs((parts.overall[1].value-parts.overall[0].value)*100-comparison.delta)>.00001)return '';
+  const leader=parts.changes.map((value,index)=>({value,index}))
+    .filter(item=>item.value*comparison.delta>0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value))[0];
+  if(!leader||Math.abs(leader.value)<.005)return '';
+  const signed=value=>`${value<0?'−':'+'}${Math.abs(value).toFixed(2)} 个百分点`;
+  const remainder=parts.changes.reduce((sum,value,index)=>sum+(index===leader.index?0:value),0);
+  return `${parts.groups[leader.index].name}对本次变化贡献 ${signed(leader.value)}${Math.abs(remainder)>=.005?`，其余合计 ${signed(remainder)}`:''}；这是数学分解，不证明因果。`;
+}
 function trialReadiness(state=filterState) {
   const source=sourceData.trialFacts.readiness;
   if(!source||source.as_of!==sourceData.snapshot.asOf)return {batches:[],reason:'暂无当前快照的批次可用性样例'};
@@ -1604,7 +1627,7 @@ function renderHome() {
       link.setAttribute('aria-label',`进入${pages[selected.page].title}，核对${selected.name}分组证据`);
       const action=element('div','home-signal-actions');action.append(link,basis);
       const movement=Math.abs(selected.delta)<.05?'基本持平':`较前期${selected.delta>0?'上升':'下降'} ${Math.abs(selected.delta).toFixed(1)} 个百分点`;
-      const advice=selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。';
+      const advice=homeTrialClue(selected)||(selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。');
       context.append(element('strong','home-observation-label','观察'),
         element('p','signal-explanation',`近期合并率${movement}。${advice}`),
         element('strong','home-observation-label','建议优先行动'),action);
@@ -2494,13 +2517,9 @@ function metricEvidence(id,page) {
       [['前9个成熟周 · W1–9',trialRows(filterState,'previous')],['近3个成熟周 · W10–12',trialRows(filterState,'current')]];
     const summaries=periods.map(([label,result])=>[label,result.rows?trialAggregate(result.rows):null]);
     if(!filterState.week&&summaries.every(([,item])=>item?.denominator>=30)) {
-      const groups=[['观鸟 Android Plus月付',isBirdPlusMonthlyAndroid],['其他成熟试用',row=>!isBirdPlusMonthlyAndroid(row)]].map(([name,matches])=>({name,
-        summaries:periods.map(([,result])=>trialAggregate(result.rows.filter(matches)))}))
-        .filter(group=>group.summaries.some(item=>item.denominator>0));
-      if(groups.every(group=>group.summaries.every(item=>item.denominator>=30))) {
-        const overall=summaries.map(([,item])=>item);
-        const changes=groups.map(group=>(group.summaries[1].numerator/overall[1].denominator-
-          group.summaries[0].numerator/overall[0].denominator)*100);
+      const contribution=trialGroupContributions(periods.map(([,result])=>result.rows));
+      if(contribution) {
+        const {groups,overall,changes}=contribution;
         const bound=Math.max(.5,Math.ceil(Math.max(...changes.map(Math.abs))*1.15*2)/2);
         const signed=value=>`${Math.abs(value)<.005?'':value>0?'+':'−'}${Math.abs(value).toFixed(2)}`;
         const changeSpec={title:'转正率变化 · 互斥分组贡献',comparisonGroup:'trial-periods',unit:'个百分点',labels:groups.map(group=>group.name),
