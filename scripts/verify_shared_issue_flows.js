@@ -2,8 +2,10 @@
 async (page) => {
   const base=new URL('.',page.url()).href;
   const context=await page.context().browser().newContext({viewport:{width:1366,height:1000},locale:'zh-CN',reducedMotion:'reduce'});
-  const p=await context.newPage(),errors=[],results=[];
+  let p=await context.newPage();
+  const errors=[],results=[];
   const check=(ok,message)=>{if(!ok)throw new Error(message);};
+  const ready=()=>p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main')?.getAttribute('aria-busy')==='false');
   p.on('pageerror',error=>errors.push(error.message));
   p.on('dialog',dialog=>dialog.accept());
   try {
@@ -11,7 +13,11 @@ async (page) => {
     const cases=await p.evaluate(()=>Object.keys(pages).flatMap(code=>[...new Set([
       ...sourceData.catalog.filter(item=>item.page===code).map(item=>item.id),...sourceData.diagnostics[code].heroIds])].map(id=>[code,id])));
     for(const [code,id] of cases) {
+      // These are independent registration routes, not a 100-history-writes/10s stress test.
+      await p.close();p=await context.newPage();
+      p.on('pageerror',error=>errors.push(error.message));p.on('dialog',dialog=>dialog.accept());
       await p.goto(`${base}#/${code}?metric=${id}`);
+      await ready();
       const evidence=p.locator(`#metric-evidence-${id}`);await evidence.waitFor();
       await evidence.locator('.issue-register').click();
       const form=p.locator('.action-record');
@@ -23,6 +29,7 @@ async (page) => {
     }
     for(const [code,id] of [['G',52],['G',15],['F',7],['F',47],['E',3]]) {
       await p.goto(`${base}#/${code}?metric=${id}&issue=${id}`);
+      await ready();
       const form=p.locator('.action-record');await form.waitFor();
       const baseline=await form.locator(':scope > p').first().innerText();
       await form.locator('[name="owner"]').fill(`${code} #${id} 核查`);

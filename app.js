@@ -111,7 +111,99 @@ function saveActionState(key,record) {
   const next={...simulatedActionState,[key]:record};
   try {localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(next));}
   catch {return false;}
-  simulatedActionState=next;return true;
+  simulatedActionState=next;updateSavedIssueSummary();return true;
+}
+const issueStatusLabels={pending:'待处理',reviewing:'核查中',resolved:'已处理，待复查',verified:'复查通过（人工确认）'};
+const issueStatusLabel=status=>Object.hasOwn(issueStatusLabels,status)?issueStatusLabels[status]:'状态待核对';
+const savedIssueTableObserver=typeof ResizeObserver==='function'?new ResizeObserver(()=>updateScrollableTables()):null;
+function issueIdForKey(key,page,id) {
+  const hash=[...key].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7).toString(36).toUpperCase();
+  return `DEMO-${page}-${id}-${hash}`;
+}
+function savedIssueTarget(key,record) {
+  if(!record||typeof record!=='object'||Array.isArray(record))return {reason:'旧记录内容不完整，仅保留原记录。'};
+  const {page,evidenceId:id,scope,filters}=record;
+  if(typeof page!=='string'||!Object.hasOwn(pages,page)||!Number.isInteger(id)||!supportsPageMetric(page,id))
+    return {reason:'记录中的专题或指标当前不可用。'};
+  if(!filters||typeof filters!=='object'||Array.isArray(filters))return {reason:'旧记录未保存筛选快照，无法可靠恢复原范围。'};
+  const allowed=relevantFilters(page);
+  if(Object.entries(filters).some(([name,value])=>!allowed.includes(name)||typeof value!=='string'||
+    value!=='All'&&!availableOptions(page,name,filters).includes(value)))
+    return {reason:'记录包含当前不支持的筛选值；保留原范围，不替换为总体。'};
+  const selected=allowed.filter(name=>filters[name]&&filters[name]!=='All').map(name=>[name,filters[name]]);
+  const restoredScope=selected.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'默认演示范围';
+  if(scope!==restoredScope||key!==`record:${page}:${scope}:${id}`||
+    record.issueId&&record.issueId!==issueIdForKey(key,page,id))
+    return {reason:'历史范围或问题标识与当前规则不一致；请先核对保存详情。'};
+  const params=new URLSearchParams(selected);params.set('metric',String(id));params.set('issue',String(id));
+  return {href:`#/${page}?${params}`,page,id};
+}
+function savedIssueEntries() {
+  return Object.entries(simulatedActionState).filter(([key])=>key.startsWith('record:')).map(([key,value])=>{
+    const record=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+    const title=catalogItem(record.evidenceId)?.name??'历史指标待核对';
+    return {key,record,title,target:savedIssueTarget(key,value)};
+  }).sort((a,b)=>{
+    const order={pending:0,reviewing:1,resolved:2,verified:3};
+    return (Object.hasOwn(order,a.record.status)?order[a.record.status]:4)-(Object.hasOwn(order,b.record.status)?order[b.record.status]:4)||
+      String(a.record.due||'9999').localeCompare(String(b.record.due||'9999'))||a.key.localeCompare(b.key,'zh-CN');
+  });
+}
+function updateSavedIssueSummary() {
+  const total=Object.keys(simulatedActionState).filter(key=>key.startsWith('record:')).length;
+  const count=document.querySelector('#saved-issues-total');if(count)count.textContent=String(total);
+  document.querySelector('#open-saved-issues')?.setAttribute('aria-label',`已登记问题，${total}条本地记录`);
+}
+function renderSavedIssues() {
+  savedIssueTableObserver?.disconnect();
+  const all=savedIssueEntries(),query=document.querySelector('#saved-issues-query').value.trim().toLocaleLowerCase('zh-CN');
+  const rows=all.filter(({record,title})=>[title,record.issueId,record.scope,record.owner,pages[record.page]?.title,
+    issueStatusLabel(record.status),record.due].filter(Boolean).join(' ').toLocaleLowerCase('zh-CN').includes(query));
+  document.querySelector('#saved-issues-count').textContent=`${rows.length} / ${all.length} 条已保存问题 · 按处理进度与计划复查日排列`;
+  const content=document.querySelector('#saved-issues-content');content.replaceChildren();
+  if(!rows.length) {
+    content.append(element('p','saved-issues-empty',all.length?'没有匹配的问题。清空关键词可查看全部已保存记录。':
+      '还没有已保存的问题单。进入任一指标的“问题登记”，保存后即可在这里跨范围查找。'));
+    return;
+  }
+  const wrap=element('div','saved-issues-table data-table-scroll');
+  const table=element('table','');table.append(element('caption','visually-hidden','本浏览器全部范围的已保存问题'));
+  const head=element('thead',''),headRow=element('tr','');
+  ['问题与指标','登记范围','负责人','处理进度','计划复查日','返回问题单'].forEach(label=>{
+    const th=element('th','',label);th.scope='col';headRow.append(th);
+  });head.append(headRow);table.append(head);
+  const body=element('tbody','');
+  for(const {key,record,title,target} of rows) {
+    const tr=element('tr','');tr.dataset.recordKey=key;
+    const metricCell=element('th','');metricCell.scope='row';
+    metricCell.append(element('strong','',`${record.evidenceId?`#${record.evidenceId} `:''}${title}`),
+      element('span','saved-issue-meta',`${pages[record.page]?.title??'历史专题'} · ${record.issueId??'旧记录未保存问题编号'}`));
+    const details=element('details','saved-issue-details');details.append(element('summary','','查看保存详情'));
+    for(const [field,label] of [['baseline','登记基线'],['baselineAt','基线周期'],['updatedAt','保存时间'],['note','处理说明'],['target','验收条件'],['reviewValue','复查实测值'],['reviewedAt','实际复查日'],['linkedSample','关联记录']])
+      if(typeof record[field]==='string'&&record[field])details.append(element('p','',`${label}：${record[field]}`));
+    if(details.children.length===1)details.append(element('p','','旧记录没有提供额外保存详情。'));
+    metricCell.append(details);tr.append(metricCell,element('td','',typeof record.scope==='string'?record.scope:'旧记录未保存范围'),
+      element('td','',typeof record.owner==='string'?record.owner:'未记录'),
+      element('td','',issueStatusLabel(record.status)),element('td','',typeof record.due==='string'&&record.due?record.due:'未设置'));
+    const action=element('td','');
+    if(target.href) {
+      const open=element('button','saved-issue-open','打开');open.type='button';
+      open.setAttribute('aria-label',`打开 ${record.issueId??title} · ${record.scope}`);
+      open.addEventListener('click',()=>{
+        const current=savedIssueTarget(key,simulatedActionState[key]);
+        if(!current.href){renderSavedIssues();return;}
+        document.querySelector('#saved-issues').close('record');pushRoute(current.href);renderRoute();
+        requestAnimationFrame(()=>{
+          main.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
+          main.querySelector('.action-record [name="owner"]')?.focus({preventScroll:true});
+          document.querySelector('#announcement').textContent=`已打开${title}的原范围问题单；登记基线和会话草稿保留。`;
+        });
+      });action.append(open);
+    } else action.append(element('span','saved-issue-readonly',target.reason));
+    tr.append(action);body.append(tr);
+  }
+  table.append(body);wrap.append(table);content.append(wrap);savedIssueTableObserver?.observe(table);
+  requestAnimationFrame(updateScrollableTables);
 }
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
@@ -2622,8 +2714,7 @@ function actionRecord(page,evidenceId) {
   const key=`record:${page}:${scope}:${evidenceId}`;
   const current=simulatedActionState[key]??{};
   const draft=actionDrafts.get(key),initial=draft??current;
-  const hash=[...key].reduce((value,char)=>(value*31+char.charCodeAt(0))>>>0,7).toString(36).toUpperCase();
-  const issueId=`DEMO-${page}-${evidenceId}-${hash}`;
+  const issueId=issueIdForKey(key,page,evidenceId);
   const currentBaseline=actionBaselineValue(evidenceId),currentWindow=actionBaselineWindow(evidenceId);
   const baseline=draft?.baseline??current.baseline??currentBaseline;
   const baselineAt=draft?.baselineAt??current.baselineAt??currentWindow;
@@ -3707,6 +3798,22 @@ function bindAppEvents() {
   const search=document.querySelector('#metric-search');
   const input=document.querySelector('#metric-search-input');
   const trigger=document.querySelector('#open-metric-search');
+  const savedIssues=document.querySelector('#saved-issues'),savedTrigger=document.querySelector('#open-saved-issues');
+  savedTrigger.disabled=false;updateSavedIssueSummary();
+  savedTrigger.addEventListener('click',()=>{
+    if(savedIssues.open)return;
+    closeDefinitionPopover();savedTrigger.focus({preventScroll:true});
+    savedIssues.returnValue='';document.querySelector('#saved-issues-query').value='';renderSavedIssues();savedIssues.showModal();
+    updateScrollableTables();
+    document.querySelector('#saved-issues-query').focus();
+  });
+  document.querySelector('#close-saved-issues').addEventListener('click',()=>savedIssues.close());
+  savedIssues.addEventListener('close',()=>{
+    if(savedIssues.returnValue==='record')return;
+    const viewport={left:scrollX,top:scrollY,behavior:'instant'};
+    savedTrigger.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});scrollTo(viewport);
+  });
+  document.querySelector('#saved-issues-query').addEventListener('input',renderSavedIssues);
   const updateSearch=()=>{
     const records=metricSearchMatches(input.value);
     const results=document.querySelector('#metric-search-results');
@@ -3723,7 +3830,7 @@ function bindAppEvents() {
     }
     if(!records.length)results.append(element('li','metric-search-empty','没有匹配的指标。换一个业务关键词试试。'));
   };
-  const openSearch=()=>{if(search.open)return;closeDefinitionPopover();input.value='';updateSearch();search.showModal();input.focus();};
+  const openSearch=()=>{if(search.open||savedIssues.open)return;closeDefinitionPopover();input.value='';updateSearch();search.showModal();input.focus();};
   trigger.disabled=false;trigger.addEventListener('click',()=>{trigger.focus({preventScroll:true});openSearch();});
   document.querySelector('#close-metric-search').addEventListener('click',()=>search.close());
   input.addEventListener('input',updateSearch);

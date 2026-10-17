@@ -280,6 +280,33 @@ kbd {font:500 var(--text-xs)/1.2 'DM Sans',sans-serif;letter-spacing:.02em;color
 .sidebar-nav .nav-link:hover {background:#284235;color:white}
 .sidebar-nav .nav-link.active {background:#e7ecdf;border-color:#e7ecdf;color:#163527;font-weight:700}
 .sidebar-foot {margin:auto .55rem 0;padding-top:1rem;color:#8fa994;font-size:var(--text-xs)}
+.saved-issues-trigger {display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:.9rem .2rem 0;padding:.65rem .7rem;border:1px solid #6f8c78;border-radius:var(--card-radius);background:transparent;color:#f2f3e8;text-align:left;font:inherit;font-size:.76rem;cursor:pointer}
+.saved-issues-trigger:hover {background:#284235;border-color:#a5b79d}
+.saved-issues-trigger:disabled {opacity:.55;cursor:wait}
+.saved-issues-trigger span:last-child {font-variant-numeric:tabular-nums}
+.saved-issues {width:min(66rem,calc(100vw - 3rem));max-height:calc(100dvh - 3rem);overflow:auto}
+.saved-issues[open] {display:flex;flex-direction:column;overflow:hidden}
+.saved-issues .metric-search-head,.saved-issues .metric-search-hint,.saved-issues .metric-search-label,.saved-issues #saved-issues-query,.saved-issues .metric-search-count {flex-shrink:0}
+.saved-issues #saved-issues-content {min-height:0;overflow:auto;scroll-padding:.5rem}
+.saved-issues #saved-issues-query {width:100%;min-height:2.4rem;padding:.5rem .65rem;border:1px solid var(--control-border);border-radius:.3rem;background:var(--paper);color:var(--ink);font:inherit;font-size:.875rem}
+.saved-issues-table {overflow:auto;border:1px solid var(--line);border-radius:var(--card-radius);scroll-padding:.5rem}
+.saved-issues-table table {min-width:46rem;width:100%;table-layout:fixed;font-size:var(--text-sm)}
+.saved-issues-table th:first-child {width:31%}
+.saved-issues-table th:nth-child(2) {width:23%}
+.saved-issues-table th:nth-child(3) {width:12%}
+.saved-issues-table th:nth-child(4) {width:13%}
+.saved-issues-table th:nth-child(5) {width:11%}
+.saved-issues-table th:last-child {width:10%}
+.saved-issues-table td,.saved-issues-table th {vertical-align:top;text-align:left;overflow-wrap:anywhere;white-space:normal}
+.saved-issues-table td strong {display:block;font-weight:600}
+.saved-issue-meta {display:block;margin-top:.25rem;color:var(--ink-soft);font-size:var(--text-xs);line-height:1.55}
+.saved-issue-open {min-height:2rem;padding:.35rem .5rem;border:1px solid var(--control-border);border-radius:.3rem;background:#edf2e7;color:#284735;font:inherit;font-size:var(--text-xs);cursor:pointer}
+.saved-issue-open:hover {background:#dfe9d7}
+.saved-issue-readonly {color:var(--orange-dark);font-size:var(--text-xs);line-height:1.6}
+.saved-issue-details {margin-top:.45rem;font-size:var(--text-xs)}
+.saved-issue-details summary {cursor:pointer;color:#365a43}
+.saved-issue-details p {margin:.4rem 0;line-height:1.65;white-space:pre-wrap}
+.saved-issues-empty {margin:0;padding:1.25rem;border:1px solid var(--line);border-radius:var(--card-radius);color:var(--ink-soft);line-height:1.7;font-size:.875rem}
 .app-content {min-width:0;padding:0 clamp(1rem,2.5vw,2.7rem);container-type:inline-size;container-name:content}
 .page-heading {padding:1.25rem 0 1.05rem;align-items:center}
 .detail-heading {padding:.85rem 0 .75rem;max-width:none}
