@@ -469,4 +469,33 @@ assert.equal(evaluate('window.__chartOptions.series[0].markLine.data[0].yAxis'),
 assert.ok(evaluate('window.__chartOptions.yAxis.max-window.__chartOptions.yAxis.min')<5);
 evaluate('chart=null;drawTrend(null)');
 assert.equal(evaluate('window.__chartOptions.series.length'),2);
-console.log(`PASS metric names and subitem search, indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+// Counterfactual test fixtures exercise composition shifts absent from the shipped demo.
+const cohort=(size,converted,target)=>Array.from({length:size},(_,index)=>({
+  product_line:target?'Bird':'Hunting',app_platform:target?'Android':'iOS',
+  plan:target?'Plus':'Pro',billing_cycle:'monthly',converted:index<converted,
+}));
+const rateParts=(before,after)=>JSON.parse(JSON.stringify(evaluate(`trialGroupContributions(${JSON.stringify([before,after])})`)));
+const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-10,`${actual} != ${expected}`);
+const decompositionCases=[
+  {before:[...cohort(40,20,true),...cohort(60,15,false)],after:[...cohort(40,16,true),...cohort(60,15,false)],within:-4,mix:0,total:-4},
+  {before:[...cohort(40,20,true),...cohort(60,15,false)],after:[...cohort(60,30,true),...cohort(40,10,false)],within:0,mix:5,total:5},
+  // Both groups improve by 10pp while the population shifts toward the lower-rate group.
+  {before:[...cohort(90,54,true),...cohort(30,6,false)],after:[...cohort(30,21,true),...cohort(90,27,false)],within:10,mix:-20,total:-10},
+];
+for(const fixture of decompositionCases) {
+  const parts=rateParts(fixture.before,fixture.after),reverse=rateParts(fixture.after,fixture.before);
+  near(parts.effects.reduce((sum,item)=>sum+item.within,0),fixture.within);
+  near(parts.effects.reduce((sum,item)=>sum+item.composition,0),fixture.mix);
+  near(parts.changes.reduce((sum,value)=>sum+value,0),fixture.total);
+  parts.effects.forEach((item,index)=>{
+    near(item.within+item.composition,parts.changes[index]);
+    near(reverse.effects[index].within,-item.within);
+    near(reverse.effects[index].composition,-item.composition);
+  });
+}
+assert.equal(rateParts(cohort(29,10,true),cohort(40,20,true)),null);
+assert.equal(rateParts([...cohort(40,20,true),...cohort(29,10,false)],cohort(60,30,true)),null);
+assert.equal(rateParts([],[]),null);
+const singleGroup=rateParts(cohort(40,20,true),cohort(60,24,true));
+assert.equal(singleGroup.groups.length,1);near(singleGroup.effects[0].composition,0);near(singleGroup.changes[0],-10);
+console.log(`PASS metric names and subitem search, indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, symmetric within/composition decomposition including Simpson reversal, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);

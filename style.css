@@ -663,6 +663,9 @@ article.trial-sample-item {cursor:auto}
 .income-evidence .evidence-pair>.workspace-calculation {margin-top:.5rem}
 .workspace-calculation summary,.workspace-context>summary,.income-catalog>summary {font-size:.78rem;font-weight:600;color:#52745e;cursor:pointer;padding:.7rem .1rem}
 .workspace-calculation,.workspace-context {border-top:1px solid #dce5d7;margin:.6rem 0}
+.trial-rate-decomposition .diagnostic-table {min-width:58rem}
+.trial-rate-decomposition .diagnostic-table tbody th {min-width:10rem;overflow-wrap:normal}
+.trial-rate-decomposition .diagnostic-table td {white-space:nowrap}
 .workspace-calculation .data-table-scroll {margin:0;padding:.45rem .65rem;min-width:0}
 .income-evidence .table-note {font-size:var(--text-sm);line-height:1.65}
 .workspace-chart-title {font-size:.87rem;line-height:1.5;margin:.5rem 0}

@@ -36,6 +36,26 @@ async(page)=>{
         check(await navigation.evaluate(node=>node.scrollWidth<=node.clientWidth+1),`${code} destination controls overflow`);
         results.push({page:code,width,destinations:buttons.length});
       }
+      // A later explicit destination must win over the tab's deferred scroll restoration.
+      for(const code of ['D','E']) {
+        await open(`${code}?metric=${code==='D'?18:35}`);
+        await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
+        await field('note').fill('快速定位也保留草稿');
+        const baseline=await form().locator('> .table-note').first().textContent();
+        const destination=await p.evaluate(code=>{
+          scrollTo({top:0,behavior:'instant'});
+          document.getElementById(`${code}-tab-groups`).click();
+          const button=document.querySelector(`#${code}-panel-groups .workspace-location`);
+          button.click();return button.getAttribute('aria-controls');
+        },code);
+        await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const target=p.locator(`[id="${destination}"]`),targetBox=await target.boundingBox();
+        const navBox=await p.getByRole('navigation',{name:'分组证据定位',exact:true}).boundingBox();
+        check(targetBox.y>=navBox.y+navBox.height-2&&targetBox.y<height-75,`${code} deferred tab restoration overrides explicit navigation at ${width}`);
+        check(await target.evaluate(n=>n.contains(document.activeElement))&&await field('note').inputValue()==='快速定位也保留草稿'&&
+          await form().locator('> .table-note').first().textContent()===baseline,'Rapid evidence navigation loses focus, draft or baseline');
+        results.push({page:code,width,rapidTabDestination:true});
+      }
       // Link a sample from a different issue while retaining the actual sample in view.
       await open('D?metric=52&issue=52');await field('note').fill('保留风险核查草稿');
       await p.locator('#D-tab-groups').click();

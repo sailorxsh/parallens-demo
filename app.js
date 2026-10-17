@@ -316,7 +316,13 @@ function trialGroupContributions(periodRows) {
   if(!groups.length||groups.some(group=>group.summaries.some(item=>item.denominator<30)))return null;
   const changes=groups.map(group=>(group.summaries[1].numerator/overall[1].denominator-
     group.summaries[0].numerator/overall[0].denominator)*100);
-  return {overall,groups,changes};
+  const effects=groups.map(group=>{
+    const rates=group.summaries.map(item=>item.value);
+    const weights=group.summaries.map((item,index)=>item.denominator/overall[index].denominator);
+    return {rates,weights,within:(weights[0]+weights[1])/2*(rates[1]-rates[0])*100,
+      composition:(rates[0]+rates[1])/2*(weights[1]-weights[0])*100};
+  });
+  return {overall,groups,changes,effects};
 }
 function homeTrialClue(comparison) {
   if(comparison.id!==18||filterState.week||Math.abs(comparison.delta)<.05)return '';
@@ -2541,17 +2547,29 @@ function metricEvidence(id,page) {
     if(!filterState.week&&summaries.every(([,item])=>item?.denominator>=30)) {
       const contribution=trialGroupContributions(periods.map(([,result])=>result.rows));
       if(contribution) {
-        const {groups,overall,changes}=contribution;
+        const {groups,overall,changes,effects}=contribution;
         const bound=Math.max(.5,Math.ceil(Math.max(...changes.map(Math.abs))*1.15*2)/2);
         const signed=value=>`${Math.abs(value)<.005?'':value>0?'+':'−'}${Math.abs(value).toFixed(2)}`;
         const changeSpec={title:'转正率变化 · 互斥分组贡献',comparisonGroup:'trial-periods',unit:'个百分点',labels:groups.map(group=>group.name),
           minY:-bound,maxY:bound,labelRotation:0,series:[{name:'对总体变化的贡献',values:changes,color:'#bc6a20'}],
-          note:`前9周与近3周比较；未舍入贡献相加为总体变化 ${signed((overall[1].value-overall[0].value)*100)} 个百分点，显示值可能有舍入尾差。pp表示百分点；纵轴包含0，正负贡献使用相同刻度。`};
+          note:`前9周→近3周：组内表现 ${signed(effects.reduce((sum,item)=>sum+item.within,0))}、人群构成 ${signed(effects.reduce((sum,item)=>sum+item.composition,0))}，合计 ${signed((overall[1].value-overall[0].value)*100)} 个百分点。算术拆分不证明原因；纵轴含0，pp＝百分点。`};
         appendEvidencePair(changeSpec,{title:'分组贡献 · 可验算依据',
           columns:['互斥分组','前9周转正 / 总体成熟','近3周转正 / 总体成熟','变化贡献（百分点）'],
           rows:groups.map((group,index)=>[group.name,`${number(group.summaries[0].numerator)} / ${number(overall[0].denominator)}`,
             `${number(group.summaries[1].numerator)} / ${number(overall[1].denominator)}`,signed(changes[index])]),
           note:'贡献＝近期该组转正人数÷近期总体成熟人数−前期该组转正人数÷前期总体成熟人数。分母为同一期总体成熟人群，区别于组内转正率；这是数学分解，不证明支付失败导致转正下降。'});
+        const decomposition=element('details','workspace-context trial-rate-decomposition');
+        decomposition.dataset.evidenceKind='groups';
+        decomposition.append(element('summary','','核对组内表现与人群构成拆分'),dataTable({
+          title:'转正率变化拆分 · 同一筛选与成熟批次',
+          columns:['互斥分组','前9周：转正 / 该组成熟（组内率）','近3周：转正 / 该组成熟（组内率）',
+            '人群占比（前→后）','组内表现（pp）','构成变化（pp）'],
+          rows:groups.map((group,index)=>[group.name,...group.summaries.map(item=>
+            `${number(item.numerator)} / ${number(item.denominator)}（${percent(item.value)}）`),
+            effects[index].weights.map(percent).join(' → '),signed(effects[index].within),signed(effects[index].composition)]),
+          note:`总体成熟人数：前期 ${number(overall[0].denominator)} 人，近期 ${number(overall[1].denominator)} 人。组内率 r＝该组转正÷该组成熟；人群占比 w＝该组成熟÷同期总体成熟。组内表现＝两期平均 w×(近期 r−前期 r)；构成变化＝两期平均 r×(近期 w−前期 w)，均乘100换算为百分点。两部分未舍入合计等于原分组贡献；显示值可能有舍入尾差。占比不变时构成变化为0；这是算术分解，不证明业务因果。`,
+        }));
+        panel.append(decomposition);
       } else {
         const pending=element('p','na-note','部分分组的前期或近期成熟样本不足30人，暂不展示变化贡献；总体批次比较仍可核对。');
         pending.dataset.evidenceKind='groups';panel.append(pending);
@@ -3429,7 +3447,9 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     updateScrollableTables();
     updateSectionNavigation();
   };
+  let evidenceNavigationRevision=0;
   const activate=(key,{focus=false,push=false}={})=>{
+    const navigationRevision=++evidenceNavigationRevision;
     const viewport=push?{left:scrollX,top:scrollY,behavior:'instant'}:null;
     diagnosticWorkspaceView=key;
     for(const [name,panel] of panels) {
@@ -3447,7 +3467,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(!workspace.isConnected||diagnosticWorkspaceView!==key)return;
       drawVisible();
       // Safari can move the viewport when the focused tab's panel changes height.
-      if(viewport){scrollTo(viewport);updateSectionNavigation();}
+      if(viewport&&navigationRevision===evidenceNavigationRevision){scrollTo(viewport);updateSectionNavigation();}
     });
   };
   for(const [key,button] of buttons) {
@@ -3474,6 +3494,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       const button=element('button','workspace-location',title);button.type='button';
       button.title=title;button.setAttribute('aria-controls',target.id);
       button.addEventListener('click',()=>{
+        evidenceNavigationRevision++;
         if(target.tagName==='DETAILS')target.open=true;
         const focus=heading??target;focus.tabIndex=-1;focus.focus({preventScroll:true});
         const offset=navigation.offsetHeight+parseFloat(getComputedStyle(navigation).top)+16;
@@ -3506,6 +3527,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     const button=element('button','section-navigation-item',label);button.type='button';button.dataset.target=target.id;
     button.setAttribute('aria-controls',target.id);
     button.addEventListener('click',()=>{
+      evidenceNavigationRevision++;
       if(target===inventory)catalogDetails.open=true;
       const heading=target.querySelector('h2');heading.tabIndex=-1;heading.focus({preventScroll:true});
       target.scrollIntoView({block:'start',behavior:'instant'});
