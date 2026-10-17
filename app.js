@@ -40,13 +40,14 @@ const detailCharts=[];
 const chartPresentations=new WeakMap();
 const chartTextScale=()=>Math.max(1,parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
 const chartText=size=>size*chartTextScale();
-function setChartOption(instance,build) {
-  chartPresentations.set(instance,{build,scale:null,reducedMotion:null});
+function setChartOption(instance,build,{responsive=false,legendPadding=null}={}) {
+  chartPresentations.set(instance,{build,responsive,legendPadding,scale:null,reducedMotion:null,width:null});
   refreshChartTypography(instance);
 }
 function refreshChartTypography(instance) {
   const presentation=chartPresentations.get(instance),scale=chartTextScale(),reducedMotion=!!chartMotionPreference?.matches;
-  if(!presentation||presentation.scale===scale&&presentation.reducedMotion===reducedMotion)return false;
+  const width=instance.getDom().clientWidth;
+  if(!presentation||presentation.scale===scale&&presentation.reducedMotion===reducedMotion&&(!presentation.responsive||presentation.width===width))return false;
   const option=presentation.build(),fontSize=chartText(12);
   option.animation=!reducedMotion&&(option.animation??true);
   option.textStyle={fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize,...option.textStyle};
@@ -65,7 +66,7 @@ function refreshChartTypography(instance) {
   }
   // Reapply authored presentation; ECharts merges the existing legend selection.
   if(reducedMotion||presentation.scale!==null)option.animationDurationUpdate=0;
-  instance.setOption(option);presentation.scale=scale;presentation.reducedMotion=reducedMotion;return true;
+  instance.setOption(option);presentation.scale=scale;presentation.reducedMotion=reducedMotion;presentation.width=width;return true;
 }
 chartMotionPreference?.addEventListener('change',()=>{
   for(const instance of [chart,statusChart,...sparklines,...detailCharts]) {
@@ -1735,8 +1736,9 @@ function chartNote(spec) {
 }
 function fitChartLegend(frame,instance) {
   const controls=frame.querySelector('.chart-legend');
+  const padding=chartPresentations.get(instance)?.legendPadding?.()??Number(frame.dataset.legendPadding);
   if(controls?.offsetHeight)instance.setOption({animationDurationUpdate:chartAnimationDuration(200),
-    grid:{bottom:controls.offsetHeight+chartText(Number(frame.dataset.legendPadding))}});
+    grid:{bottom:controls.offsetHeight+chartText(padding)}});
 }
 function interactiveChartLegend(box,instance,lines,title,axisPadding=28) {
   let frame=box.parentElement;
@@ -2205,6 +2207,17 @@ function seriesForStructure(view) {
   return {title:view.label,unit:view.unit,labels:view.rows.map(row=>row[0]),
     series:[{name:'数量',values:view.rows.map(row=>row[1])}],note:view.note};
 }
+function categoryAxisLayout(box,spec,left,right) {
+  const scale=chartTextScale(),font=`${chartText(12)}px DM Sans, PingFang SC, Microsoft YaHei, sans-serif`;
+  const bounds=spec.labels.map(label=>window.echarts.format.getTextRect(String(label),font));
+  const width=Math.max(0,...bounds.map(rect=>rect.width));
+  const height=Math.max(chartText(12),...bounds.map(rect=>rect.height));
+  const slot=(box.clientWidth-chartText(left+right))/Math.max(1,spec.labels.length);
+  const rotate=spec.labelRotation??(width+chartText(12)<=slot?0:18);
+  const radians=Math.abs(rotate)*Math.PI/180;
+  const padding=Math.max(36,Math.ceil((width*Math.sin(radians)+height*Math.cos(radians))/scale+20));
+  return {rotate,padding};
+}
 function drawDetailChart(box,spec) {
   if (!window.echarts) {
     box.className='detail-chart chart-fallback'; box.removeAttribute('role');
@@ -2354,43 +2367,47 @@ function drawDetailChart(box,spec) {
     if(value>=1000)return `${(value/1000).toFixed(span<500?2:span<2000?1:0)}k`;
     return number(Math.round(value));
   };
-  setChartOption(instance,()=>({
-    animationDuration:chartAnimationDuration(350),
-    color:colors,
-    textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif'},
-    tooltip:{...chartTooltipStyle(),trigger:'axis',formatter:params=>{
-      const index=params[0]?.dataIndex;
-      if(index===undefined)return '';
-      const lines=[periodLabel(spec.labels[index]),...params.map(item=>{
-        const line=spec.series[item.seriesIndex],basis=Number.isFinite(item.value)?chartBasis(chartPointDetail(spec,line,index)):'';
-        return `${item.marker}${item.seriesName}：${chartValue(item.value,spec.unit)}${basis?`<br>${basis}`:''}`;
-      })];
-      return lines.join('<br>');
-    }},
-    legend:{show:false},
-    grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32)+(weeklyAxis?16:0):76},
-    xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#58695b',
-      ...(weeklyAxis?{formatter:weeklyAxisLabel,rich:weeklyAxisText()}:{}),
-      interval:isTimeline?timelineLabelInterval:0,
-      showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:isTimeline?0:spec.labelRotation??18,fontSize:chartText(12)},
-      axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
-    yAxis:{type:'value',min:trendAxis?.min??barAxis?.min??spec.minY??0,max:trendAxis?.max??barAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
-      ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
-      axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
-    series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
-      data:spec.unit==='个百分点'?line.values.map(value=>({value,label:{position:value<0?'bottom':'top',color:value<0?'#97541c':value>0?'#315e41':'#58695b'},
-        itemStyle:{color:value<0?'#bc6a20':value>0?'#356d51':'#718078'}})):line.values,smooth:false,symbolSize:6,
-      barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
-      lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
-      endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
-        color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:chartText(12),fontWeight:600,width:chartText(rightReserve-12),overflow:'truncate'},
-      label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
-        fontSize:chartText(12),fontWeight:600,color:'#365a43'},
-      labelLayout:{hideOverlap:true,moveOverlap:'shiftY'},
-    })),
-  }));
+  const categoryLayout=()=>categoryAxisLayout(box,spec,leftReserve,rightReserve);
+  setChartOption(instance,()=>{
+    const category=isTimeline?null:categoryLayout();
+    return {
+      animationDuration:chartAnimationDuration(350),
+      color:colors,
+      textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif'},
+      tooltip:{...chartTooltipStyle(),trigger:'axis',formatter:params=>{
+        const index=params[0]?.dataIndex;
+        if(index===undefined)return '';
+        const lines=[periodLabel(spec.labels[index]),...params.map(item=>{
+          const line=spec.series[item.seriesIndex],basis=Number.isFinite(item.value)?chartBasis(chartPointDetail(spec,line,index)):'';
+          return `${item.marker}${item.seriesName}：${chartValue(item.value,spec.unit)}${basis?`<br>${basis}`:''}`;
+        })];
+        return lines.join('<br>');
+      }},
+      legend:{show:false},
+      grid:{left:leftReserve,right:rightReserve,top:28,bottom:isTimeline?(spec.series.length>1?55:32)+(weeklyAxis?16:0):category.padding},
+      xAxis:{type:'category',data:spec.labels,axisLabel:{color:'#58695b',
+        ...(weeklyAxis?{formatter:weeklyAxisLabel,rich:weeklyAxisText()}:{}),
+        interval:isTimeline?timelineLabelInterval:0,
+        showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:category?.rotate??0,fontSize:chartText(12)},
+        axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
+      yAxis:{type:'value',min:trendAxis?.min??barAxis?.min??spec.minY??0,max:trendAxis?.max??barAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
+        ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
+        axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
+      series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
+        data:spec.unit==='个百分点'?line.values.map(value=>({value,label:{position:value<0?'bottom':'top',color:value<0?'#97541c':value>0?'#315e41':'#58695b'},
+          itemStyle:{color:value<0?'#bc6a20':value>0?'#356d51':'#718078'}})):line.values,smooth:false,symbolSize:6,
+        barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
+        lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
+        endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
+          color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:chartText(12),fontWeight:600,width:chartText(rightReserve-12),overflow:'truncate'},
+        label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
+          fontSize:chartText(12),fontWeight:600,color:'#365a43'},
+        labelLayout:{hideOverlap:true,moveOverlap:'shiftY'},
+      })),
+    };
+  },{responsive:!isTimeline,legendPadding:isTimeline?null:()=>categoryLayout().padding});
   interactiveChartLegend(box,instance,spec.series.map((line,index)=>({...line,color:line.color??colors[index%colors.length],
-    pattern:isTimeline?['solid','dashed','dotted'][index%3]:'bar'})),spec.title,isTimeline?28+(weeklyAxis?16:0):55);
+    pattern:isTimeline?['solid','dashed','dotted'][index%3]:'bar'})),spec.title,isTimeline?28+(weeklyAxis?16:0):categoryLayout().padding);
   return instance;
 }
 function flattenMeasure(value,path='',rows=[],field='',unit=groupValueUnit(field)) {

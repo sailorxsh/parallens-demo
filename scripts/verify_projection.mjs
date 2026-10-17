@@ -423,7 +423,7 @@ assert.ok(activeAxes[0].min>60000&&activeAxes[0].max>=68000&&activeAxes[0].max<7
 assert.ok(activeAxes[1].min>40000&&activeAxes[1].max>=46800&&activeAxes[1].max<50000);
 const revenueAxis=evaluate('trendAxisDomain(sourceData.diagnostics.E.extraCharts[0].series,"美元\/人")');
 assert.ok(revenueAxis.min>0&&revenueAxis.max<10);
-evaluate('window.echarts={init:()=>({setOption:option=>window.__chartOptions=option})}');
+evaluate('window.echarts={init:box=>({getDom:()=>box,setOption:option=>window.__chartOptions=option})}');
 // This calculation-only DOM fixture represents a fresh chart host, before any fallback class exists.
 evaluate('window.__chartTestBox={clientWidth:800,classList:{contains:()=>false}}');
 evaluate('drawDetailChart(window.__chartTestBox,sourceData.diagnostics.G.extraCharts[0])');

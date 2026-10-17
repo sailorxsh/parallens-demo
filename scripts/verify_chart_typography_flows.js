@@ -20,6 +20,14 @@ async(parent)=>{
       await p.waitForFunction(n=>!!echarts.getInstanceByDom(n),await box.elementHandle());
     }
     await settle();
+    // ResizeObserver and WebKit's scroll-overflow cache can settle after the SVG text.
+    // Require the application's real geometry to finish; persistent overflow still fails.
+    await p.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+1&&
+      [...document.querySelectorAll('#trendChart,#statusChart,.detail-chart')]
+        .filter(n=>n.checkVisibility()&&getComputedStyle(n).visibility!=='hidden').every(n=>{
+          const instance=echarts.getInstanceByDom(n);
+          return instance&&Math.abs(instance.getWidth()-n.clientWidth)<1&&Math.abs(instance.getHeight()-n.clientHeight)<1;
+        }),null,{timeout:3000});
   };
   const evidence=()=>p.evaluate(()=>[...document.querySelectorAll('#trendChart,#statusChart,.detail-chart')]
     .filter(n=>n.checkVisibility()&&getComputedStyle(n).visibility!=='hidden')
