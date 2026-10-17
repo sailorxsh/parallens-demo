@@ -1139,9 +1139,13 @@ function subscriptionIncomeChange(history=metricHistory(35)) {
 }
 function subscriptionIncomeSpec(change) {
   const values=[change.payersContribution,change.arppuContribution];
+  const low=Math.min(0,...values),high=Math.max(0,...values),span=high-low||1;
+  const interval=Math.max(.01,chartNiceStep(span/5)),padding=span*.1;
+  const rounded=value=>Number(value.toPrecision(12));
   return {title:`订阅净收入变化拆分 · ${change.beforeLabel} → ${change.afterLabel}`,unit:'美元',
     labels:['付款人数变化','ARPPU变化'],labelRotation:0,series:[{name:'收入变化的算术贡献',values,color:'#356d51'}],
-    minY:Math.min(0,...values)*1.2,maxY:Math.max(0,...values)*1.25||1,
+    minY:low<0?rounded(Math.floor((low-padding)/interval)*interval):0,
+    maxY:high>0?rounded(Math.ceil((high+padding)/interval)*interval):high===low?1:0,intervalY:interval,
     note:`订阅净收入 $${number(change.before.numerator)} → $${number(change.after.numerator)}，净变化 ${change.delta>=0?'+':'−'}$${number(Math.abs(change.delta))}。两项贡献之和等于净变化；采用两期均值拆分，不代表价格或业务原因。${change.source}，与MRR分别计算。`};
 }
 function subscriptionIncomeCalculationSpec(change) {
@@ -2430,7 +2434,8 @@ function drawDetailChart(box,spec) {
     }
     if(spec.unit==='个百分点')return `${Number(value).toFixed(1)}pp`;
     if(spec.unit==='美元/人')return `$${Number(value).toFixed(span<1?2:1)}`;
-    if(spec.unit==='美元')return value>=1000?`$${(value/1000).toFixed(span<1000?2:1)}k`:`$${number(Math.round(value))}`;
+    if(spec.unit==='美元')return spec.intervalY?`$${number(value)}`:
+      value>=1000?`$${(value/1000).toFixed(span<1000?2:1)}k`:`$${number(Math.round(value))}`;
     if(value>=1000)return `${(value/1000).toFixed(span<500?2:span<2000?1:0)}k`;
     return number(Math.round(value));
   };
@@ -2458,7 +2463,7 @@ function drawDetailChart(box,spec) {
         showMinLabel:true,showMaxLabel:true,hideOverlap:true,rotate:category?.rotate??0,fontSize:chartText(12)},
         axisTick:{show:false},axisLine:{lineStyle:{color:'#bed0bf'}}},
       yAxis:{type:'value',min:trendAxis?.min??barAxis?.min??spec.minY??0,max:trendAxis?.max??barAxis?.max??spec.maxY??(spec.unit==='%'?100:undefined),
-        ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
+        ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:spec.intervalY?{interval:spec.intervalY}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
         axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
       series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
         data:spec.unit==='个百分点'?line.values.map(value=>({value,label:{position:value<0?'bottom':'top',color:value<0?'#97541c':value>0?'#315e41':'#58695b'},

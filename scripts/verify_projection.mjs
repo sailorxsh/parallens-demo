@@ -288,6 +288,9 @@ assert.equal(income.after.denominator,10000);
 assert.equal(income.delta,2020);
 assert.equal(income.payersContribution,1030);
 assert.equal(income.arppuContribution,990);
+const incomeAxis=evaluate('subscriptionIncomeSpec(subscriptionIncomeChange())');
+assert.deepEqual([incomeAxis.minY,incomeAxis.maxY,incomeAxis.intervalY],[0,1250,250],
+  'Income contribution ticks must be evenly spaced, including the endpoints');
 for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'},{productLine:'Hunting',plan:'Starter'}]) {
   project(filters);
   const part=evaluate('subscriptionIncomeChange()');
@@ -300,12 +303,17 @@ for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'},{produ
 }
 project({});
 const incomeScenario=(n0,r0,n1,r1)=>evaluate(`subscriptionIncomeChange({labels:['7月','8月'],details:[{denominator:${n0},numerator:${r0}},{denominator:${n1},numerator:${r1}}]})`);
-for(const [n0,r0,n1,r1] of [[100,1000,100,800],[100,1000,200,1000],[31,101,32,97],[100,0,100,0]]) {
+for(const [n0,r0,n1,r1] of [[100,1000,100,800],[100,1000,200,1000],[31,101,32,97],[100,0,100,0],[100,1,100,1.01],[100,1,100,.98]]) {
   const part=incomeScenario(n0,r0,n1,r1);
-  assert.equal(Math.round((part.payersContribution+part.arppuContribution)*100),(r1-r0)*100);
+  assert.equal(Math.round((part.payersContribution+part.arppuContribution)*100),Math.round((r1-r0)*100));
   const spec=evaluate(`subscriptionIncomeSpec(${JSON.stringify(part)})`);
   assert.ok(spec.minY<=Math.min(0,part.payersContribution,part.arppuContribution),'Negative effects must not be clipped');
-  assert.ok(spec.maxY>Math.max(0,part.payersContribution,part.arppuContribution));
+  const high=Math.max(0,part.payersContribution,part.arppuContribution);
+  assert.ok(spec.maxY>=high,'Positive effects and the zero baseline must remain visible');
+  if(high>0)assert.ok(spec.maxY>high,'Positive data labels need space above their bars');
+  assert.ok(spec.intervalY>=.01,'Dollar axis ticks must not invent fractions of a cent');
+  assert.ok(Math.abs(spec.minY/spec.intervalY-Math.round(spec.minY/spec.intervalY))<1e-8);
+  assert.ok(Math.abs(spec.maxY/spec.intervalY-Math.round(spec.maxY/spec.intervalY))<1e-8);
 }
 assert.equal(incomeScenario(29,100,30,105),null,'Low-sample prior month cannot generate an income driver claim');
 assert.equal(evaluate('subscriptionIncomeChange(null)'),null);
@@ -423,9 +431,15 @@ assert.ok(activeAxes[0].min>60000&&activeAxes[0].max>=68000&&activeAxes[0].max<7
 assert.ok(activeAxes[1].min>40000&&activeAxes[1].max>=46800&&activeAxes[1].max<50000);
 const revenueAxis=evaluate('trendAxisDomain(sourceData.diagnostics.E.extraCharts[0].series,"美元\/人")');
 assert.ok(revenueAxis.min>0&&revenueAxis.max<10);
-evaluate('window.echarts={init:box=>({getDom:()=>box,setOption:option=>window.__chartOptions=option})}');
+evaluate('window.echarts={format:{getTextRect:()=>({width:100,height:12})},init:box=>({getDom:()=>box,setOption:option=>window.__chartOptions=option})}');
 // This calculation-only DOM fixture represents a fresh chart host, before any fallback class exists.
 evaluate('window.__chartTestBox={clientWidth:800,classList:{contains:()=>false}}');
+for(const amount of [.01,-.01]) {
+  const spec=evaluate(`subscriptionIncomeSpec({payersContribution:0,arppuContribution:${amount},before:{numerator:1},after:{numerator:${1+amount}},delta:${amount},beforeLabel:'7月',afterLabel:'8月',source:'isolated formatter boundary'})`);
+  evaluate(`drawDetailChart(window.__chartTestBox,${JSON.stringify(spec)})`);
+  assert.equal(evaluate(`window.__chartOptions.yAxis.axisLabel.formatter(${amount})`),`$${amount}`,
+    'The authored dollar formatter must preserve a signed cent rather than round it to $0');
+}
 evaluate('drawDetailChart(window.__chartTestBox,sourceData.diagnostics.G.extraCharts[0])');
 assert.equal(evaluate('window.__chartOptions.yAxis.min'),lossAxis.min);
 assert.equal(evaluate('window.__chartOptions.yAxis.max'),lossAxis.max);

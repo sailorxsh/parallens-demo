@@ -2,11 +2,36 @@
 async(page)=>{
   const base=new URL('.',page.url()).href;
   const context=await page.context().browser().newContext({viewport:{width:1366,height:768},locale:'zh-CN',reducedMotion:'reduce'});
-  const p=await context.newPage(),errors=[],sizes=[];
+  const p=await context.newPage(),errors=[],sizes=[],axisStates=[];
   const check=(ok,message)=>{if(!ok)throw new Error(message);};
   p.on('pageerror',error=>errors.push(error.message));
   const open=async hash=>{await p.goto(`${base}#/${hash}`);await p.locator('.income-workspace').waitFor();};
   const pair=()=>p.locator('#metric-evidence-35 .evidence-pair').filter({has:p.getByRole('heading',{name:/订阅净收入变化拆分/})});
+  const checkAxis=async name=>{
+    const axis=await pair().locator('.detail-chart').evaluate(node=>{
+      const chart=echarts.getInstanceByDom(node),options=chart.getOption(),axis=options.yAxis[0],box=node.getBoundingClientRect();
+      const ticks=Array.from({length:Math.round((axis.max-axis.min)/axis.interval)+1},(_,i)=>
+        Number((axis.min+i*axis.interval).toPrecision(12)));
+      const labels=[...node.querySelectorAll('svg text')].filter(label=>{
+        const r=label.getBoundingClientRect();return r.width&&r.right<=box.left+options.grid[0].left-2;
+      }).map(label=>{const r=label.getBoundingClientRect();return {text:label.textContent,top:r.top,bottom:r.bottom,left:r.left};});
+      return {min:axis.min,max:axis.max,interval:axis.interval,ticks,expected:ticks.map(axis.axisLabel.formatter),labels,
+        values:options.series[0].data,boxLeft:box.left,boxHeight:box.height,chartHeight:chart.getHeight(),grid:options.grid[0],
+        visibleTop:document.querySelector('.section-navigation')?.getBoundingClientRect().bottom??0,visibleBottom:innerHeight};
+    });
+    check(axis.min<=0&&axis.max>=0&&axis.interval>=.01,`${name}: zero baseline or cent precision is lost`);
+    check(axis.expected.length===axis.labels.length&&axis.expected.every(value=>axis.labels.some(label=>label.text===value)),
+      `${name}: actual axis omits, duplicates or rounds ticks: ${JSON.stringify(axis)}`);
+    const labels=[...axis.labels].sort((a,b)=>a.top-b.top);
+    check(labels.every((label,i)=>label.left>=axis.boxLeft-1&&(!i||label.top-labels[i-1].bottom>=2)),
+      `${name}: amount ticks overlap or clip: ${JSON.stringify(axis)}`);
+    if(name.includes('200%'))check(labels.every(label=>label.top>=axis.visibleTop&&label.bottom<=axis.visibleBottom),
+      `${name}: enlarged amount ticks are behind navigation or outside the viewport`);
+    for(let i=2;i<labels.length;i++)check(Math.abs((labels[i].top-labels[i-1].top)-(labels[1].top-labels[0].top))<1,
+      `${name}: endpoint tick spacing differs from the other ticks`);
+    check(axis.values.every(value=>value>=axis.min&&value<=axis.max),`${name}: signed contribution is clipped`);
+    axisStates.push({name,...axis});
+  };
   try {
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
       await p.setViewportSize({width,height});await open('E');
@@ -29,6 +54,17 @@ async(page)=>{
       await pair().waitFor();await pair().locator('svg').waitFor();
       const plotText=await pair().locator('svg').textContent();
       check(plotText.includes('$1,030')&&plotText.includes('$990'),'Chart hides contribution values');
+      await checkAxis(`${width}px default`);
+      await p.evaluate(()=>document.documentElement.style.fontSize='32px');
+      await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      // Enlarging the header moves this plot below the viewport. Inspect the
+      // visible, painted chart rather than stale off-screen SVG coordinates.
+      await pair().evaluate(node=>scrollTo({top:node.getBoundingClientRect().top+scrollY-
+        document.querySelector('.section-navigation').getBoundingClientRect().height-16,behavior:'instant'}));
+      await p.screenshot({path:`output/playwright/v106-income-axis-enlarged-${width}.png`});
+      await checkAxis(`${width}px 200% text`);
+      await p.evaluate(()=>document.documentElement.style.fontSize='16px');
+      await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       await pair().locator('.workspace-calculation > summary').click();
       check((await pair().innerText()).includes('合计 +$2,020'),'Calculation does not reconcile revenue change');
       check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Income evidence causes page overflow');
@@ -70,6 +106,7 @@ async(page)=>{
     check((await baseline().innerText()).includes('订阅净收入：')&&!(await baseline().innerText()).includes('$52,000'),
       'Filtered issue records overall revenue instead of its current scope');
     await pair().waitFor();check(await pair().locator('svg').count()===1,'Filtered contribution chart missing');
+    await checkAxis('US recomputed income');
     await p.reload();await pair().waitFor();
     check(p.url().includes('country=US'),'Refresh loses income scope');
     await open('E?deviceModel=K6&metric=35');
@@ -93,6 +130,7 @@ async(page)=>{
         }).map(label=>label.textContent)};
     });
     check(negative.values[1]===-2000&&negative.min<=-2000,'Negative income contribution clipped to zero');
+    await checkAxis('negative ARPPU contribution');
     await pair().screenshot({path:'output/playwright/v55-income-negative.png'});
     check(!negative.clipped.length&&negative.text.includes('$-2,000'),`Negative contribution label is missing or clipped: ${JSON.stringify(negative)}`);
     check((await p.locator('.detail-finding').innerText()).includes('减少 $2,000'),'Income decrease reported as improvement');
@@ -109,10 +147,11 @@ async(page)=>{
       });
       await open('E?metric=35');await p.reload();await pair().locator('svg').waitFor();
       check((await p.locator('[data-driver="payers"]').innerText()).includes(previousPayers===10200?'−200 人':'持平'),'Payer decline or unchanged count is mislabeled');
-      check((await p.locator('[data-driver="arppu"]').innerText()).includes(previousARPPU===5.2?'持平':'下降不足 $0.01/人'),'Rounded ARPPU hides a real small change or invents a movement');
+      check((await p.locator('[data-driver="arppu"]').innerText()).includes(previousARPPU===5.2?'持平':`${previousARPPU>5.2?'下降':'上升'}不足 $0.01/人`),'Rounded ARPPU hides a real small change or invents a movement');
+      await checkAxis(`previous payers ${previousPayers}, ARPPU ${previousARPPU}`);
       await p.unroute('**/data/diagnostics.json');
     }
     check(errors.length===0,errors.join('; '));
-    return {status:'PASS',sizes,checks:['visible income comparison and driver values','positive negative and unchanged drivers','symmetric amounts reconcile','calculation disclosure','observation to income chart','complete issue baseline saved and reloaded','historical baseline preserved on edit','filtered issue baseline','country recomputation and reload','missing scope suppressed','negative contribution and labels','no browser errors or page overflow']};
+    return {status:'PASS',sizes,axisStates,checks:['visible income comparison and driver values','positive negative and unchanged drivers','symmetric amounts reconcile','calculation disclosure','observation to income chart','complete issue baseline saved and reloaded','historical baseline preserved on edit','filtered issue baseline','country recomputation and reload','missing scope suppressed','negative contribution and labels','actual evenly spaced signed amount ticks including zero','no browser errors or page overflow']};
   } finally {await context.close();}
 }
