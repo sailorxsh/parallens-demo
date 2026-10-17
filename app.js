@@ -1211,15 +1211,16 @@ function filteredBreakdown(page) {
   if(rows.length<2)return null;
   const unit=rows[0].value.kind==='rate'?'%':rows[0].value.kind==='usd'?'美元':'人';
   const values=rows.map(row=>row.value.kind==='rate'?row.value.value*100:row.value.value);
+  const comparisonScope=`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前选择：${optionLabel(dimension,filterState[dimension])}。${omitted.length?` 未绘制：${omitted.map(row=>`${row.label}（${row.value.reason}）`).join('；')}。`:''}`;
   const spec={title:`${filterLabels[dimension]} · ${catalogItem(id).name}分组对照`,unit,
     labels:rows.map(row=>row.label),details:unit==='%'?rows.map(row=>row.value):null,series:[{name:catalogItem(id).name,values}],
-    note:`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前选择：${optionLabel(dimension,filterState[dimension])}。当前模拟分组用于定位差异，不能证明原因。${omitted.length?` 未绘制：${omitted.map(row=>`${row.label}（${row.value.reason}）`).join('；')}。`:''}`};
+    note:`${comparisonScope} 当前模拟分组用于定位差异，不能证明原因。`};
   const table={title:`${filterLabels[dimension]} · 组规模与指标`,
     columns:['分组',unit==='%'?'分子':'当前值',unit==='%'?'分母':'统计对象', '指标值'],
     rows:rows.map(row=>row.value.kind==='rate'?[row.label,row.value.numerator,row.value.denominator,percent(row.value.value)]:
       [row.label,row.value.value,metricEntityLabel(contract.entity),unit==='美元'?`$${number(row.value.value)}`:`${number(row.value.value)}${unit}`]),
     note:spec.note};
-  return {spec,table};
+  return {metricId:id,dimension,comparisonScope,spec,table};
 }
 function subscriptionBridgeSpec() {
   const flow=metric(21);
@@ -2691,8 +2692,10 @@ function metricEvidence(id,page) {
       const labels=options.map(option=>optionLabels[option]??option);
       const vals=projected.map(part=>part.kind==='na'?null:part.kind==='rate'?part.value*100:part.value);
       const countUnit=metricCountUnits[id]??'';
-      const groupNote=id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。';
-      const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote,
+      const comparison=filteredBreakdown(page);
+      const comparisonNote=comparison?.metricId===id&&comparison.dimension===dimension?comparison.comparisonScope:'';
+      const groupNote=[id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。',comparisonNote].filter(Boolean).join(' ');
+      const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,groupDimension:dimension,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote,
         scopeNote:`${actionBaselineWindow(id)} · 比较当前分组水平，不表示跨期变化贡献。${groupNote}`};
       appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
         const cells=flattenMeasure(part)[0]??[];return [labels[index],cells[1]??'—',cells[2]??'—',part.kind==='rate'?percent(part.value):part.kind==='na'?'不适用':part.kind==='usd'?`$${number(part.value)}`:number(part.value)];
@@ -3744,7 +3747,8 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(chartGrid);
     }
     const breakdown=filteredBreakdown(page);
-    if(breakdown) {
+    const hasSameGroup=breakdown?.metricId===selectedMetric&&evidenceFor.specs.some(([,spec])=>spec.groupDimension===breakdown.dimension);
+    if(breakdown&&!hasSameGroup) {
       const chartGrid=element('div','evidence-charts-grid');
       addChart(chartGrid,breakdown.spec);evidence.append(chartGrid,dataTable(breakdown.table));
     }

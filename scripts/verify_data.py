@@ -346,7 +346,14 @@ check("D13-device-structure", sum(row[1] for row in device_rows) == snapshot["bo
       rebind["unboundDeviceRate"]["denominator"] == 142000 and
       rebind["unboundEvents"] > rebind["observedUnboundDevices"],
       "F页设备分层、共享子集和回绑率去重分母正确")
-check("D14-quality-trend", abs(diagnostics["G"]["extraCharts"][0]["series"][0]["values"][-1] -
+quality_history = metric_trends["m54"]
+quality_baseline = next(row for table in diagnostics["G"]["tables"]
+                        for row in table["rows"] if row[0] == "埋点丢失率")
+check("D14-quality-trend", quality_baseline[1] ==
+      f'{quality_history["labels"][0]} {quality_history["points"][0]["value"] * 100:.1f}%' and
+      quality_history["labels"][0] ==
+      (date.fromisoformat(snapshot["asOf"]) - timedelta(days=len(quality_history["labels"])-1)).strftime("%-m/%-d") and
+      abs(diagnostics["G"]["extraCharts"][0]["series"][0]["values"][-1] -
       metrics["m54"]["value"]["eventLoss"]["value"] * 100) < .0001 and
       sum(diagnostics["G"]["chart"]["series"][0]["values"]) == metrics["m53"]["value"] and
       snapshot["quality"]["eventLossNumerator"] / snapshot["quality"]["eventExpected"] <=
