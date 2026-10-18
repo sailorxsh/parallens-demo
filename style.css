@@ -944,3 +944,4 @@ article.trial-sample-item {cursor:auto}
 /* The one-row device return table can wrap instead of pinning clipped cells. */
 .device-return-evidence .diagnostic-table {min-width:0}
 .device-return-evidence .diagnostic-table thead th {white-space:normal}
+.device-return-evidence .diagnostic-table tbody td:nth-child(-n+4) {white-space:nowrap}

@@ -67,6 +67,7 @@ async(parent)=>{
    await p.waitForFunction(()=>{const n=document.querySelector('.device-return-evidence');return n.scrollLeft>=n.scrollWidth-n.clientWidth-2;});
    check(await historyTable.evaluate(n=>{const r=n.getBoundingClientRect(),cell=n.querySelector('tbody td:last-child').getBoundingClientRect();return cell.right<=r.right+1;}),'Historical dates remain clipped at the scroll limit');
   }
+  check(await historyTable.locator('tbody td:nth-child(-n+4)').evaluateAll(nodes=>nodes.every(n=>{const r=document.createRange();r.selectNodeContents(n);return r.getClientRects().length===1;})),'An enlarged numeric value splits its percentage unit onto another line');
   await p.screenshot({path:`output/playwright/device-return-dates-${browser.browserType().name()}-32.png`});
   await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.setViewportSize({width:1600,height:1000});
   // Save a versioned new issue, then emulate pre-v1 records; updating progress keeps old evidence.
