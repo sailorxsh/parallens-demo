@@ -715,6 +715,29 @@ function deviceEventChangeSpec(parts) {
     scopeNote:`${comparison.beforeWindow} → ${comparison.afterWindow}。合并空触发率 ${comparison.beforeRate.toFixed(1)}% → ${comparison.afterRate.toFixed(1)}%。`,
     note:`贡献＝近期该组空触发数÷近期总体触发数−前期该组空触发数÷前期总体触发数。两组互斥，合计 ${chartValue(comparison.delta,'个百分点')}；pp＝百分点，纵轴含0。合成事件计数的算术分解，不证明固件导致异常。`};
 }
+function homeDeviceClue() {
+  const disclosure=element('details','home-device-clue');disclosure.id='home-device-clue';
+  const measure=metric(42),comparison=weeklyRateComparison(42),context=metricFilterContext(42);
+  const summary=element('summary','',`设备线索 · 空触发${comparison?
+    ` ${comparison.beforeRate.toFixed(1)}% → ${comparison.afterRate.toFixed(1)}%`:
+    ` · ${measure.kind==='na'?(measure.availability==='pending'?'待补数据':measure.availability==='invalid-filter'?'筛选无效':'不适用'):'暂无可比数据'}`}`);
+  disclosure.append(summary);
+  if(comparison) {
+    const count=part=>`${part.numerator.toLocaleString('zh-CN')}／${part.denominator.toLocaleString('zh-CN')} 次`;
+    disclosure.append(element('p','device-clue-periods',`${comparison.beforeLabel} ${comparison.beforeWindow}（${count(comparison.before)}） → ${comparison.afterLabel} ${comparison.afterWindow}（${count(comparison.after)}）。计数为「空触发／触发」，比例按各期合并计数计算。`));
+    const parts=deviceEventGroupChanges(comparison);
+    disclosure.append(element('p','device-clue-contributions',parts.reason??
+      `${parts.groups.map((group,index)=>`${group.name}贡献 ${chartValue(parts.changes[index],'个百分点')}`).join('；')}。`));
+  } else disclosure.append(element('p','device-clue-unavailable',measure.reason??'当前范围缺少两期可比触发计数，暂不展示变化及分组贡献。'));
+  if(context.ignored.length) {
+    const scope=context.applied.length?
+      `${measure.kind==='na'?'本项条件':'本项应用'}：${context.applied.map(([key,value])=>`${filterLabels[key]} ${optionLabel(key,value)}`).join('、')}`:'本项仍为总体范围';
+    disclosure.append(element('p','metric-filter-scope',`${scope}；未应用：${context.ignoredText}`));
+  }
+  disclosure.append(element('p','device-clue-guardrail','独立设备线索，来源为合成触发事件；不与用户过程率排序，也不证明设备导致激活或转正变化。'));
+  const link=element('a','insight-link','核对设备分组变化证据 ↗');link.href=routeHref('C',42,'groups');
+  disclosure.append(link);return disclosure;
+}
 function weeklyMetric(id,w) {
   const rateValue=(n,d)=>({kind:'rate',numerator:n,denominator:d,value:d?n/d:0});
   const countValue=n=>({kind:'count',value:n});
@@ -1733,7 +1756,7 @@ function renderHome() {
   const selectionReason=element('p','home-selection-reason');
   const resetSelection=element('button','home-selection-reset','恢复建议起点');resetSelection.type='button';
   resetSelection.setAttribute('aria-controls','trendChart home-comparison-context');
-  selection.append(selectionReason,resetSelection);insight.append(selection);
+  selection.append(selectionReason,resetSelection);insight.append(selection,homeDeviceClue());
   const signals=element('div','home-signals');
   comparisons.forEach(item=>{
     const button=element('button',`home-signal signal-${item.id}`);button.type='button';button.dataset.metricId=item.id;

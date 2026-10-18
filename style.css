@@ -816,6 +816,10 @@ article.trial-sample-item {cursor:auto}
 .home-selection-reason {font-size:.75rem;line-height:1.55;color:#4d6655;margin:0}
 .home-selection-reset {font:inherit;font-size:.75rem;color:#365841;background:transparent;border:0;padding:.25rem 0;cursor:pointer;text-decoration:underline;text-underline-offset:.18rem}
 .home-selection-reset[hidden] {display:none}
+.home-device-clue {margin:0 0 .6rem;border:1px solid #d5e1cf;border-radius:.3rem;padding:.45rem .65rem;background:#f1f5eb;font-size:.78rem;line-height:1.6;overflow-wrap:anywhere}
+.home-device-clue>summary {cursor:pointer;font-weight:650;color:#365841;min-height:24px}
+.home-device-clue>p {margin:.35rem 0}
+.home-device-clue>.insight-link {font-size:.78rem}
 .home-dashboard .home-signals {gap:.5rem}
 .home-dashboard .home-signal {padding:.65rem .75rem;gap:.35rem;background:var(--paper);border-color:var(--line);border-left:3px solid #719b80}
 .home-dashboard .home-signal[aria-pressed=true] {background:#fffdf7;border-color:var(--line);border-left:3px solid var(--orange);box-shadow:none;border-bottom:0;border-radius:.3rem .3rem 0 0}
