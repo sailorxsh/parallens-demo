@@ -1365,8 +1365,14 @@ function projectMetric(id,state=filterState) {
   if(effectiveFilters.length&&[14,26,33,38].includes(id)) return na('本项只有汇总分布或分位数，缺少可重算的维度明细');
   if(id===39) {
     if(effectiveFilters.some(([key])=>!['country','productLine','deviceModel'].includes(key))) return pending('型号表现缺少当前条件下的关联模拟样本');
-    const records=sourceData.modelMarket.records.filter(row=>(!scoped.country||row.country===scoped.country)&&
+    const rows=sourceData.modelMarket?.records,products={K6:'Bird','Bird Lite':'Bird','Bird Pro':'Bird','Hunt Pro':'Hunting'};
+    if(!Array.isArray(rows)||rows.some(row=>!row||!['US','UK','DE','Other'].includes(row.country)||
+      !Object.hasOwn(products,row.model)||row.productLine!==products[row.model]))
+      return pending('型号汇总的市场、主型号归属或记录结构待核验；不使用旧比例补齐');
+    const records=rows.filter(row=>(!scoped.country||row.country===scoped.country)&&
       (!scoped.productLine||row.productLine===scoped.productLine)&&(!scoped.deviceModel||row.model===scoped.deviceModel));
+    if(new Set(records.map(row=>`${row.country}:${row.model}`)).size!==records.length)
+      return pending('同一市场与主型号出现重复汇总，需核对后再计算人数和比例');
     if(records.some(row=>![row.owners,row.activeOwners,row.subscribedOwners].every(Number.isSafeInteger)||
       row.owners<=0||row.activeOwners<0||row.subscribedOwners<0||row.activeOwners>row.owners||row.subscribedOwners>row.owners))
       return pending('型号汇总的人数缺失或不合法，需补齐同范围主账号、活跃和订阅人数后再计算');
@@ -2348,6 +2354,12 @@ function modelCalculationTable() {
     rows:entries.map(([name,part])=>[name,part.owners,part.activeOwners,percent(part.activeRate),
       part.subscribedOwners,percent(part.subscriptionRate)]),
     note:`${contract.window}。按当前范围主账号人数降序，同规模按型号名排列，与矩阵从上到下顺序一致。活跃率＝30天活跃主账号÷该型号主账号；订阅率＝有效订阅主账号÷该型号主账号。按同一市场×主型号合成汇总重算；当前范围 ${number(entries.reduce((sum,[,part])=>sum+part.owners,0))} 个已归属主型号的主账号，不代表全部合资格主账号。型号内多设备占比待补同范围绑定关系明细。`};
+}
+function modelContextTable() {
+  const value=metric(39);
+  return value.kind==='group'?{...modelCalculationTable(),title:'设备型号订阅表现 · 主型号归属人数'}:
+    {title:'设备型号订阅表现 · 暂不可用',columns:['状态'],rows:[[`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}`]],
+      note:'未展示旧汇总比例或反推人数；补齐同范围来源后再核对型号表现。'};
 }
 function headlineTrend(id) {
   const history=metricHistory(id);
@@ -5152,13 +5164,26 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     const ranking=modelSubscriptionRanking();
     if(ranking){addChart(context,ranking.spec);context.append(dataTable(ranking.table));}
     if(!hasDataFilters('E')) {
-      info.extraCharts.slice(1).forEach(spec=>addChart(context,spec));
-      if(info.structureViews&&selectedMetric!==38) {
-        const explorer=structureExplorer(info.structureViews);context.append(explorer.node);
-        context.addEventListener('toggle',()=>{if(context.open&&!explorer.node.dataset.initialized){explorer.init();explorer.node.dataset.initialized='true';}});
+      info.extraCharts.slice(1).forEach(spec=>{
+        if(spec.kind==='heatmap'&&metric(39).kind!=='group') {
+          const unavailable=element('section','detail-chart-panel model-context-unavailable');
+          unavailable.append(element('h3','',spec.title),element('p','na-note',`型号表现暂不可用：${metric(39).reason}。`));context.append(unavailable);
+        }else addChart(context,spec);
+      });
+      if(selectedMetric!==38) {
+        const source=structureMetricViews();
+        if(source.reason)context.append(element('p','na-note structure-context-unavailable',`用户与设备构成暂不可用：${source.reason}`));
+        else {
+          const explorer=structureExplorer(source.views);context.append(explorer.node);
+          context.addEventListener('toggle',()=>{if(context.open&&!explorer.node.dataset.initialized){explorer.init();explorer.node.dataset.initialized='true';}});
+        }
       }
       const tables=element('details','workspace-context');tables.append(element('summary','','查看付费专题其他完整数据'));
-      info.tables.filter(spec=>!(selectedMetric===35&&spec.title==='完整月付款与人均收入')).forEach(spec=>tables.append(dataTable(spec.title==='完整月付款与人均收入'?paymentMonthTable():spec)));panels.get('data').append(tables);
+      info.tables.filter(spec=>!(selectedMetric===35&&spec.title==='完整月付款与人均收入')).forEach(spec=>{
+        const table=spec.title==='完整月付款与人均收入'?paymentMonthTable():
+          spec.title==='设备型号订阅表现 · 主账号可跨型号'?modelContextTable():spec;
+        tables.append(dataTable(table));
+      });panels.get('data').append(tables);
     }
     if(context.children.length>1)panels.get('groups').append(context);
   }
