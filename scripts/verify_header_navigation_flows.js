@@ -66,10 +66,10 @@ async (parent) => {
     check(await current()==='诊断工作区','Deep-linked E evidence is mislabeled as the collapsed catalog');
     await p.getByRole('button',{name:'诊断工作区',exact:true}).click();await settle();
     check(await current()==='诊断工作区'&&!await p.locator('.income-catalog').evaluate(n=>n.open),'Diagnosis selection is immediately overridden');
-    check((await p.locator('.detail-finding .insight-tag').innerText()).includes('#35 月度订阅付费用户与人均收入'),
-      'Page-level observation lacks its own metric identity');
+    check((await p.locator('.detail-finding .insight-tag').innerText()).includes('#39 不同设备型号的订阅表现'),
+      'Current model observation lacks its own metric identity');
     await p.locator('.detail-finding .issue-register').click();
-    check(await p.locator('.action-record [name="issueMetric"]').inputValue()==='35','Observation registration lost its metric');
+    check(await p.locator('.action-record [name="issueMetric"]').inputValue()==='39','Observation registration lost its current metric');
     for(const label of ['关键指标','诊断工作区','全部指标']) {
       await p.getByRole('button',{name:label,exact:true}).focus();await p.keyboard.press('Enter');await settle();
       check(await current()===label,`Keyboard section destination does not select ${label}`);

@@ -61,7 +61,7 @@ async(page)=>{
     await input('owner').fill('付费价值核查');await input('note').fill('核对人数与ARPPU变化，保留草稿');
     await tab('groups').click();
     check(await input('note').inputValue()==='核对人数与ARPPU变化，保留草稿','Switching evidence discards registration edits');
-    await p.locator('.income-context-controls').getByRole('button',{name:'关键观察',exact:true}).click();
+    await p.locator('.income-context-controls').getByRole('button',{name:'当前指标',exact:true}).click();
     check(await p.locator('.detail-finding').isVisible()&&!await form().isVisible(),'The observation and form cannot be switched in place');
     await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
     check(await input('note').inputValue()==='核对人数与ARPPU变化，保留草稿','Returning to the form loses the draft');
@@ -72,9 +72,10 @@ async(page)=>{
     await p.locator('.detail-kpi[data-metric-id="3"] .detail-evidence-link').click();
     await p.locator('#metric-evidence-3').waitFor();
     check(await input('issueMetric').inputValue()==='35'&&await input('note').inputValue()==='辅助指标核对期间也保留草稿','Auxiliary evidence silently changes the issue or discards edits');
-    await p.locator('.income-context-controls').getByRole('button',{name:'关键观察',exact:true}).click();
-    check((await p.locator('.detail-finding .issue-register').getAttribute('aria-label')).includes('#35'),
-      'Page-level income observation registers the auxiliary MRR metric');
+    await p.locator('.income-context-controls').getByRole('button',{name:'当前指标',exact:true}).click();
+    check((await p.locator('.detail-finding .issue-register').getAttribute('aria-label')).includes('#3 MRR'),
+      'Current MRR observation registers a different metric');
+    check((await p.locator('.page-observation > summary').innerText()).includes('#35'),'Income priority observation was lost while viewing MRR');
     await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
     check(await input('issueMetric').inputValue()==='35'&&p.url().includes('metric=3')&&await input('note').inputValue()==='辅助指标核对期间也保留草稿',
       'Switching the rail changes the current issue or auxiliary evidence');

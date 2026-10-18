@@ -76,7 +76,7 @@ async(page)=>{
       const controls=await p.locator('.income-context-controls').boundingBox();
       check(controls.y>=50&&controls.y+controls.height<height,'Sample linkage hides the observation/registration controls behind the page navigation');
       if(width===1600)await p.screenshot({path:'output/playwright/v59-linked-sample.png'});
-      await p.locator('.income-context-controls').getByRole('button',{name:'关键观察',exact:true}).click();
+      await p.locator('.income-context-controls').getByRole('button',{name:'当前指标',exact:true}).click();
       await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
       check(await field('issueMetric').inputValue()==='18'&&Boolean(await field('linkedSample').inputValue()),'Reopening registration loses the replacement issue form');
       await p.locator('.trial-sample-item').first().evaluate(node=>node.focus({preventScroll:true}));

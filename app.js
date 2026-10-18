@@ -10,7 +10,7 @@ const pages = {
 const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
 const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
-const findingRuleVersion='demo-2026-10-03-v4';
+const findingRuleVersion='demo-2026-10-18-v5';
 const findingSource=id=>({18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 main?.addEventListener('toggle',()=>updateScrollableTables(),true);
@@ -2578,7 +2578,7 @@ function metricEvidence(id,page) {
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
     `${filterContext.applied.length?`本项应用：${filterContext.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、')}`:'本项仍为总体范围'}${filterContext.ignored.length?`；未应用：${filterContext.ignoredText}（不适用于本项）`:''}。`));
   if(value.kind==='na') {panel.append(element('p','na-note',`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}。`));return {node:panel,specs:[]};}
-  panel.append(registerIssueButton(page,id));
+  panel.append(registerIssueButton(page,id,{compact:true}));
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
   const specs=[];
   const appendEvidencePair=(spec,tableSpec,kind='groups')=>{
@@ -2863,8 +2863,8 @@ function registerIssue(page,id,{preserveEvidence=false}={}) {
   form?.querySelector('[name="owner"]')?.focus({preventScroll:true});
   document.querySelector('#announcement').textContent=`已打开 #${id} ${catalogItem(id).name} 的当前范围问题单；填写后保存本地记录`;
 }
-function registerIssueButton(page,id) {
-  const button=element('button','issue-register','登记该指标问题');button.type='button';
+function registerIssueButton(page,id,{compact=false}={}) {
+  const button=element('button','issue-register',compact?`登记 #${id} 问题`:`登记 #${id} ${catalogItem(id).name}问题`);button.type='button';
   button.dataset.metricId=String(id);
   button.setAttribute('aria-label',`登记 #${id} ${catalogItem(id).name} 的当前范围问题`);
   button.addEventListener('click',()=>registerIssue(page,id));
@@ -2893,7 +2893,7 @@ function actionRecord(page,evidenceId) {
     `未参与计算：${filterContext.ignoredText}（不适用于本指标）。`));
   scopeDetails.append(element('dt','','计算范围'),calculationDescription,element('dt','','界面条件'),element('dd','',scope));
   scopeDetails.id=`scope-${issueId}`;form.setAttribute('aria-describedby',scopeDetails.id);form.append(scopeDetails);
-  const issueIds=[...new Set([defaultId,evidenceId,...sourceData.catalog.filter(item=>item.page===page&&
+  const issueIds=[...new Set([defaultId,evidenceId,...sourceData.catalog.filter(item=>supportsPageMetric(page,item.id)&&
     (simulatedActionState[`record:${page}:${scope}:${item.id}`]||actionDrafts.has(`record:${page}:${scope}:${item.id}`))).map(item=>item.id)])];
   const switchLabel=element('label','issue-switch','同一界面条件下的问题单');
   const switcher=element('select','');switcher.name='issueMetric';
@@ -3093,8 +3093,8 @@ function actionQueue(page,defaultMetric) {
   table.append(body);wrap.append(table);section.append(wrap,element('p','table-note','指标依据用于核对同类信号；演示样本不参与总体聚合。清单标记与问题单的处理、复查进度分别登记。'),feedback,actionRecord(page,defaultMetric??defaultFindingMetric[page]));
   return section;
 }
-function filteredFinding(page) {
-  const m=id=>metric(id);
+function filteredFinding(page,requestedId) {
+  const m=id=>metric(id),isTarget=id=>requestedId===undefined||requestedId===id;
   const recentChange=id=>{
     const history=metricHistory(id);
     if(!history)return null;
@@ -3107,31 +3107,31 @@ function filteredFinding(page) {
   const changeText=(change,digits=1)=>!change?'':
     `；${change.current}较${change.previous}${Math.abs(change.delta)<.05?'基本持平':
       `${change.delta>=0?'上升':'下降'} ${Math.abs(change.delta).toFixed(digits)} ${change.unit==='%'?'个百分点':change.unit}`}`;
-  if(page==='A'&&m(13).kind==='rate') {
+  if(page==='A'&&isTarget(13)&&m(13).kind==='rate') {
     const t=weeklyRateComparison(13),week=filterState.week??sourceData.weekly.at(-1).week;
     return {id:13,comparison:t,text:`W${week}观鸟7日价值激活率 ${percent(m(13).value)}。${t?'按比较周期的合格注册人数合并计算。该变化不证明设备问题是原因。':'前期无可比样本，暂不生成变化判断。'}`};
   }
-  if(page==='B'&&filterState.functionType&&m(27).kind==='rate')
+  if(page==='B'&&isTarget(27)&&filterState.functionType&&m(27).kind==='rate')
     return {id:27,text:`查看${optionLabel('functionType',filterState.functionType)}的活跃主账号 ${number(m(27).numerator)}/${number(m(27).denominator)}（${percent(m(27).value)}）。功能人数可能重叠，不与其他功能相加。`};
-  if(page==='B'&&filterState.season&&m(29).kind==='rate')
+  if(page==='B'&&isTarget(29)&&filterState.season&&m(29).kind==='rate')
     return {id:29,text:`按${optionLabel('season',filterState.season)}${m(29).thresholdDays}天规则，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。这是判定阈值变化，不是切换季节人群。`};
-  if(page==='B'&&m(25).kind==='group') {
+  if(page==='B'&&isTarget(25)&&m(25).kind==='group') {
     const v=m(25).value;
     return {id:25,text:`当前DAU ${number(v.DAU)}、WAU ${number(v.WAU)}、MAU ${number(v.MAU)}${changeText(recentChange(4),0)}；DAU/MAU 为 ${(v.DAU/v.MAU*100).toFixed(1)}%。三个时间窗人数不可相加。`};
   }
-  if(page==='B'&&m(29).kind==='rate')
+  if(page==='B'&&isTarget(29)&&m(29).kind==='rate')
     return {id:29,text:`按当前${m(29).thresholdDays}天阈值，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。迁徙季与淡季规则不可当作两个互斥人群相加。`};
-  if(page==='C'&&m(42).kind==='rate') {
+  if(page==='C'&&isTarget(42)&&m(42).kind==='rate') {
     const t=weeklyRateComparison(42),week=filterState.week??sourceData.weekly.at(-1).week;
     return {id:42,comparison:t,text:`W${week}空触发率 ${percent(m(42).value)}。${t?'按比较周期的触发次数合并计算。请核对型号与固件分组，尚不能据此认定原因。':'前期无可比样本，暂不生成变化判断。'}`};
   }
-  if(page==='D'&&filterState.plan==='Free'&&m(22).kind==='group') {
+  if(page==='D'&&isTarget(22)&&filterState.plan==='Free'&&m(22).kind==='group') {
     const part=m(22).value.anyExhausted;
     return {id:22,text:`观鸟Free主账号中，任一权益用满 ${number(part.numerator)} / ${number(part.denominator)}（${percent(part.value)}）。付费试用与续费指标在Free筛选下不适用。`};
   }
-  if(page==='D'&&m(18).kind==='na')
+  if(page==='D'&&isTarget(18)&&m(18).kind==='na')
     return {id:18,text:`试用转正率当前${m(18).availability==='pending'?'待补数据':'不适用'}：${m(18).reason}。请查看指标口径与可用明细。`};
-  if(page==='D'&&m(18).kind==='rate') {
+  if(page==='D'&&isTarget(18)&&m(18).kind==='rate') {
     const comparison=weeklyRateComparison(18);
     if(filterState.week) {
       const currentWeek=Number(filterState.week);
@@ -3152,7 +3152,7 @@ function filteredFinding(page) {
     }
     return {id:18,text:`当前试用转正 ${number(m(18).numerator)}/${number(m(18).denominator)}（${percent(m(18).value)}）；可比批次样本不足，暂不生成变化判断。`};
   }
-  if(page==='E'&&m(35).kind==='group') {
+  if(page==='E'&&isTarget(35)&&m(35).kind==='group') {
     const v=m(35).value;
     const incomeChange=subscriptionIncomeChange();
     if(incomeChange) {
@@ -3162,17 +3162,24 @@ function filteredFinding(page) {
     }
     return {id:35,text:`所选范围的月度订阅付款主账号 ${number(v.monthlySubscriptionPayers)} 人，订阅净收入 $${number(v.subscriptionNetIncome)}，ARPPU $${v.ARPPU.toFixed(2)}${changeText(recentChange(35),2)}。付款人数与ARPPU的月度趋势分别见下方图表。`};
   }
-  if(page==='E'&&m(39).kind==='group') {
+  if(page==='E'&&isTarget(39)&&m(39).kind==='group') {
     const [name,part]=Object.entries(m(39).value)[0];
     return {id:39,text:`${filterState.country?`${optionLabel('country',filterState.country)} · `:''}${name}主型号样本 ${number(part.owners)} 位主账号，其中有效订阅 ${number(part.subscribedOwners)} 位，订阅率 ${percent(part.subscriptionRate)}。仅覆盖可归属主型号的合成样本；不代表全部合资格主账号。`};
   }
-  if(page==='E'&&m(40).kind==='group') {
+  if(page==='E'&&isTarget(40)&&m(40).kind==='group') {
     const [channel,v]=Object.entries(m(40).value)[0];
     return {id:40,text:`自报${channel}渠道演示样本 ${number(v.owners)} 位主账号，订阅率 ${percent(v.subscriptionRate)}。渠道为用户自报，不能直接解释购买归因。`};
   }
-  if(page==='F'&&m(48).kind==='rate'&&m(49).kind==='rate')
+  if(page==='F'&&isTarget(48)&&m(48).kind==='rate'&&m(49).kind==='rate')
     return {id:48,text:`多设备主账号占比 ${percent(m(48).value)}${changeText(recentChange(48))}；设备共享率 ${percent(m(49).value)}。前者以主账号为分母，后者以当前绑定设备为分母。`};
-  if(page==='G'&&m(53).kind==='count')return {id:53,text:`当前筛选下有 ${number(m(53).value)} 条模拟异常事件${changeText(recentChange(53),0)}；先核对事件归属和数据质量，再判断业务异常。`};
+  if(page==='G'&&isTarget(53)&&m(53).kind==='count')return {id:53,text:`当前筛选下有 ${number(m(53).value)} 条模拟异常事件${changeText(recentChange(53),0)}；先核对事件归属和数据质量，再判断业务异常。`};
+  if(page==='G'&&isTarget(54)&&m(54).kind==='group') {
+    const value=m(54),quality=dataQualityState(value);
+    const rates=quality.label==='演示预警'||quality.label==='演示正常'?
+      `事件丢失率 ${percent(value.value.eventLoss.value)}（${number(value.value.eventLoss.numerator)} / ${number(value.value.eventLoss.denominator)} 事件）；ID映射覆盖率 ${percent(value.value.idMapping.value)}（${number(value.value.idMapping.numerator)} / ${number(value.value.idMapping.denominator)}）。`:'';
+    return {id:54,text:`数据质量：${quality.label}。${rates}${quality.reason}`};
+  }
+  if(requestedId!==undefined)return null;
   const fallback=dataset.diagnostics[page].heroIds.find(id=>m(id).kind!=='na')??
     sourceData.catalog.find(item=>item.page===page&&m(item.id).kind!=='na')?.id;
   return fallback?{id:fallback,text:`${catalogItem(fallback).name}为 ${displayValue(fallback)}。当前筛选下缺少可核验的趋势比较；请查看本项分子、分母和来源。`}:null;
@@ -3245,18 +3252,76 @@ function metricInspector(id,page) {
       const amount=history.unit==='%'?`${Math.abs(delta).toFixed(1)} 个百分点`:
         history.unit==='美元/人'?`$${Math.abs(delta).toFixed(2)}`:
           `${number(Math.abs(Math.round(delta)))} ${history.unit}`;
-      fact('较上一期',`${Math.abs(delta)<.05?'基本持平':`${delta>0?'上升':'下降'} ${amount}`} · ${history.labels[index-1]} → ${history.labels[index]}`);
+      const change=history.unit==='美元/人'?arppuChangeLabel(delta):
+        Math.abs(delta)<.05?'基本持平':`${delta>0?'上升':'下降'} ${amount}`;
+      fact('较上一期',`${change} · ${history.labels[index-1]} → ${history.labels[index]}`);
     }
   }
+  const scope=metricFilterContext(id);
+  if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
     id===42?'周×型号×固件合成触发计数重算；缺少维度明细时显示待补数据。':id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
       id===46?`${technicalRequestSource(id)}按当前条件重算；各链路使用自身请求数。`:
-      selectedFilters().length?'当前筛选结果含模拟分片估算；请结合下方数据核对。':'结果来自演示底表；趋势中的构造数据在图注中说明。'));
+      scope.applied.length?'当前适用筛选结果含模拟分片估算；请结合左侧数据核对。':'结果来自演示底表；趋势中的构造数据在图注中说明。'));
   const link=element('a','inspector-link','查看图表与完整数据 ↓');
   link.href=routeHref(page,id);panel.append(link);
   if(value.kind!=='na')panel.append(registerIssueButton(page,id));
   return panel;
+}
+function diagnosticFinding(page,id,observation,{current=true}={}) {
+  const finding=element(current?'aside':'div',current?'detail-finding':'page-observation-body');
+  finding.dataset.metricId=String(id);
+  const name=`#${String(id).padStart(2,'0')} ${catalogItem(id).name}`;
+  if(current)finding.append(element('span','insight-tag',`当前指标 · ${name}`));
+  if(observation) {
+    const text=observation.text,end=text.indexOf('。');
+    finding.append(element('h3',current?'finding-title':'page-finding-title',end>=0?text.slice(0,end):text));
+    if(observation.comparison)finding.append(findingComparison(observation.comparison));
+    if(observation.incomeChange)finding.append(incomeDriverSummary(observation.incomeChange));
+    if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
+    const basis=element('details','finding-basis');
+    basis.append(element('summary','','合成数据 · 查看观察依据'));
+    if(observation.comparison)basis.append(findingCalculation(observation.comparison));
+    if(observation.incomeChange)basis.append(subscriptionIncomeCalculation(observation.incomeChange));
+    basis.append(element('p','finding-meta',
+      `演示文案规则 ${findingRuleVersion} · 证据指标 ${name} · ${observation.incomeChange?.source??observation.comparison?.source??(id===54?'事件及ID映射合成汇总':findingSource(id))}。不作因果归因。`));
+    finding.append(basis);
+  } else {
+    const facts=metricInspector(id,page);
+    facts.querySelectorAll('.inspector-kicker,.inspector-link,.issue-register').forEach(node=>node.remove());
+    facts.querySelector('h3').className='finding-title';
+    const status=element('p','finding-summary-status',metric(id).kind==='na'?'当前无可用结果 · 不生成诊断结论':'事实摘要 · 暂无该指标的诊断结论');
+    facts.querySelector('.inspector-value').after(status);
+    finding.append(facts);
+  }
+  const cross=element('a','insight-link',current?'查看本条指标证据 ↓':`查看 ${name} 证据 →`);
+  cross.href=routeHref(page,id);finding.append(cross);
+  // Other-page links belong to an authored observation, never to an unrelated factual summary.
+  if(observation) {
+    const info=dataset.diagnostics[page];
+    const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
+    related.href=routeHref(info.crossLink);finding.append(related);
+    if(selectedFilters().some(([key])=>!relevantFilters(info.crossLink).includes(key)))
+      finding.append(element('p','finding-meta','跨页时仅保留目标页支持的筛选条件。'));
+  }
+  if(current) {
+    if(metric(id).kind!=='na')finding.append(registerIssueButton(page,id));
+    else finding.append(element('p','table-note','当前证据待补数据或不适用；补齐可核验数据后再登记。'));
+  }
+  return finding;
+}
+function currentMetricObservation(page,id) {
+  const wrap=element('div','workspace-observation');
+  wrap.append(diagnosticFinding(page,id,filteredFinding(page,id)));
+  const priority=filteredFinding(page);
+  if(priority&&priority.id!==id) {
+    const disclosure=element('details','page-observation');disclosure.dataset.metricId=String(priority.id);
+    disclosure.append(element('summary','',`本页重点观察 · #${String(priority.id).padStart(2,'0')} ${catalogItem(priority.id).name}`),
+      diagnosticFinding(page,priority.id,priority,{current:false}));
+    wrap.append(disclosure);
+  }
+  return wrap;
 }
 function entitySamplesPanel(page) {
   if(!['C','G'].includes(page))return null;
@@ -3335,7 +3400,7 @@ function updateSectionNavigation() {
   }
   for(const {button} of entries)if(button===current.button)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
 }
-function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric,legacy) {
+function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,legacy) {
   body.classList.add('income-page');
   const evidence=legacy?.selectedEvidence??metricEvidence(selectedMetric,page),specs=[...evidence.specs,...(legacy?.specs??[])];
   body.replaceChildren(body.querySelector('.filter-bar'),overview);
@@ -3464,15 +3529,11 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   queueDetails.append(queue);panels.get('data').append(queueDetails);
   const right=element('aside','income-context');right.setAttribute('aria-label','当前观察与问题登记');
   const rightControls=element('div','income-context-controls');
-  const observationButton=element('button','','关键观察'),recordButton=element('button','','问题登记');
+  const observationButton=element('button','','当前指标'),recordButton=element('button','','问题登记');
   observationButton.type=recordButton.type='button';
   observationButton.setAttribute('aria-controls',`${page}-workspace-observation`);recordButton.setAttribute('aria-controls',`${page}-workspace-record`);
   rightControls.append(observationButton,recordButton);
   finding.id=`${page}-workspace-observation`;
-  const findingTag=finding.querySelector('.insight-tag');
-  findingTag.textContent=`${selectedMetric!==findingMetric?'本页':''}${findingTag.textContent} · #${String(findingMetric).padStart(2,'0')} ${catalogItem(findingMetric).name}`;
-  if(metric(findingMetric).kind!=='na')finding.append(registerIssueButton(page,findingMetric));
-  else finding.append(element('p','table-note','当前证据待补数据或不适用；补齐可核验数据后再登记。'));
   const record=element('div','income-record');record.id=`${page}-workspace-record`;
   record.append(element('p','workspace-record-hint','本地问题单 · 保存仅保留在此浏览器'),form);
   right.append(rightControls,finding,record);
@@ -3688,43 +3749,10 @@ function renderDetail(page,selectedMetric,showSelected=false) {
         selectedFilters().length?'筛后无可比历史':'当前快照 · 无可比历史'));
     hero.append(card);
   });
-  const finding=element('aside','detail-finding');
-  const observation=filteredFinding(page);
-  const appendFinding=text=>{
-    const end=text.indexOf('。');
-    finding.append(element('h3','finding-title',end>=0?text.slice(0,end):text));
-    if(observation?.comparison)finding.append(findingComparison(observation.comparison));
-    if(observation?.incomeChange)finding.append(incomeDriverSummary(observation.incomeChange));
-    if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
-  };
-  let findingMetric=defaultFindingMetric[page];
-  if(selectedFilters().length) {
-    findingMetric=observation?.id??selectedMetric;
-    finding.append(element('span','insight-tag','筛后观察'));
-    appendFinding(observation?
-      `${observation.text} 所选条件：${activeFilterDescription()}。`:
-      '当前筛选下，本页关键指标均无适用的模拟事实；请调整筛选条件。');
-  } else {
-    findingMetric=observation?.id??findingMetric;
-    finding.append(element('span','insight-tag','关键观察'));
-    appendFinding(observation?.text??info.finding);
-  }
-  const findingBasis=element('details','finding-basis');
-  findingBasis.append(element('summary','','合成数据 · 查看观察依据'));
-  if(observation?.comparison)findingBasis.append(findingCalculation(observation.comparison));
-  if(observation?.incomeChange)findingBasis.append(subscriptionIncomeCalculation(observation.incomeChange));
-  findingBasis.append(element('p','finding-meta',
-    `演示文案规则 ${findingRuleVersion} · 证据指标 #${String(findingMetric).padStart(2,'0')} · ${observation?.incomeChange?.source??observation?.comparison?.source??findingSource(findingMetric)}。不作因果归因。`));
-  finding.append(findingBasis);
-  const cross=element('a','insight-link','查看本条指标证据 ↓');
-  cross.href=routeHref(page,findingMetric);finding.append(cross);
-  const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
-  related.href=routeHref(info.crossLink);finding.append(related);
-  if(selectedFilters().some(([key])=>!relevantFilters(info.crossLink).includes(key)))
-    finding.append(element('p','finding-meta','跨页时仅保留目标页支持的筛选条件。'));
+  const finding=currentMetricObservation(page,selectedMetric);
   overviewMain.append(hero);overviewGrid.append(overviewMain,inspector);
   overview.append(overviewGrid);body.append(overview);
-  if(page==='E'){renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric);return;}
+  if(page==='E'){renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric);return;}
   const drawSpecs=[];
   const addChart=(container,spec)=>{
     spec=diagnosticChartFacts(page,spec);
@@ -3820,7 +3848,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(element('p','table-note','当前条件下没有额外的可比趋势；完整指标值与适用性见上方数据核对。'));
   }
   if(page==='D')evidence.insertBefore(trialReadinessPanel(),evidence.children[1]??null);
-  renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,findingMetric,{
+  renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric,{
     selectedEvidence:evidenceFor,analysisMain,evidence,specs:drawSpecs,explorer
   });
 }

@@ -30,6 +30,10 @@ async(parent)=>{
     revenue=amount;await p.reload();await ready();await card().locator('.metric-delta').waitFor();
     const expected=label==='持平'?'8月 · 与上期持平':`8月 · ${label}（较上期）`;
     check(await card().locator('.metric-delta').innerText()===expected,`Wrong monetary change at ${width}: ${amount}`);
+    await card().locator('.detail-select').click();
+    const inspectorChange=p.locator('.metric-inspector .inspector-facts > div').filter({has:p.locator('dt', {hasText:'较上一期'})}).locator('dd');
+    check((await inspectorChange.innerText()).startsWith(`${label} · `),'Inspector contradicts the monetary direction or precision');
+    await p.locator('.inspector-close').click();
     const current=`$${(amount/10000).toFixed(2)}/人`;
     check(await card().locator('.detail-select').innerText()===current,'KPI does not show its actual revenue / payers');
     const aria=await card().locator('.headline-sparkline').getAttribute('aria-label');
