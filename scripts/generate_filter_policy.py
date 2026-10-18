@@ -75,6 +75,10 @@ for item in contract:
         # Business applicability remains; event facts have no geography/season
         # fields, so rebuilding must not re-enable independent slice estimates.
         demonstrable.difference_update({"country", "season"})
+    if mid in (34, 36):
+        # Independent plan/product slices contradict the subscription subset.
+        # The filters remain meaningful; linked entitlement ownership is absent.
+        demonstrable.difference_update({"plan", "productLine"})
     if mid == 51:
         # Historical populations need status at entry, not today's status.
         # Keep the business dimension visible while that linked field is absent.

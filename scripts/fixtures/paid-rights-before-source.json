@@ -1,0 +1,67 @@
+{
+  "sourceCommit": "f88f8b14adad1ee3afc563a1a02d4dd8d4769f45",
+  "classification": "isolated-test-records-generated-through-original-ui",
+  "records": {
+    "record:E:产品线：狩猎:34": {
+      "issueId": "DEMO-E-34-12XADAI",
+      "owner": "旧权益计数核查",
+      "status": "pending",
+      "note": "",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/19 04:45:34",
+      "page": "E",
+      "evidenceId": 34,
+      "scope": "产品线：狩猎",
+      "filters": {
+        "productLine": "Hunting"
+      },
+      "baseline": "3,765人",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 34
+    },
+    "record:E:套餐：Plus:36": {
+      "issueId": "DEMO-E-36-SJLYHL",
+      "owner": "旧权益计数核查",
+      "status": "pending",
+      "note": "",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/19 04:45:34",
+      "page": "E",
+      "evidenceId": 36,
+      "scope": "套餐：Plus",
+      "filters": {
+        "plan": "Plus"
+      },
+      "baseline": "任一Pack 27.2%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 36
+    },
+    "record:E:默认演示范围:36": {
+      "issueId": "DEMO-E-36-YHIE8Z",
+      "owner": "旧权益计数核查",
+      "status": "pending",
+      "note": "",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/19 04:45:34",
+      "page": "E",
+      "evidenceId": 36,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "任一Pack 25.1%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 36
+    }
+  }
+}

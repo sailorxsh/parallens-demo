@@ -729,6 +729,8 @@ for item in catalog[1:]:
         window = windows["month"]
     else:
         window = windows["day"]
+    if mid == 36:
+        window = "2026-09-24 有效增值Pack权益快照；分母为同日付费权益主账号"
     if mid == 48:
         window = "2026-09-24 主账号当前绑定关系快照；多设备占比以绑定主账号为分母"
     if mid == 29:

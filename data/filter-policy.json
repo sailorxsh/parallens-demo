@@ -840,13 +840,13 @@
       "demonstrableDimensions": [
         "appPlatform",
         "country",
-        "plan",
-        "productLine",
         "subscriptionPlatform"
       ],
       "unavailableDimensions": [
         "billingCycle",
-        "deviceModel"
+        "deviceModel",
+        "plan",
+        "productLine"
       ]
     },
     {
@@ -879,7 +879,7 @@
       "id": 36,
       "page": "E",
       "entity": "用户",
-      "window": "最近完整月或指标定义中的月窗口",
+      "window": "2026-09-24 有效增值Pack权益快照；分母为同日付费权益主账号",
       "businessDimensions": [
         "appPlatform",
         "country",
@@ -890,11 +890,12 @@
       "demonstrableDimensions": [
         "appPlatform",
         "country",
-        "plan",
-        "productLine",
         "subscriptionPlatform"
       ],
-      "unavailableDimensions": []
+      "unavailableDimensions": [
+        "plan",
+        "productLine"
+      ]
     },
     {
       "id": 37,
