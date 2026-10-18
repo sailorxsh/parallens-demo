@@ -935,31 +935,107 @@ function technicalRequestSource(id) {
   return effectiveFor(id).some(([key])=>!['productLine','deviceModel','firmware','functionType'].includes(key))?
     '合成请求明细与模拟分片估算':'型号×固件合成请求明细';
 }
-function technicalMetric(id,state,filters) {
-  const records=sourceData.technicalFacts.records.filter(row=>
-    (!state.productLine||(row.model==='Hunt Pro'?'Hunting':'Bird')===state.productLine)&&
-    (!state.deviceModel||row.model===state.deviceModel)&&(!state.firmware||row.firmware===state.firmware));
-  if(!records.length)return na('该型号与固件组合没有合成请求样本');
-  const other=filters.filter(([key])=>!['productLine','deviceModel','firmware','functionType','week'].includes(key));
-  const shares=sharesFor(other,id);
-  const total=records.reduce((sum,row)=>sum+row.attempts,0);
-  const denominator=allocatedCount(total,other,id,'denominator',shares);
-  if(denominator<30)return na('筛选后请求样本少于30');
-  const rateFor=field=>{
-    const failures=records.reduce((sum,row)=>sum+row[field],0);
-    const projected=Math.min(denominator,allocatedCount(failures,other,id,'numerator',shares));
-    return {kind:'rate',numerator:denominator-projected,denominator,value:(denominator-projected)/denominator};
-  };
-  if(id===45) {
-    const heartbeats=sourceData.metrics.m45.value.reportedWithin24h;
-    const all=filters.filter(([key])=>key!=='week');
-    return {kind:'group',value:{networkSuccess:rateFor('networkFailures'),
-      reportedWithin24h:allocatedCount(heartbeats,all,id,'denominator',sharesFor(all,id))}};
+const technicalChains={upload:'uploadFailures',live:'liveFailures',push:'pushFailures'};
+function technicalRowsProblem(rows,fields) {
+  const keys=new Set();
+  if(!Array.isArray(rows)||rows.length!==8)return '请求分组缺行，需补齐四型号×两固件的互斥计数';
+  for(const row of rows) {
+    if(!row||!['K6','Bird Lite','Bird Pro','Hunt Pro'].includes(row.model)||!['2.8','Other'].includes(row.firmware)||
+      keys.has(`${row.model}:${row.firmware}`)||!Number.isSafeInteger(row.attempts)||row.attempts<0||
+      fields.some(field=>!Number.isSafeInteger(row[field])||row[field]<0||row[field]>row.attempts))return '请求计数、失败次数、型号／固件归属或唯一性待核验';
+    keys.add(`${row.model}:${row.firmware}`);
   }
-  const field={Upload:'upload',Live:'live',Push:'push'}[state.functionType];
-  const names=field?[field]:['upload','live','push'];
-  const failures={upload:'uploadFailures',live:'liveFailures',push:'pushFailures'};
-  return {kind:'group',value:Object.fromEntries(names.map(name=>[name,rateFor(failures[name])]))};
+  return null;
+}
+function technicalCurrentSource(id=46) {
+  const source=sourceData.technicalFacts,fields=id===45?['networkFailures']:Object.values(technicalChains),problem=technicalRowsProblem(source?.records,fields);
+  if(problem)return {reason:problem};
+  if(source.asOf!==sourceData.snapshot.asOf)return {reason:'请求快照日期与看板不一致，不能借用旧值'};
+  const total=source.records.reduce((n,r)=>n+r.attempts,0),raw=sourceData.metrics[id===45?'m45':'m46'];
+  const components=id===45?{networkSuccess:'networkFailures'}:technicalChains;
+  if(!Number.isSafeInteger(total)||raw?.kind!=='group'||Object.entries(components).some(([name,field])=>{
+    const part=raw.value?.[name],failed=source.records.reduce((n,r)=>n+r[field],0);
+    return part?.kind!=='rate'||part.denominator!==total||part.numerator!==total-failed;
+  }))return {reason:'请求分组与当前成功／分母锚点不闭合，暂停相关成功率'};
+  return {rows:source.records};
+}
+function technicalCounts(rows,state=filterState,id=46) {
+  const filters=effectiveFor(id,state);
+  if(filters.some(([key])=>!policyFor(id).demonstrableDimensions.includes(key)))return {reason:'当前条件缺少同范围请求归属明细'};
+  if(state.deviceStatus==='Inactive')return {reason:'非有效设备不属于当前请求统计对象'};
+  const records=rows.filter(row=>(!state.productLine||(row.model==='Hunt Pro'?'Hunting':'Bird')===state.productLine)&&
+    (!state.deviceModel||row.model===state.deviceModel)&&(!state.firmware||row.firmware===state.firmware));
+  if(!records.length)return {reason:'该型号与固件组合没有合成请求样本'};
+  const other=filters.filter(([key])=>!['productLine','deviceModel','firmware','functionType','week'].includes(key));
+  const shares=sharesFor(other,id),denominator=allocatedCount(records.reduce((n,r)=>n+r.attempts,0),other,id,'denominator',shares);
+  const fields=id===45?{networkSuccess:'networkFailures'}:technicalChains,counts={};
+  for(const [name,field] of Object.entries(fields)) {
+    const failed=allocatedCount(records.reduce((n,r)=>n+r[field],0),other,id,'numerator',shares);
+    if(!Number.isSafeInteger(denominator)||!Number.isSafeInteger(failed)||failed<0||failed>denominator)return {reason:'筛后失败次数超过请求分母，不能截断为零成功率'};
+    counts[name]={numerator:denominator-failed,denominator,failed};
+  }
+  return {counts};
+}
+function technicalHistoryProjection(state=filterState) {
+  const current=technicalCurrentSource();if(current.reason)return current;
+  const source=sourceData.technicalFacts,history=source.dailyHistory,bad=()=>({reason:'30日请求历史缺失、日期不连续或与当前锚点不闭合；保留可靠的最近24小时结果'});
+  if(history?.version!=='synthetic-technical-days-v1'||history.endExclusive!==`${source.asOf}T00:00:00Z`||
+    history.provenance!=='constructed-simulation-preserving-current-anchor'||!Array.isArray(history.rows)||history.rows.length!==30)return bad();
+  const end=Date.parse(history.endExclusive);if(!Number.isFinite(end))return bad();
+  const rows=[];
+  for(const [i,row] of history.rows.entries()) {
+    if(!row||row.date!==new Date(end-(30-i)*86400000).toISOString().slice(0,10)||technicalRowsProblem(row.records,Object.values(technicalChains)))return bad();
+    const part=technicalCounts(row.records,state);if(part.reason)return part;
+    rows.push({date:row.date,...part});
+  }
+  const latest=new Map(history.rows.at(-1).records.map(r=>[`${r.model}:${r.firmware}`,r]));
+  if(current.rows.some(row=>{const last=latest.get(`${row.model}:${row.firmware}`);return ['attempts',...Object.values(technicalChains)].some(field=>last?.[field]!==row[field]);}))return bad();
+  const selected={Upload:'upload',Live:'live',Push:'push'}[state.functionType],names=selected?[selected]:Object.keys(technicalChains);
+  if(state.functionType&&!selected)return {reason:'该功能不属于上传／直播／推送技术链路'};
+  const aggregate=days=>Object.fromEntries(names.map(name=>[name,rows.slice(-days).reduce((sum,row)=>({
+    numerator:sum.numerator+row.counts[name].numerator,denominator:sum.denominator+row.counts[name].denominator,failed:sum.failed+row.counts[name].failed}),{numerator:0,denominator:0,failed:0})]));
+  return {rows,names,endExclusive:history.endExclusive,day:aggregate(1),week:aggregate(7),note:history.note};
+}
+function technicalHistoryHeadline(state=filterState) {
+  const part=technicalHistoryProjection(state);if(part.reason)return null;
+  const details=part.rows.map(row=>{
+    const rates=part.names.map(name=>({name,...row.counts[name]}));
+    if(rates.some(r=>r.denominator<30))return null;
+    const value=rates.reduce((a,b)=>a.numerator/a.denominator<=b.numerator/b.denominator?a:b);
+    return {...value,value:value.numerator/value.denominator,basisLabel:`${groupLabels[value.name]}成功 / 该链路请求`,numeratorUnit:'次',denominatorUnit:'次'};
+  });
+  return {labels:part.rows.map(r=>r.date),values:details.map(d=>d?d.value*100:null),details,unit:'%',comparisonLabel:'较前24小时',
+    title:part.names.length===1?`${groupLabels[part.names[0]]}成功率`:'三链路最低成功率',
+    note:`30个完整UTC日，截至${part.endExclusive.replace('T',' ').replace('Z',' UTC')}。${part.names.length===1?'仅当前所选链路。':'各日取三链路中最低成功率，最低项可能变化，不代表同一功能的连续率。'}各链路分母独立；新增合成历史，非生产日志。`};
+}
+function technicalHistoryEvidence(panel,appendEvidencePair) {
+  const part=technicalHistoryProjection();
+  if(part.reason){const note=element('p','na-note technical-history-unavailable',part.reason);note.dataset.evidenceKind='change';panel.append(note);return;}
+  const format=r=>r.denominator>=30?percent(r.numerator/r.denominator):r.denominator?'样本不足30次':'无合格分母';
+  const end=part.endExclusive.slice(0,10),start=days=>new Date(Date.parse(part.endExclusive)-days*86400000).toISOString().slice(0,10);
+  const summary=dataTable({title:'最近24小时与7天 · 同源请求核对',columns:['链路','24小时成功／请求（次）','24小时成功率','7天成功／请求（次）','7天成功率'],
+    rows:part.names.map(name=>[groupLabels[name],`${number(part.day[name].numerator)} / ${number(part.day[name].denominator)}`,format(part.day[name]),`${number(part.week[name].numerator)} / ${number(part.week[name].denominator)}`,format(part.week[name])]),
+    note:`UTC起含止不含：最近24小时 ${start(1)} → ${end}；最近7天 ${start(7)} → ${end}。7天按成功总数÷请求总数计算，不平均日率；各链路请求不可相加，也不等于影响设备数。生产目标线、错误码与逐请求来源待补。`},'technical-window-summary');
+  summary.dataset.evidenceKind='change';panel.append(summary);
+  const spec={title:'上传／直播／推送成功率 · 30个完整日',unit:'%',nearestLinePoint:true,labels:part.rows.map(r=>r.date),
+    series:part.names.map(name=>({name:`${groupLabels[name]}成功率`,values:part.rows.map(r=>r.counts[name].denominator>=30?r.counts[name].numerator/r.counts[name].denominator*100:null),
+      details:part.rows.map(r=>({...r.counts[name],numeratorUnit:'次',denominatorUnit:'次'}))})),note:`${technicalRequestSource(46)}；30个完整UTC日，末日 ${start(1)} → ${end}，不含逐请求或设备身份；${part.note}`};
+  const table={title:'30日技术链路 · 成功／请求完整计数',columns:['UTC自然日',...part.names.flatMap(name=>[`${groupLabels[name]}成功（次）`,`${groupLabels[name]}请求（次）`,`${groupLabels[name]}成功率`])],
+    rows:part.rows.map(row=>[row.date,...part.names.flatMap(name=>[row.counts[name].numerator,row.counts[name].denominator,format(row.counts[name])])]),note:spec.note};
+  appendEvidencePair(spec,table,'change');
+}
+
+function technicalMetric(id,state,filters) {
+  const source=technicalCurrentSource(id);if(source.reason)return pending(source.reason);
+  const part=technicalCounts(source.rows,state,id);if(part.reason)return pending(part.reason);
+  const values=Object.values(part.counts);if(values.some(r=>r.denominator<30))return na(values[0].denominator?'筛选后请求样本少于30':'当前没有合格请求分母');
+  const rateFor=name=>{const r=part.counts[name];return {kind:'rate',numerator:r.numerator,denominator:r.denominator,value:r.numerator/r.denominator};};
+  if(id===45) {
+    const heartbeats=sourceData.metrics.m45.value.reportedWithin24h,all=filters.filter(([key])=>key!=='week');
+    return {kind:'group',value:{networkSuccess:rateFor('networkSuccess'),reportedWithin24h:allocatedCount(heartbeats,all,id,'denominator',sharesFor(all,id))}};
+  }
+  const field={Upload:'upload',Live:'live',Push:'push'}[state.functionType],names=field?[field]:Object.keys(technicalChains);
+  return {kind:'group',value:Object.fromEntries(names.map(name=>[name,rateFor(name)]))};
 }
 const activityCombinations=[
   {key:'appOnly',label:'仅App',sources:['app']},
@@ -1759,6 +1835,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  if(id===46)return technicalHistoryHeadline()?.values??null;
   if(id===2){const part=subscriptionStatusHistoryProjection();if(part.rows)return part.rows.map(r=>Object.values(r.products).reduce((sum,p)=>sum+p.paidCurrent+p.cancelledButEntitled,0));}
   if(id===4||id===25){const p=activeWindowProjection();return p.rows?p.rows.map(r=>r.counts[id===4?'MAU':'DAU']):null;}
   if(id===23){const part=renewalProjection();return part.rows?part.rows.map(r=>r.renewal.kind==='rate'?r.renewal.value*100:null):null;}
@@ -2140,10 +2217,11 @@ function savedMonthLabel(period) {
     `完整月 ${sourceData.snapshot.asOf.slice(0,4)}年${period}`;
 }
 
-const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,25,27,34,35,41,42,44,48,49,52,53,54]);
+const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,25,27,34,35,41,42,44,46,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
+  if(id===46)return technicalHistoryHeadline();
   if(id===4||id===25){const p=activeWindowProjection();if(p.reason)return null;return {comparisonLabel:'较前日',nearestLinePoint:true,title:id===4?'近30天复合活跃主账号':'近1天复合活跃主账号',unit:'人',labels:p.rows.map(r=>r.at.slice(0,10)),values:trendValues(id),note:'84个每日UTC零时快照；滚动窗口，起含止不含，不是自然周／月。合成频数，7／30天相邻窗口重叠，不相加为独立人数。'};}
   if(id===23){const part=renewalProjection();if(part.reason)return null;return {labels:part.rows.map(r=>r.month),values:trendValues(23),selectedPeriod:part.month,details:part.rows.map(r=>({...r.renewal,basisLabel:'成功续订 / 当月到期',numeratorUnit:'人',denominatorUnit:'人'})),unit:'%',title:'月度到期续订率',note:'完整到期月，期初归属固定；到期后7天为演示观察窗。原周度86%与月度95%不可直接比较；月环比只比较相邻完整月。'};}
   if(id===24){const part=retentionProjection();if(part.reason)return null;return {labels:part.rows.map(r=>r.observedMonth),
@@ -2461,7 +2539,9 @@ function headlineTrend(id) {
     `${delta>0?'+':''}${number(Math.round(delta))}${history.unit}（${history.comparisonLabel??'较上期'}）`;
   const wrap=element('div','headline-trend');
   if(delta!==null)wrap.dataset.delta=String(delta);
-  wrap.append(element('span','headline-trend-label',`${history.labels[index]} · ${deltaText}`));
+  const label=element('span','headline-trend-label',id===46?deltaText:`${history.labels[index]} · ${deltaText}`);
+  if(id===46){const comparison=`${history.labels[index]} 较 ${history.labels[index-1]??'无前期'}；${deltaText}`;label.title=comparison;label.setAttribute('aria-label',comparison);}
+  wrap.append(label);
   const box=element('div','node-sparkline headline-sparkline');box.dataset.metricId=String(id);
   box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':history.unit==='美元/人'?chartValue(current,history.unit):`${Number(current).toFixed(history.unit==='%'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
   wrap.append(box);
@@ -2485,7 +2565,7 @@ function metricValueRow(id,valueNode,trend) {
     if(label){
       const delta=Number(trend.dataset.delta);
       const adverseWhenHigh=new Set([15,29,42,52,53,54]);
-      const favorableWhenHigh=new Set([2,3,4,9,10,11,13,17,18,23,24,27,34,41]);
+      const favorableWhenHigh=new Set([2,3,4,9,10,11,13,17,18,23,24,27,34,41,46]);
       const direction=adverseWhenHigh.has(id)?-1:favorableWhenHigh.has(id)?1:0;
       label.className=`metric-delta${direction&&Math.abs(delta)>.05?delta*direction>0?' improving':' adverse':''}`;
       row.append(label);
@@ -4116,7 +4196,7 @@ function metricEvidence(id,page) {
   const filterContext=metricFilterContext(id);
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
     `${filterContext.applied.length?`本项应用：${filterContext.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、')}`:'本项仍为总体范围'}${filterContext.ignored.length?`；未应用：${filterContext.ignoredText}（不适用于本项）`:''}。`));
-  if(value.kind==='na'&&(id!==23||!renewalProjection().current)&&(id!==36||packPenetrationFacts().reason)) {panel.append(element('p','na-note',`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}。`));return {node:panel,specs:[]};}
+  if(value.kind==='na'&&(id!==23||!renewalProjection().current)&&(id!==36||packPenetrationFacts().reason)&&(id!==46||technicalHistoryProjection().reason)) {panel.append(element('p','na-note',`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}。`));return {node:panel,specs:[]};}
   if(hasRegistrationBaseline(id))panel.append(registerIssueButton(page,id,{compact:true}));
   if(id===24){const table=dataTable(retentionTable(),'retention-calculation');table.dataset.evidenceKind='data';panel.append(table);}
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
@@ -4139,6 +4219,7 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===46){if(value.kind==='na')panel.append(element('p','na-note',value.reason));technicalHistoryEvidence(panel,appendEvidencePair);}
   if(id===36){
     const part=packPenetrationFacts(),table=packPenetrationTable(part);
     if(value.kind==='na'){const counts=dataTable(table,'pack-penetration-calculation');counts.dataset.evidenceKind='data';panel.append(element('p','na-note',value.reason),counts);}
@@ -4193,7 +4274,7 @@ function metricEvidence(id,page) {
     else {const missing=element('p','na-note binding-failure-unavailable',failure.reason);missing.dataset.evidenceKind='groups';panel.append(missing);}
 
   }
-  const history=metricHistory(id);
+  const history=id===46?null:metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&(id!==primaryId||id===13||id===54||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {
     const qualityDetails=id===54?history.details?.map(detail=>detail?{...detail,
@@ -5068,6 +5149,9 @@ function metricInspector(id,page) {
   else if(id===46&&value.kind==='group') {
     Object.entries(value.value).forEach(([name,part])=>fact(`${groupLabels[name]}请求`,
       `${number(part.numerator)} / ${number(part.denominator)} 次成功；失败 ${number(part.denominator-part.numerator)} 次`));
+    const history=technicalHistoryProjection();
+    if(history.reason)fact('7天／30日历史',history.reason);
+    else fact('最近7天加权成功率',history.names.map(name=>{const r=history.week[name];return `${groupLabels[name]} ${r.denominator>=30?percent(r.numerator/r.denominator):'分母不足30次'}`;}).join('；'));
   } else if(id===21&&value.kind==='group') {
     fact('期初 / 期末',`${number(value.value.opening)} / ${number(value.value.closing)}`);
     fact('本期净增',`${value.value.closing-value.value.opening>=0?'+':''}${number(value.value.closing-value.value.opening)} 人`);

@@ -1,0 +1,48 @@
+{
+  "sourceCommit": "252005985ec1db42a0bc63193c8d3a08aed681e6",
+  "classification": "isolated-synthetic-records-generated-through-original-ui",
+  "records": {
+    "record:C:默认演示范围:46": {
+      "issueId": "DEMO-C-46-MW45DS",
+      "owner": "技术窗口原基线核查",
+      "status": "pending",
+      "note": "",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/19 05:12:34",
+      "page": "C",
+      "evidenceId": 46,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "关键功能最低成功率：直播 · 97.0%；推送成功率：98.5%；上传成功率：99.0%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 46
+    },
+    "record:C:设备型号：K6 · 固件版本：2.8 · 功能类型：直播:46": {
+      "issueId": "DEMO-C-46-RCB2CS",
+      "owner": "技术窗口原基线核查",
+      "status": "pending",
+      "note": "",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/19 05:12:34",
+      "page": "C",
+      "evidenceId": 46,
+      "scope": "设备型号：K6 · 固件版本：2.8 · 功能类型：直播",
+      "filters": {
+        "deviceModel": "K6",
+        "firmware": "2.8",
+        "functionType": "Live"
+      },
+      "baseline": "91.3%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 46
+    }
+  }
+}

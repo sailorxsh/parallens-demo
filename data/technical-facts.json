@@ -3,13 +3,2395 @@
   "window": "最近24小时合成请求样本",
   "note": "型号×固件的互斥请求样本；每条链路各有10,000次尝试，链路之间不是同一统计对象，不可相加。",
   "records": [
-    {"model":"K6","firmware":"2.8","attempts":400,"networkFailures":60,"uploadFailures":12,"liveFailures":35,"pushFailures":20},
-    {"model":"K6","firmware":"Other","attempts":713,"networkFailures":30,"uploadFailures":5,"liveFailures":15,"pushFailures":5},
-    {"model":"Bird Lite","firmware":"2.8","attempts":800,"networkFailures":90,"uploadFailures":15,"liveFailures":55,"pushFailures":25},
-    {"model":"Bird Lite","firmware":"Other","attempts":2677,"networkFailures":70,"uploadFailures":15,"liveFailures":35,"pushFailures":25},
-    {"model":"Bird Pro","firmware":"2.8","attempts":700,"networkFailures":70,"uploadFailures":12,"liveFailures":45,"pushFailures":20},
-    {"model":"Bird Pro","firmware":"Other","attempts":2429,"networkFailures":60,"uploadFailures":15,"liveFailures":35,"pushFailures":20},
-    {"model":"Hunt Pro","firmware":"2.8","attempts":500,"networkFailures":60,"uploadFailures":11,"liveFailures":45,"pushFailures":15},
-    {"model":"Hunt Pro","firmware":"Other","attempts":1781,"networkFailures":60,"uploadFailures":15,"liveFailures":35,"pushFailures":20}
-  ]
+    {
+      "model": "K6",
+      "firmware": "2.8",
+      "attempts": 400,
+      "networkFailures": 60,
+      "uploadFailures": 12,
+      "liveFailures": 35,
+      "pushFailures": 20
+    },
+    {
+      "model": "K6",
+      "firmware": "Other",
+      "attempts": 713,
+      "networkFailures": 30,
+      "uploadFailures": 5,
+      "liveFailures": 15,
+      "pushFailures": 5
+    },
+    {
+      "model": "Bird Lite",
+      "firmware": "2.8",
+      "attempts": 800,
+      "networkFailures": 90,
+      "uploadFailures": 15,
+      "liveFailures": 55,
+      "pushFailures": 25
+    },
+    {
+      "model": "Bird Lite",
+      "firmware": "Other",
+      "attempts": 2677,
+      "networkFailures": 70,
+      "uploadFailures": 15,
+      "liveFailures": 35,
+      "pushFailures": 25
+    },
+    {
+      "model": "Bird Pro",
+      "firmware": "2.8",
+      "attempts": 700,
+      "networkFailures": 70,
+      "uploadFailures": 12,
+      "liveFailures": 45,
+      "pushFailures": 20
+    },
+    {
+      "model": "Bird Pro",
+      "firmware": "Other",
+      "attempts": 2429,
+      "networkFailures": 60,
+      "uploadFailures": 15,
+      "liveFailures": 35,
+      "pushFailures": 20
+    },
+    {
+      "model": "Hunt Pro",
+      "firmware": "2.8",
+      "attempts": 500,
+      "networkFailures": 60,
+      "uploadFailures": 11,
+      "liveFailures": 45,
+      "pushFailures": 15
+    },
+    {
+      "model": "Hunt Pro",
+      "firmware": "Other",
+      "attempts": 1781,
+      "networkFailures": 60,
+      "uploadFailures": 15,
+      "liveFailures": 35,
+      "pushFailures": 20
+    }
+  ],
+  "dailyHistory": {
+    "version": "synthetic-technical-days-v1",
+    "endExclusive": "2026-09-24T00:00:00Z",
+    "provenance": "constructed-simulation-preserving-current-anchor",
+    "note": "30个完整UTC日，起含止不含；新增合成情景，非生产请求日志。每链路按失败数与请求数重算，不平均日率，不生成设备或请求身份。",
+    "rows": [
+      {
+        "date": "2026-08-25",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 348,
+            "networkFailures": 47,
+            "uploadFailures": 10,
+            "liveFailures": 12,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 655,
+            "networkFailures": 27,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 758,
+            "networkFailures": 83,
+            "uploadFailures": 13,
+            "liveFailures": 44,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2528,
+            "networkFailures": 60,
+            "uploadFailures": 12,
+            "liveFailures": 27,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 638,
+            "networkFailures": 54,
+            "uploadFailures": 9,
+            "liveFailures": 36,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2092,
+            "networkFailures": 43,
+            "uploadFailures": 11,
+            "liveFailures": 29,
+            "pushFailures": 17
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 407,
+            "networkFailures": 43,
+            "uploadFailures": 9,
+            "liveFailures": 36,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1409,
+            "networkFailures": 45,
+            "uploadFailures": 12,
+            "liveFailures": 26,
+            "pushFailures": 14
+          }
+        ]
+      },
+      {
+        "date": "2026-08-26",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 368,
+            "networkFailures": 52,
+            "uploadFailures": 11,
+            "liveFailures": 13,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 677,
+            "networkFailures": 28,
+            "uploadFailures": 5,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 757,
+            "networkFailures": 81,
+            "uploadFailures": 12,
+            "liveFailures": 43,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2444,
+            "networkFailures": 56,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 604,
+            "networkFailures": 50,
+            "uploadFailures": 9,
+            "liveFailures": 35,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 1984,
+            "networkFailures": 41,
+            "uploadFailures": 11,
+            "liveFailures": 28,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 396,
+            "networkFailures": 43,
+            "uploadFailures": 8,
+            "liveFailures": 34,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1427,
+            "networkFailures": 47,
+            "uploadFailures": 12,
+            "liveFailures": 25,
+            "pushFailures": 13
+          }
+        ]
+      },
+      {
+        "date": "2026-08-27",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 380,
+            "networkFailures": 55,
+            "uploadFailures": 11,
+            "liveFailures": 13,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 676,
+            "networkFailures": 28,
+            "uploadFailures": 4,
+            "liveFailures": 12,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 732,
+            "networkFailures": 76,
+            "uploadFailures": 12,
+            "liveFailures": 41,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2315,
+            "networkFailures": 51,
+            "uploadFailures": 11,
+            "liveFailures": 26,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 573,
+            "networkFailures": 47,
+            "uploadFailures": 9,
+            "liveFailures": 35,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 1930,
+            "networkFailures": 41,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 401,
+            "networkFailures": 45,
+            "uploadFailures": 9,
+            "liveFailures": 34,
+            "pushFailures": 10
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1496,
+            "networkFailures": 49,
+            "uploadFailures": 12,
+            "liveFailures": 26,
+            "pushFailures": 14
+          }
+        ]
+      },
+      {
+        "date": "2026-08-28",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 380,
+            "networkFailures": 56,
+            "uploadFailures": 11,
+            "liveFailures": 14,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 653,
+            "networkFailures": 26,
+            "uploadFailures": 4,
+            "liveFailures": 11,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 693,
+            "networkFailures": 69,
+            "uploadFailures": 11,
+            "liveFailures": 40,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2196,
+            "networkFailures": 48,
+            "uploadFailures": 10,
+            "liveFailures": 26,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 557,
+            "networkFailures": 47,
+            "uploadFailures": 9,
+            "liveFailures": 35,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 1954,
+            "networkFailures": 44,
+            "uploadFailures": 12,
+            "liveFailures": 27,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 421,
+            "networkFailures": 49,
+            "uploadFailures": 9,
+            "liveFailures": 35,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1589,
+            "networkFailures": 52,
+            "uploadFailures": 12,
+            "liveFailures": 26,
+            "pushFailures": 15
+          }
+        ]
+      },
+      {
+        "date": "2026-08-29",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 367,
+            "networkFailures": 54,
+            "uploadFailures": 10,
+            "liveFailures": 13,
+            "pushFailures": 15
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 619,
+            "networkFailures": 24,
+            "uploadFailures": 4,
+            "liveFailures": 11,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 658,
+            "networkFailures": 64,
+            "uploadFailures": 10,
+            "liveFailures": 39,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2136,
+            "networkFailures": 46,
+            "uploadFailures": 10,
+            "liveFailures": 26,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 564,
+            "networkFailures": 49,
+            "uploadFailures": 9,
+            "liveFailures": 36,
+            "pushFailures": 15
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2048,
+            "networkFailures": 47,
+            "uploadFailures": 12,
+            "liveFailures": 28,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 447,
+            "networkFailures": 53,
+            "uploadFailures": 9,
+            "liveFailures": 35,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1670,
+            "networkFailures": 54,
+            "uploadFailures": 12,
+            "liveFailures": 27,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-08-30",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 348,
+            "networkFailures": 51,
+            "uploadFailures": 9,
+            "liveFailures": 13,
+            "pushFailures": 14
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 587,
+            "networkFailures": 22,
+            "uploadFailures": 3,
+            "liveFailures": 10,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 640,
+            "networkFailures": 60,
+            "uploadFailures": 10,
+            "liveFailures": 39,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2163,
+            "networkFailures": 47,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 592,
+            "networkFailures": 53,
+            "uploadFailures": 10,
+            "liveFailures": 37,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2176,
+            "networkFailures": 52,
+            "uploadFailures": 13,
+            "liveFailures": 29,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 470,
+            "networkFailures": 55,
+            "uploadFailures": 10,
+            "liveFailures": 36,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1707,
+            "networkFailures": 53,
+            "uploadFailures": 12,
+            "liveFailures": 28,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-08-31",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 330,
+            "networkFailures": 47,
+            "uploadFailures": 9,
+            "liveFailures": 12,
+            "pushFailures": 14
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 571,
+            "networkFailures": 21,
+            "uploadFailures": 3,
+            "liveFailures": 10,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 648,
+            "networkFailures": 60,
+            "uploadFailures": 10,
+            "liveFailures": 41,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2267,
+            "networkFailures": 51,
+            "uploadFailures": 12,
+            "liveFailures": 29,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 628,
+            "networkFailures": 58,
+            "uploadFailures": 11,
+            "liveFailures": 39,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2286,
+            "networkFailures": 55,
+            "uploadFailures": 14,
+            "liveFailures": 29,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 480,
+            "networkFailures": 56,
+            "uploadFailures": 9,
+            "liveFailures": 36,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1686,
+            "networkFailures": 51,
+            "uploadFailures": 12,
+            "liveFailures": 28,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-01",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 321,
+            "networkFailures": 44,
+            "uploadFailures": 8,
+            "liveFailures": 12,
+            "pushFailures": 14
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 579,
+            "networkFailures": 21,
+            "uploadFailures": 3,
+            "liveFailures": 11,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 679,
+            "networkFailures": 63,
+            "uploadFailures": 11,
+            "liveFailures": 45,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2407,
+            "networkFailures": 56,
+            "uploadFailures": 13,
+            "liveFailures": 31,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 660,
+            "networkFailures": 63,
+            "uploadFailures": 11,
+            "liveFailures": 40,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2337,
+            "networkFailures": 57,
+            "uploadFailures": 14,
+            "liveFailures": 29,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 474,
+            "networkFailures": 53,
+            "uploadFailures": 9,
+            "liveFailures": 35,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1616,
+            "networkFailures": 47,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-02",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 325,
+            "networkFailures": 43,
+            "uploadFailures": 8,
+            "liveFailures": 13,
+            "pushFailures": 15
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 606,
+            "networkFailures": 21,
+            "uploadFailures": 4,
+            "liveFailures": 12,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 721,
+            "networkFailures": 69,
+            "uploadFailures": 12,
+            "liveFailures": 49,
+            "pushFailures": 22
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2529,
+            "networkFailures": 61,
+            "uploadFailures": 14,
+            "liveFailures": 32,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 675,
+            "networkFailures": 66,
+            "uploadFailures": 11,
+            "liveFailures": 39,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2308,
+            "networkFailures": 55,
+            "uploadFailures": 13,
+            "liveFailures": 28,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 455,
+            "networkFailures": 49,
+            "uploadFailures": 8,
+            "liveFailures": 34,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1529,
+            "networkFailures": 43,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-03",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 341,
+            "networkFailures": 44,
+            "uploadFailures": 8,
+            "liveFailures": 14,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 644,
+            "networkFailures": 22,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 757,
+            "networkFailures": 74,
+            "uploadFailures": 13,
+            "liveFailures": 51,
+            "pushFailures": 22
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2584,
+            "networkFailures": 64,
+            "uploadFailures": 14,
+            "liveFailures": 32,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 666,
+            "networkFailures": 66,
+            "uploadFailures": 11,
+            "liveFailures": 37,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2213,
+            "networkFailures": 52,
+            "uploadFailures": 12,
+            "liveFailures": 26,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 430,
+            "networkFailures": 45,
+            "uploadFailures": 8,
+            "liveFailures": 33,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1459,
+            "networkFailures": 41,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-09-04",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 362,
+            "networkFailures": 45,
+            "uploadFailures": 9,
+            "liveFailures": 15,
+            "pushFailures": 18
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 676,
+            "networkFailures": 24,
+            "uploadFailures": 4,
+            "liveFailures": 14,
+            "pushFailures": 5
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 774,
+            "networkFailures": 79,
+            "uploadFailures": 14,
+            "liveFailures": 52,
+            "pushFailures": 22
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2552,
+            "networkFailures": 65,
+            "uploadFailures": 14,
+            "liveFailures": 31,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 639,
+            "networkFailures": 63,
+            "uploadFailures": 10,
+            "liveFailures": 35,
+            "pushFailures": 15
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2093,
+            "networkFailures": 47,
+            "uploadFailures": 11,
+            "liveFailures": 25,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 411,
+            "networkFailures": 42,
+            "uploadFailures": 8,
+            "liveFailures": 33,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1438,
+            "networkFailures": 40,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-09-05",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 380,
+            "networkFailures": 47,
+            "uploadFailures": 10,
+            "liveFailures": 16,
+            "pushFailures": 19
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 691,
+            "networkFailures": 25,
+            "uploadFailures": 5,
+            "liveFailures": 14,
+            "pushFailures": 5
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 764,
+            "networkFailures": 81,
+            "uploadFailures": 14,
+            "liveFailures": 50,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2448,
+            "networkFailures": 63,
+            "uploadFailures": 13,
+            "liveFailures": 28,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 604,
+            "networkFailures": 58,
+            "uploadFailures": 9,
+            "liveFailures": 32,
+            "pushFailures": 15
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 1998,
+            "networkFailures": 44,
+            "uploadFailures": 10,
+            "liveFailures": 24,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 405,
+            "networkFailures": 40,
+            "uploadFailures": 8,
+            "liveFailures": 34,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1475,
+            "networkFailures": 42,
+            "uploadFailures": 11,
+            "liveFailures": 28,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-09-06",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 388,
+            "networkFailures": 49,
+            "uploadFailures": 10,
+            "liveFailures": 17,
+            "pushFailures": 19
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 682,
+            "networkFailures": 26,
+            "uploadFailures": 5,
+            "liveFailures": 14,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 733,
+            "networkFailures": 80,
+            "uploadFailures": 14,
+            "liveFailures": 47,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2316,
+            "networkFailures": 60,
+            "uploadFailures": 12,
+            "liveFailures": 26,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 577,
+            "networkFailures": 54,
+            "uploadFailures": 8,
+            "liveFailures": 31,
+            "pushFailures": 14
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 1969,
+            "networkFailures": 42,
+            "uploadFailures": 10,
+            "liveFailures": 25,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 415,
+            "networkFailures": 41,
+            "uploadFailures": 8,
+            "liveFailures": 36,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1556,
+            "networkFailures": 46,
+            "uploadFailures": 12,
+            "liveFailures": 30,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-07",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 383,
+            "networkFailures": 49,
+            "uploadFailures": 11,
+            "liveFailures": 17,
+            "pushFailures": 19
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 654,
+            "networkFailures": 26,
+            "uploadFailures": 5,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 693,
+            "networkFailures": 77,
+            "uploadFailures": 13,
+            "liveFailures": 43,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2212,
+            "networkFailures": 56,
+            "uploadFailures": 11,
+            "liveFailures": 24,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 569,
+            "networkFailures": 51,
+            "uploadFailures": 8,
+            "liveFailures": 31,
+            "pushFailures": 15
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2020,
+            "networkFailures": 42,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 438,
+            "networkFailures": 44,
+            "uploadFailures": 9,
+            "liveFailures": 39,
+            "pushFailures": 13
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1649,
+            "networkFailures": 51,
+            "uploadFailures": 14,
+            "liveFailures": 32,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-08",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 368,
+            "networkFailures": 49,
+            "uploadFailures": 11,
+            "liveFailures": 17,
+            "pushFailures": 17
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 619,
+            "networkFailures": 25,
+            "uploadFailures": 4,
+            "liveFailures": 12,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 662,
+            "networkFailures": 74,
+            "uploadFailures": 12,
+            "liveFailures": 39,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2180,
+            "networkFailures": 54,
+            "uploadFailures": 11,
+            "liveFailures": 24,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 583,
+            "networkFailures": 50,
+            "uploadFailures": 8,
+            "liveFailures": 33,
+            "pushFailures": 16
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2130,
+            "networkFailures": 44,
+            "uploadFailures": 11,
+            "liveFailures": 29,
+            "pushFailures": 17
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 464,
+            "networkFailures": 48,
+            "uploadFailures": 10,
+            "liveFailures": 41,
+            "pushFailures": 13
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1718,
+            "networkFailures": 55,
+            "uploadFailures": 14,
+            "liveFailures": 32,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-09",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 348,
+            "networkFailures": 48,
+            "uploadFailures": 10,
+            "liveFailures": 17,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 592,
+            "networkFailures": 25,
+            "uploadFailures": 4,
+            "liveFailures": 11,
+            "pushFailures": 3
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 653,
+            "networkFailures": 72,
+            "uploadFailures": 11,
+            "liveFailures": 38,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2235,
+            "networkFailures": 53,
+            "uploadFailures": 11,
+            "liveFailures": 25,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 615,
+            "networkFailures": 52,
+            "uploadFailures": 9,
+            "liveFailures": 36,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2258,
+            "networkFailures": 47,
+            "uploadFailures": 13,
+            "liveFailures": 32,
+            "pushFailures": 18
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 483,
+            "networkFailures": 52,
+            "uploadFailures": 10,
+            "liveFailures": 43,
+            "pushFailures": 13
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1736,
+            "networkFailures": 57,
+            "uploadFailures": 14,
+            "liveFailures": 32,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-10",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 333,
+            "networkFailures": 48,
+            "uploadFailures": 10,
+            "liveFailures": 17,
+            "pushFailures": 15
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 583,
+            "networkFailures": 24,
+            "uploadFailures": 4,
+            "liveFailures": 11,
+            "pushFailures": 3
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 669,
+            "networkFailures": 72,
+            "uploadFailures": 11,
+            "liveFailures": 38,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2357,
+            "networkFailures": 54,
+            "uploadFailures": 11,
+            "liveFailures": 27,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 652,
+            "networkFailures": 54,
+            "uploadFailures": 10,
+            "liveFailures": 39,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2352,
+            "networkFailures": 50,
+            "uploadFailures": 14,
+            "liveFailures": 33,
+            "pushFailures": 19
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 488,
+            "networkFailures": 55,
+            "uploadFailures": 11,
+            "liveFailures": 43,
+            "pushFailures": 13
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1697,
+            "networkFailures": 57,
+            "uploadFailures": 14,
+            "liveFailures": 30,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-09-11",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 328,
+            "networkFailures": 48,
+            "uploadFailures": 10,
+            "liveFailures": 17,
+            "pushFailures": 14
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 598,
+            "networkFailures": 25,
+            "uploadFailures": 4,
+            "liveFailures": 11,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 706,
+            "networkFailures": 73,
+            "uploadFailures": 11,
+            "liveFailures": 41,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2497,
+            "networkFailures": 55,
+            "uploadFailures": 12,
+            "liveFailures": 29,
+            "pushFailures": 23
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 679,
+            "networkFailures": 57,
+            "uploadFailures": 10,
+            "liveFailures": 42,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2376,
+            "networkFailures": 52,
+            "uploadFailures": 14,
+            "liveFailures": 34,
+            "pushFailures": 18
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 477,
+            "networkFailures": 55,
+            "uploadFailures": 10,
+            "liveFailures": 40,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1617,
+            "networkFailures": 54,
+            "uploadFailures": 13,
+            "liveFailures": 28,
+            "pushFailures": 15
+          }
+        ]
+      },
+      {
+        "date": "2026-09-12",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 336,
+            "networkFailures": 50,
+            "uploadFailures": 10,
+            "liveFailures": 19,
+            "pushFailures": 14
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 630,
+            "networkFailures": 26,
+            "uploadFailures": 4,
+            "liveFailures": 11,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 748,
+            "networkFailures": 75,
+            "uploadFailures": 12,
+            "liveFailures": 44,
+            "pushFailures": 22
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2601,
+            "networkFailures": 57,
+            "uploadFailures": 12,
+            "liveFailures": 31,
+            "pushFailures": 24
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 686,
+            "networkFailures": 59,
+            "uploadFailures": 11,
+            "liveFailures": 43,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2322,
+            "networkFailures": 53,
+            "uploadFailures": 14,
+            "liveFailures": 33,
+            "pushFailures": 17
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 455,
+            "networkFailures": 54,
+            "uploadFailures": 10,
+            "liveFailures": 37,
+            "pushFailures": 12
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1531,
+            "networkFailures": 50,
+            "uploadFailures": 12,
+            "liveFailures": 25,
+            "pushFailures": 14
+          }
+        ]
+      },
+      {
+        "date": "2026-09-13",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 354,
+            "networkFailures": 53,
+            "uploadFailures": 10,
+            "liveFailures": 20,
+            "pushFailures": 15
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 668,
+            "networkFailures": 26,
+            "uploadFailures": 4,
+            "liveFailures": 12,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 779,
+            "networkFailures": 75,
+            "uploadFailures": 12,
+            "liveFailures": 47,
+            "pushFailures": 23
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2628,
+            "networkFailures": 57,
+            "uploadFailures": 13,
+            "liveFailures": 33,
+            "pushFailures": 24
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 670,
+            "networkFailures": 59,
+            "uploadFailures": 11,
+            "liveFailures": 43,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2214,
+            "networkFailures": 52,
+            "uploadFailures": 14,
+            "liveFailures": 30,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 431,
+            "networkFailures": 51,
+            "uploadFailures": 9,
+            "liveFailures": 34,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1475,
+            "networkFailures": 47,
+            "uploadFailures": 11,
+            "liveFailures": 24,
+            "pushFailures": 14
+          }
+        ]
+      },
+      {
+        "date": "2026-09-14",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 375,
+            "networkFailures": 55,
+            "uploadFailures": 10,
+            "liveFailures": 22,
+            "pushFailures": 16
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 695,
+            "networkFailures": 26,
+            "uploadFailures": 4,
+            "liveFailures": 12,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 787,
+            "networkFailures": 74,
+            "uploadFailures": 13,
+            "liveFailures": 50,
+            "pushFailures": 24
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2569,
+            "networkFailures": 57,
+            "uploadFailures": 13,
+            "liveFailures": 33,
+            "pushFailures": 24
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 639,
+            "networkFailures": 59,
+            "uploadFailures": 11,
+            "liveFailures": 40,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2097,
+            "networkFailures": 51,
+            "uploadFailures": 13,
+            "liveFailures": 28,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 415,
+            "networkFailures": 49,
+            "uploadFailures": 8,
+            "liveFailures": 32,
+            "pushFailures": 10
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1474,
+            "networkFailures": 46,
+            "uploadFailures": 11,
+            "liveFailures": 24,
+            "pushFailures": 15
+          }
+        ]
+      },
+      {
+        "date": "2026-09-15",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 391,
+            "networkFailures": 55,
+            "uploadFailures": 10,
+            "liveFailures": 24,
+            "pushFailures": 17
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 702,
+            "networkFailures": 26,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 5
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 769,
+            "networkFailures": 72,
+            "uploadFailures": 13,
+            "liveFailures": 50,
+            "pushFailures": 24
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2449,
+            "networkFailures": 56,
+            "uploadFailures": 13,
+            "liveFailures": 32,
+            "pushFailures": 22
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 605,
+            "networkFailures": 57,
+            "uploadFailures": 10,
+            "liveFailures": 38,
+            "pushFailures": 15
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2021,
+            "networkFailures": 50,
+            "uploadFailures": 12,
+            "liveFailures": 26,
+            "pushFailures": 14
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 415,
+            "networkFailures": 48,
+            "uploadFailures": 8,
+            "liveFailures": 31,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1528,
+            "networkFailures": 46,
+            "uploadFailures": 11,
+            "liveFailures": 26,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-09-16",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 395,
+            "networkFailures": 54,
+            "uploadFailures": 10,
+            "liveFailures": 26,
+            "pushFailures": 18
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 687,
+            "networkFailures": 24,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 5
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 733,
+            "networkFailures": 70,
+            "uploadFailures": 12,
+            "liveFailures": 49,
+            "pushFailures": 23
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2320,
+            "networkFailures": 55,
+            "uploadFailures": 13,
+            "liveFailures": 30,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 584,
+            "networkFailures": 57,
+            "uploadFailures": 10,
+            "liveFailures": 35,
+            "pushFailures": 14
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2018,
+            "networkFailures": 49,
+            "uploadFailures": 12,
+            "liveFailures": 25,
+            "pushFailures": 14
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 430,
+            "networkFailures": 48,
+            "uploadFailures": 8,
+            "liveFailures": 32,
+            "pushFailures": 11
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1617,
+            "networkFailures": 47,
+            "uploadFailures": 11,
+            "liveFailures": 28,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-17",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 386,
+            "networkFailures": 51,
+            "uploadFailures": 10,
+            "liveFailures": 26,
+            "pushFailures": 18
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 655,
+            "networkFailures": 23,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 5
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 695,
+            "networkFailures": 68,
+            "uploadFailures": 12,
+            "liveFailures": 47,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2236,
+            "networkFailures": 55,
+            "uploadFailures": 12,
+            "liveFailures": 28,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 583,
+            "networkFailures": 58,
+            "uploadFailures": 10,
+            "liveFailures": 34,
+            "pushFailures": 14
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2092,
+            "networkFailures": 50,
+            "uploadFailures": 12,
+            "liveFailures": 25,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 455,
+            "networkFailures": 49,
+            "uploadFailures": 8,
+            "liveFailures": 35,
+            "pushFailures": 13
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1706,
+            "networkFailures": 48,
+            "uploadFailures": 12,
+            "liveFailures": 31,
+            "pushFailures": 19
+          }
+        ]
+      },
+      {
+        "date": "2026-09-18",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 368,
+            "networkFailures": 47,
+            "uploadFailures": 9,
+            "liveFailures": 26,
+            "pushFailures": 18
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 620,
+            "networkFailures": 22,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 670,
+            "networkFailures": 68,
+            "uploadFailures": 12,
+            "liveFailures": 46,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2233,
+            "networkFailures": 57,
+            "uploadFailures": 12,
+            "liveFailures": 28,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 604,
+            "networkFailures": 60,
+            "uploadFailures": 10,
+            "liveFailures": 34,
+            "pushFailures": 14
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2214,
+            "networkFailures": 52,
+            "uploadFailures": 12,
+            "liveFailures": 27,
+            "pushFailures": 16
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 480,
+            "networkFailures": 50,
+            "uploadFailures": 9,
+            "liveFailures": 38,
+            "pushFailures": 14
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1760,
+            "networkFailures": 50,
+            "uploadFailures": 13,
+            "liveFailures": 33,
+            "pushFailures": 20
+          }
+        ]
+      },
+      {
+        "date": "2026-09-19",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 349,
+            "networkFailures": 44,
+            "uploadFailures": 9,
+            "liveFailures": 26,
+            "pushFailures": 17
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 598,
+            "networkFailures": 22,
+            "uploadFailures": 4,
+            "liveFailures": 12,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 669,
+            "networkFailures": 70,
+            "uploadFailures": 12,
+            "liveFailures": 45,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2315,
+            "networkFailures": 60,
+            "uploadFailures": 13,
+            "liveFailures": 28,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 639,
+            "networkFailures": 63,
+            "uploadFailures": 10,
+            "liveFailures": 35,
+            "pushFailures": 15
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2336,
+            "networkFailures": 53,
+            "uploadFailures": 12,
+            "liveFailures": 28,
+            "pushFailures": 17
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 495,
+            "networkFailures": 50,
+            "uploadFailures": 9,
+            "liveFailures": 41,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1759,
+            "networkFailures": 50,
+            "uploadFailures": 13,
+            "liveFailures": 34,
+            "pushFailures": 20
+          }
+        ]
+      },
+      {
+        "date": "2026-09-20",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 336,
+            "networkFailures": 42,
+            "uploadFailures": 9,
+            "liveFailures": 26,
+            "pushFailures": 17
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 597,
+            "networkFailures": 22,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 693,
+            "networkFailures": 75,
+            "uploadFailures": 13,
+            "liveFailures": 46,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2449,
+            "networkFailures": 64,
+            "uploadFailures": 13,
+            "liveFailures": 28,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 674,
+            "networkFailures": 65,
+            "uploadFailures": 10,
+            "liveFailures": 36,
+            "pushFailures": 17
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2409,
+            "networkFailures": 52,
+            "uploadFailures": 12,
+            "liveFailures": 30,
+            "pushFailures": 19
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 495,
+            "networkFailures": 50,
+            "uploadFailures": 9,
+            "liveFailures": 42,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1703,
+            "networkFailures": 50,
+            "uploadFailures": 14,
+            "liveFailures": 33,
+            "pushFailures": 19
+          }
+        ]
+      },
+      {
+        "date": "2026-09-21",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 336,
+            "networkFailures": 43,
+            "uploadFailures": 9,
+            "liveFailures": 27,
+            "pushFailures": 17
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 619,
+            "networkFailures": 24,
+            "uploadFailures": 4,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 733,
+            "networkFailures": 81,
+            "uploadFailures": 14,
+            "liveFailures": 47,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2583,
+            "networkFailures": 67,
+            "uploadFailures": 13,
+            "liveFailures": 29,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 696,
+            "networkFailures": 64,
+            "uploadFailures": 10,
+            "liveFailures": 38,
+            "pushFailures": 18
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2407,
+            "networkFailures": 51,
+            "uploadFailures": 13,
+            "liveFailures": 31,
+            "pushFailures": 19
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 479,
+            "networkFailures": 48,
+            "uploadFailures": 9,
+            "liveFailures": 42,
+            "pushFailures": 14
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1617,
+            "networkFailures": 49,
+            "uploadFailures": 13,
+            "liveFailures": 32,
+            "pushFailures": 17
+          }
+        ]
+      },
+      {
+        "date": "2026-09-22",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 348,
+            "networkFailures": 46,
+            "uploadFailures": 10,
+            "liveFailures": 29,
+            "pushFailures": 17
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 655,
+            "networkFailures": 26,
+            "uploadFailures": 5,
+            "liveFailures": 13,
+            "pushFailures": 4
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 773,
+            "networkFailures": 87,
+            "uploadFailures": 14,
+            "liveFailures": 47,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2665,
+            "networkFailures": 68,
+            "uploadFailures": 13,
+            "liveFailures": 29,
+            "pushFailures": 21
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 695,
+            "networkFailures": 62,
+            "uploadFailures": 10,
+            "liveFailures": 38,
+            "pushFailures": 19
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2331,
+            "networkFailures": 48,
+            "uploadFailures": 12,
+            "liveFailures": 31,
+            "pushFailures": 19
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 455,
+            "networkFailures": 47,
+            "uploadFailures": 9,
+            "liveFailures": 41,
+            "pushFailures": 13
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1537,
+            "networkFailures": 48,
+            "uploadFailures": 13,
+            "liveFailures": 30,
+            "pushFailures": 16
+          }
+        ]
+      },
+      {
+        "date": "2026-09-23",
+        "records": [
+          {
+            "model": "K6",
+            "firmware": "2.8",
+            "attempts": 400,
+            "networkFailures": 60,
+            "uploadFailures": 12,
+            "liveFailures": 35,
+            "pushFailures": 20
+          },
+          {
+            "model": "K6",
+            "firmware": "Other",
+            "attempts": 713,
+            "networkFailures": 30,
+            "uploadFailures": 5,
+            "liveFailures": 15,
+            "pushFailures": 5
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "2.8",
+            "attempts": 800,
+            "networkFailures": 90,
+            "uploadFailures": 15,
+            "liveFailures": 55,
+            "pushFailures": 25
+          },
+          {
+            "model": "Bird Lite",
+            "firmware": "Other",
+            "attempts": 2677,
+            "networkFailures": 70,
+            "uploadFailures": 15,
+            "liveFailures": 35,
+            "pushFailures": 25
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "2.8",
+            "attempts": 700,
+            "networkFailures": 70,
+            "uploadFailures": 12,
+            "liveFailures": 45,
+            "pushFailures": 20
+          },
+          {
+            "model": "Bird Pro",
+            "firmware": "Other",
+            "attempts": 2429,
+            "networkFailures": 60,
+            "uploadFailures": 15,
+            "liveFailures": 35,
+            "pushFailures": 20
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "2.8",
+            "attempts": 500,
+            "networkFailures": 60,
+            "uploadFailures": 11,
+            "liveFailures": 45,
+            "pushFailures": 15
+          },
+          {
+            "model": "Hunt Pro",
+            "firmware": "Other",
+            "attempts": 1781,
+            "networkFailures": 60,
+            "uploadFailures": 15,
+            "liveFailures": 35,
+            "pushFailures": 20
+          }
+        ]
+      }
+    ]
+  }
 }
