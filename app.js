@@ -1452,6 +1452,78 @@ function paidContextTable(spec) {
   return spec;
 }
 
+function accountStockRowsProblem(rows) {
+  const seen=new Set();
+  if(!Array.isArray(rows)||rows.length!==8)return '账号存量分组缺行，需补齐国家×App的互斥人数';
+  for(const row of rows) {
+    if(!row||!['US','UK','DE','Other'].includes(row.country)||!['iOS','Android'].includes(row.appPlatform)||
+      seen.has(`${row.country}:${row.appPlatform}`)||![row.registered,row.boundOwners].every(validHeadcount)||row.boundOwners>row.registered)return '注册／绑定人数、归属或唯一性待核验；不能用比例补齐';
+    seen.add(`${row.country}:${row.appPlatform}`);
+  }
+  return null;
+}
+function accountStockCurrentSource() {
+  const source=sourceData.diagnostics.A.accountHistory,raw=sourceData.metrics.m07?.value,snapshot=sourceData.snapshot;
+  const problem=accountStockRowsProblem(source?.current?.records);if(problem)return {reason:problem};
+  if(source.version!=='synthetic-account-month-stocks-v1'||source.provenance!=='constructed-month-end-stocks'||source.asOf!==`${snapshot.asOf}T00:00:00Z`||
+    source.current.endExclusive!==source.asOf||source.current.date!==snapshot.asOf)return {reason:'账号快照日期或来源版本待核验'};
+  const rows=source.current.records,registered=rows.reduce((n,r)=>n+r.registered,0),boundOwners=rows.reduce((n,r)=>n+r.boundOwners,0);
+  if(sourceData.metrics.m07?.kind!=='group'||![registered,boundOwners].every(validHeadcount)||registered!==raw?.registered||boundOwners!==raw?.boundOwners||
+    registered!==snapshot.registeredCumulative||boundOwners!==snapshot.boundOwnerAccounts)return {reason:'账号分组与当前注册／绑定快照不闭合'};
+  const dimensions=[['country','countryShare',['US','UK','DE','Other']],['appPlatform','appPlatformShare',['iOS','Android']]];
+  for(const [dimension,field,keys] of dimensions)for(const key of keys) {
+    const expected=sourceData.metrics.m38?.value?.[field]?.[key],count=rows.filter(r=>r[dimension]===key).reduce((n,r)=>n+r.registered,0);
+    if(!Number.isFinite(expected)||Math.abs(count-registered*expected)>1e-7)return {reason:'同日注册国家／平台结构与账号存量不一致，待核对来源'};
+  }
+  return {source,rows};
+}
+function accountStockProjection(state=filterState) {
+  const current=accountStockCurrentSource();if(current.reason)return current;
+  const filters=effectiveFor(7,state);
+  if(filters.some(([key,value])=>!['country','appPlatform'].includes(key)||!sourceData.slices[key]?.[value]))return {reason:'当前条件缺少账号归属，不能回退到总体'};
+  const aggregate=rows=>rows.filter(row=>filters.every(([key,value])=>row[key]===value)).reduce((sum,row)=>({registered:sum.registered+row.registered,boundOwners:sum.boundOwners+row.boundOwners}),{registered:0,boundOwners:0});
+  return {...aggregate(current.rows),source:current.source,aggregate,filters};
+}
+function accountStockHistory(state=filterState) {
+  const part=accountStockProjection(state);if(part.reason)return part;
+  const bad=()=>({reason:'月末账号历史缺失、月份不连续或累计存量不闭合；保留可靠当前人数'}),source=part.source,months=source.months;
+  if(!Array.isArray(months)||months.length!==12)return bad();
+  const at=new Date(source.asOf);if(!Number.isFinite(at.getTime()))return bad();
+  const bridge=source.registrationBridge?.days,first=Date.parse(`${sourceData.weekly[0].weekEnd}T00:00:00Z`)-6*86400000;
+  if(!Array.isArray(bridge)||bridge.length!==(at.getTime()-first)/86400000||bridge.some((r,i)=>!r||r.date!==new Date(first+i*86400000).toISOString().slice(0,10)||!validHeadcount(r.registered)))return bad();
+  for(const week of sourceData.weekly){const end=Date.parse(`${week.weekEnd}T00:00:00Z`),start=new Date(end-6*86400000).toISOString().slice(0,10);if(bridge.filter(r=>r.date>=start&&r.date<=week.weekEnd).reduce((n,r)=>n+r.registered,0)!==week.registrationCohort.registered)return bad();}
+  const rows=[];let previous;
+  for(const [i,row] of months.entries()) {
+    const day=new Date(Date.UTC(at.getUTCFullYear(),at.getUTCMonth()-12+i+1,0)),date=day.toISOString().slice(0,10),end=new Date(day.getTime()+86400000).toISOString().replace('.000Z','Z');
+    if(!row||row.month!==date.slice(0,7)||row.date!==date||row.endExclusive!==end||accountStockRowsProblem(row.records))return bad();
+    if(previous&&row.records.some(r=>r.registered<previous.find(p=>p.country===r.country&&p.appPlatform===r.appPlatform).registered))return bad();
+    if(day.getTime()>=first&&row.records.reduce((n,r)=>n+r.registered,0)!==sourceData.metrics.m07.value.registered-bridge.filter(r=>r.date>date).reduce((n,r)=>n+r.registered,0))return bad();
+    rows.push({date,kind:'完整月末',...part.aggregate(row.records)});previous=row.records;
+  }
+  if(source.current.records.some(r=>r.registered<previous.find(p=>p.country===r.country&&p.appPlatform===r.appPlatform).registered))return bad();
+  rows.push({date:source.current.date,kind:'当前快照',registered:part.registered,boundOwners:part.boundOwners});
+  return {rows,note:source.note,asOf:source.asOf};
+}
+function accountStockHistoryEvidence(panel,append) {
+  const part=accountStockHistory();
+  const ratio=r=>r.registered>=30?percent(r.boundOwners/r.registered):r.registered?'样本不足30人':'无合格分母';
+  if(part.reason){const note=element('p','na-note account-history-unavailable',part.reason);note.dataset.evidenceKind='change';panel.append(note);}else {
+  const spec={title:'注册与当前绑定主账号 · 12个月末＋当前',unit:'人',nearestLinePoint:true,labels:part.rows.map(r=>r.date),
+    categoryLabels:part.rows.map(r=>r.kind==='完整月末'?r.date.slice(0,7):r.date),
+    series:[{name:'累计注册',values:part.rows.map(r=>r.registered)},{name:'当时绑定主账号',values:part.rows.map(r=>r.boundOwners)}],
+    scopeNote:`12个完整月末＋${part.rows.at(-1).date}当前快照；最后一段不是完整月新增。合成固定国家×App归属，非逐账号日志。`,
+    note:`${part.note} 末点${part.rows.at(-1).date}是当前快照，和上月末的差值不是完整月新增或解绑人数。`};
+  append(spec,{title:'账号存量 · 月末与当前完整计数',columns:['快照日期','周期性质','累计注册（人）','当时绑定（人）','当时未绑定（人）','当时绑定占比'],
+    rows:part.rows.map(r=>[r.date,r.kind,r.registered,r.boundOwners,r.registered-r.boundOwners,ratio(r)]),note:spec.note},'change');
+  }
+  for(const dimension of ['country','appPlatform']) {
+    const options=sourceData.filterPolicy.controls[dimension].options,parts=options.map(option=>accountStockProjection({...filterState,[dimension]:option}));
+    const table=dataTable({title:`${filterLabels[dimension]} · 当前账号存量`,columns:['分组','累计注册（人）','当前绑定（人）','当前未绑定（人）','绑定占比'],
+      rows:parts.map((r,i)=>[optionLabel(dimension,options[i]),r.registered,r.boundOwners,r.registered-r.boundOwners,ratio(r)]),
+      note:'保留另一项筛选，仅替换本分组；各行互斥，合计为移除本分组条件后的总体。当前未绑定按主账号关系计算，不等于从未绑定或流失；组间比率接近，不生成强行排名。'},'account-stock-group');table.dataset.evidenceKind='groups';panel.append(table);
+  }
+}
+
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -1467,6 +1539,7 @@ function projectMetric(id,state=filterState) {
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
   if(id===23){if(scoped.plan==='Free'||product==='Bird'&&scoped.plan==='Starter')return na('所选套餐不属于期初有效付费主订阅群');return renewalMetric(state);}
   if([4,25,30].includes(id))return activeWindowMetric(id,state);
+  if(id===7){const part=accountStockProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{registered:part.registered,boundOwners:part.boundOwners}};}
   if(id===34){const part=paidRightsFacts(state);return part.reason?pending(part.reason):{kind:'count',value:part.total};}
   if(id===36){const part=packPenetrationFacts(state);if(part.reason)return pending(part.reason);
     if(part.anyPack.denominator<30)return na(part.anyPack.denominator?'付费权益主账号少于30人，保留计数，不展示可靠比例':'无付费权益主账号，比例无合格分母');
@@ -1835,6 +1908,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  if(id===7){const part=accountStockHistory();return part.rows?part.rows.map(r=>r.registered):null;}
   if(id===46)return technicalHistoryHeadline()?.values??null;
   if(id===2){const part=subscriptionStatusHistoryProjection();if(part.rows)return part.rows.map(r=>Object.values(r.products).reduce((sum,p)=>sum+p.paidCurrent+p.cancelledButEntitled,0));}
   if(id===4||id===25){const p=activeWindowProjection();return p.rows?p.rows.map(r=>r.counts[id===4?'MAU':'DAU']):null;}
@@ -2217,10 +2291,11 @@ function savedMonthLabel(period) {
     `完整月 ${sourceData.snapshot.asOf.slice(0,4)}年${period}`;
 }
 
-const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,25,27,34,35,41,42,44,46,48,49,52,53,54]);
+const headlineTrendIds=new Set([2,3,4,7,9,10,11,13,15,17,18,23,24,25,27,34,35,41,42,44,46,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
+  if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
   if(id===46)return technicalHistoryHeadline();
   if(id===4||id===25){const p=activeWindowProjection();if(p.reason)return null;return {comparisonLabel:'较前日',nearestLinePoint:true,title:id===4?'近30天复合活跃主账号':'近1天复合活跃主账号',unit:'人',labels:p.rows.map(r=>r.at.slice(0,10)),values:trendValues(id),note:'84个每日UTC零时快照；滚动窗口，起含止不含，不是自然周／月。合成频数，7／30天相邻窗口重叠，不相加为独立人数。'};}
   if(id===23){const part=renewalProjection();if(part.reason)return null;return {labels:part.rows.map(r=>r.month),values:trendValues(23),selectedPeriod:part.month,details:part.rows.map(r=>({...r.renewal,basisLabel:'成功续订 / 当月到期',numeratorUnit:'人',denominatorUnit:'人'})),unit:'%',title:'月度到期续订率',note:'完整到期月，期初归属固定；到期后7天为演示观察窗。原周度86%与月度95%不可直接比较；月环比只比较相邻完整月。'};}
@@ -2539,8 +2614,9 @@ function headlineTrend(id) {
     `${delta>0?'+':''}${number(Math.round(delta))}${history.unit}（${history.comparisonLabel??'较上期'}）`;
   const wrap=element('div','headline-trend');
   if(delta!==null)wrap.dataset.delta=String(delta);
-  const label=element('span','headline-trend-label',id===46?deltaText:`${history.labels[index]} · ${deltaText}`);
-  if(id===46){const comparison=`${history.labels[index]} 较 ${history.labels[index-1]??'无前期'}；${deltaText}`;label.title=comparison;label.setAttribute('aria-label',comparison);}
+  const visibleDelta=id===7&&delta!==null?`${delta>=0?'+':''}${number(delta)}人`:deltaText;
+  const label=element('span','headline-trend-label',[7,46].includes(id)?visibleDelta:`${history.labels[index]} · ${deltaText}`);
+  if([7,46].includes(id)){const comparison=`${history.labels[index]} 较 ${history.labels[index-1]??'无前期'}；${deltaText}`;label.title=comparison;label.setAttribute('aria-label',comparison);}
   wrap.append(label);
   const box=element('div','node-sparkline headline-sparkline');box.dataset.metricId=String(id);
   box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':history.unit==='美元/人'?chartValue(current,history.unit):`${Number(current).toFixed(history.unit==='%'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
@@ -3345,7 +3421,8 @@ function metricCardSummary(id) {
     const v=value.value;
     if(id===7) {
       summary.text=number(v.registered);summary.unit='人';
-      summary.fields=[['当前绑定主账号',`${number(v.boundOwners)}人`]];
+      summary.fields=[['当前绑定主账号',`${number(v.boundOwners)}人 · ${v.registered>=30?percent(v.boundOwners/v.registered):v.registered?'样本不足30人':'无合格分母'}`]];
+      const history=accountStockHistory();if(history.rows)summary.context=`变化较${Number(history.rows.at(-2).date.slice(5,7))}月末快照`;
     } else if(id===8) {
       summary.text=number(v.activatedCumulative);summary.unit='台';
       summary.fields=[['当前绑定设备',`${number(v.boundCurrent)}台`]];
@@ -3398,6 +3475,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===7&&metric(7).kind==='group'){const v=metric(7).value;return `累计注册用户：${number(v.registered)}人；当前绑定主账号：${number(v.boundOwners)}人`;}
   if(id===5&&metric(5).kind==='group') {
     const value=metric(5).value;
     return '状态人数：'+['bird','hunting'].filter(key=>Object.hasOwn(value,key)).map(key=>{
@@ -4183,7 +4261,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
@@ -4219,6 +4297,7 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===7)accountStockHistoryEvidence(panel,appendEvidencePair);
   if(id===46){if(value.kind==='na')panel.append(element('p','na-note',value.reason));technicalHistoryEvidence(panel,appendEvidencePair);}
   if(id===36){
     const part=packPenetrationFacts(),table=packPenetrationTable(part);
@@ -4274,7 +4353,7 @@ function metricEvidence(id,page) {
     else {const missing=element('p','na-note binding-failure-unavailable',failure.reason);missing.dataset.evidenceKind='groups';panel.append(missing);}
 
   }
-  const history=id===46?null:metricHistory(id);
+  const history=[7,46].includes(id)?null:metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&(id!==primaryId||id===13||id===54||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {
     const qualityDetails=id===54?history.details?.map(detail=>detail?{...detail,
@@ -5044,6 +5123,7 @@ function filteredFinding(page,requestedId) {
     }
     return {id:18,text:`当前试用转正 ${number(m(18).numerator)}/${number(m(18).denominator)}（${percent(m(18).value)}）；可比批次样本不足，暂不生成变化判断。`};
   }
+  if(requestedId===7&&m(7).kind==='group'){const v=m(7).value;return {id:7,text:`当前累计注册 ${number(v.registered)} 人，其中当前绑定 ${number(v.boundOwners)} 人，当前无主设备绑定 ${number(v.registered-v.boundOwners)} 人。${v.registered>=30?`绑定占比 ${percent(v.boundOwners/v.registered)}。`:'绑定占比分母不足30人。'}月末与当前是存量快照，差值不代表新增注册批次的转化或流失；国家×App固定归属为合成设定。`};}
   if(page==='E'&&requestedId===36&&m(36).kind==='group') {
     const part=packPenetrationFacts();
     return {id:36,text:`${sourceData.snapshot.asOf} 当前有效Pack持有人 ${number(part.anyPack.numerator)} / ${number(part.anyPack.denominator)} 人（${percent(m(36).value.anyPack.value)}）。五类持有合计 ${number(part.membershipSum)} 主账号次，超出去重人数 ${number(part.duplicateMemberships)} 次，不能据此确定多Pack人数。历史趋势与具体重叠组合待补；当前国家、App与订阅平台仍为模拟分片估算。`};
@@ -5175,7 +5255,7 @@ function metricInspector(id,page) {
   if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
-    id===38?'现有总体人数、分母与底表比例已逐项核对；不代表付费人群，当前没有12个月历史。':
+    id===7?'同一国家×App互斥合成存量逐行汇总；较上月末是月内存量变化，不是新增注册批次转化率或逐账号历史。':id===38?'现有总体人数、分母与底表比例已逐项核对；不代表付费人群，当前没有12个月历史。':
     id===43?'按首图激活周、国家、型号与自报渠道合成频数重算；状态按入组时冻结，后续停用不剔除。D30不是D7子集，不能解释为连续使用率。':
     id===23?'按完整到期月的合成频数重算，7天为演示观察窗；取消与发生权益流失可重叠，不等于离开产品。':[4,25,30].includes(id)?'按84日同源窗口频数及当前七类互斥构成核对；国家×平台固定归属，1／7／30天与App子集不相加。':id===24?'按所选完整自然月、国家与基期App平台汇总同一合成分组；人数重算留存率，不平均分组率。不是逐账号事件日志或真实经营历史。':
     [11,13].includes(id)?'按当前批次与筛选交集汇总同一合成频数；成功率与耗时同源，不是独立分片估算，仍非真实经营日志。':

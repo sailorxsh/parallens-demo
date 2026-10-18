@@ -265,7 +265,1110 @@
         "note": "样本 P50=170分钟、P90=1,440分钟；最小值/Q1/Q3/最大值为额外模拟分布值，不由P50/P90唯一推导。",
         "metricId": 14
       }
-    ]
+    ],
+    "accountHistory": {
+      "version": "synthetic-account-month-stocks-v1",
+      "asOf": "2026-09-24T00:00:00Z",
+      "provenance": "constructed-month-end-stocks",
+      "note": "12个完整月末与当前快照；国家×App是模拟固定归属，真实接入需确认维度时点。绑定为当时有主设备绑定的主账号，不是累计曾绑定人数；没有逐账号或注册月份批次来源。",
+      "months": [
+        {
+          "month": "2025-09",
+          "date": "2025-09-30",
+          "endExclusive": "2025-10-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 18720,
+              "boundOwners": 15795
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 22880,
+              "boundOwners": 19305
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 5184,
+              "boundOwners": 4374
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 6336,
+              "boundOwners": 5346
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 2880,
+              "boundOwners": 2430
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 3520,
+              "boundOwners": 2970
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2016,
+              "boundOwners": 1701
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 2464,
+              "boundOwners": 2079
+            }
+          ]
+        },
+        {
+          "month": "2025-10",
+          "date": "2025-10-31",
+          "endExclusive": "2025-11-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 19510,
+              "boundOwners": 16380
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 23845,
+              "boundOwners": 20020
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 5403,
+              "boundOwners": 4536
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 6603,
+              "boundOwners": 5544
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3001,
+              "boundOwners": 2520
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 3669,
+              "boundOwners": 3080
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2101,
+              "boundOwners": 1764
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 2568,
+              "boundOwners": 2156
+            }
+          ]
+        },
+        {
+          "month": "2025-11",
+          "date": "2025-11-30",
+          "endExclusive": "2025-12-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 20446,
+              "boundOwners": 16965
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 24989,
+              "boundOwners": 20735
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 5662,
+              "boundOwners": 4698
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 6920,
+              "boundOwners": 5742
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3145,
+              "boundOwners": 2610
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 3845,
+              "boundOwners": 3190
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2202,
+              "boundOwners": 1827
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 2691,
+              "boundOwners": 2233
+            }
+          ]
+        },
+        {
+          "month": "2025-12",
+          "date": "2025-12-31",
+          "endExclusive": "2026-01-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 21440,
+              "boundOwners": 17550
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 26205,
+              "boundOwners": 21450
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 5937,
+              "boundOwners": 4860
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 7257,
+              "boundOwners": 5940
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3299,
+              "boundOwners": 2700
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 4031,
+              "boundOwners": 3300
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2309,
+              "boundOwners": 1890
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 2822,
+              "boundOwners": 2310
+            }
+          ]
+        },
+        {
+          "month": "2026-01",
+          "date": "2026-01-31",
+          "endExclusive": "2026-02-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 22464,
+              "boundOwners": 18194
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 27456,
+              "boundOwners": 22236
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 6221,
+              "boundOwners": 5038
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 7603,
+              "boundOwners": 6158
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3456,
+              "boundOwners": 2799
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 4224,
+              "boundOwners": 3421
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2419,
+              "boundOwners": 1959
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 2957,
+              "boundOwners": 2395
+            }
+          ]
+        },
+        {
+          "month": "2026-02",
+          "date": "2026-02-28",
+          "endExclusive": "2026-03-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 23488,
+              "boundOwners": 18808
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 28707,
+              "boundOwners": 22987
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 6504,
+              "boundOwners": 5208
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 7950,
+              "boundOwners": 6366
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3614,
+              "boundOwners": 2894
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 4416,
+              "boundOwners": 3536
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2529,
+              "boundOwners": 2025
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 3092,
+              "boundOwners": 2476
+            }
+          ]
+        },
+        {
+          "month": "2026-03",
+          "date": "2026-03-31",
+          "endExclusive": "2026-04-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 24599,
+              "boundOwners": 19539
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 30066,
+              "boundOwners": 23881
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 6812,
+              "boundOwners": 5411
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 8326,
+              "boundOwners": 6613
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3785,
+              "boundOwners": 3006
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 4625,
+              "boundOwners": 3674
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2649,
+              "boundOwners": 2104
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 3238,
+              "boundOwners": 2572
+            }
+          ]
+        },
+        {
+          "month": "2026-04",
+          "date": "2026-04-30",
+          "endExclusive": "2026-05-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 25769,
+              "boundOwners": 20329
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 31496,
+              "boundOwners": 24846
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 7136,
+              "boundOwners": 5630
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 8722,
+              "boundOwners": 6880
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 3965,
+              "boundOwners": 3127
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 4845,
+              "boundOwners": 3823
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2775,
+              "boundOwners": 2189
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 3392,
+              "boundOwners": 2676
+            }
+          ]
+        },
+        {
+          "month": "2026-05",
+          "date": "2026-05-31",
+          "endExclusive": "2026-06-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 26998,
+              "boundOwners": 21499
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 32997,
+              "boundOwners": 26276
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 7476,
+              "boundOwners": 5954
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 9138,
+              "boundOwners": 7276
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 4154,
+              "boundOwners": 3307
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 5076,
+              "boundOwners": 4043
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 2907,
+              "boundOwners": 2315
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 3554,
+              "boundOwners": 2830
+            }
+          ]
+        },
+        {
+          "month": "2026-06",
+          "date": "2026-06-30",
+          "endExclusive": "2026-07-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 28245,
+              "boundOwners": 23563
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 34521,
+              "boundOwners": 28799
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 7821,
+              "boundOwners": 6525
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 9560,
+              "boundOwners": 7975
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 4345,
+              "boundOwners": 3625
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 5311,
+              "boundOwners": 4431
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 3042,
+              "boundOwners": 2538
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 3718,
+              "boundOwners": 3101
+            }
+          ]
+        },
+        {
+          "month": "2026-07",
+          "date": "2026-07-31",
+          "endExclusive": "2026-08-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 31519,
+              "boundOwners": 23757
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 38522,
+              "boundOwners": 29037
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 8728,
+              "boundOwners": 6579
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 10668,
+              "boundOwners": 8041
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 4849,
+              "boundOwners": 3655
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 5926,
+              "boundOwners": 4467
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 3394,
+              "boundOwners": 2558
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 4149,
+              "boundOwners": 3127
+            }
+          ]
+        },
+        {
+          "month": "2026-08",
+          "date": "2026-08-31",
+          "endExclusive": "2026-09-01T00:00:00Z",
+          "records": [
+            {
+              "country": "US",
+              "appPlatform": "iOS",
+              "registered": 34987,
+              "boundOwners": 23952
+            },
+            {
+              "country": "US",
+              "appPlatform": "Android",
+              "registered": 42763,
+              "boundOwners": 29274
+            },
+            {
+              "country": "UK",
+              "appPlatform": "iOS",
+              "registered": 9689,
+              "boundOwners": 6633
+            },
+            {
+              "country": "UK",
+              "appPlatform": "Android",
+              "registered": 11842,
+              "boundOwners": 8106
+            },
+            {
+              "country": "DE",
+              "appPlatform": "iOS",
+              "registered": 5383,
+              "boundOwners": 3685
+            },
+            {
+              "country": "DE",
+              "appPlatform": "Android",
+              "registered": 6579,
+              "boundOwners": 4504
+            },
+            {
+              "country": "Other",
+              "appPlatform": "iOS",
+              "registered": 3768,
+              "boundOwners": 2579
+            },
+            {
+              "country": "Other",
+              "appPlatform": "Android",
+              "registered": 4605,
+              "boundOwners": 3153
+            }
+          ]
+        }
+      ],
+      "current": {
+        "date": "2026-09-24",
+        "endExclusive": "2026-09-24T00:00:00Z",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "registered": 37615,
+            "boundOwners": 24102
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "registered": 45975,
+            "boundOwners": 29458
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "registered": 10417,
+            "boundOwners": 6674
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "registered": 12731,
+            "boundOwners": 8158
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "registered": 5787,
+            "boundOwners": 3708
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "registered": 7073,
+            "boundOwners": 4532
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "registered": 4051,
+            "boundOwners": 2596
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "registered": 4951,
+            "boundOwners": 3172
+          }
+        ]
+      },
+      "registrationBridge": {
+        "note": "12个原完整注册周保留；之后至当前的10天为新增模拟注册，较早月份为构造累计存量。仅总体连接，不声称现有#9维度分片与此来源同一账号链。",
+        "days": [
+          {
+            "date": "2026-06-22",
+            "registered": 346
+          },
+          {
+            "date": "2026-06-23",
+            "registered": 346
+          },
+          {
+            "date": "2026-06-24",
+            "registered": 346
+          },
+          {
+            "date": "2026-06-25",
+            "registered": 346
+          },
+          {
+            "date": "2026-06-26",
+            "registered": 346
+          },
+          {
+            "date": "2026-06-27",
+            "registered": 345
+          },
+          {
+            "date": "2026-06-28",
+            "registered": 345
+          },
+          {
+            "date": "2026-06-29",
+            "registered": 356
+          },
+          {
+            "date": "2026-06-30",
+            "registered": 356
+          },
+          {
+            "date": "2026-07-01",
+            "registered": 356
+          },
+          {
+            "date": "2026-07-02",
+            "registered": 356
+          },
+          {
+            "date": "2026-07-03",
+            "registered": 356
+          },
+          {
+            "date": "2026-07-04",
+            "registered": 355
+          },
+          {
+            "date": "2026-07-05",
+            "registered": 355
+          },
+          {
+            "date": "2026-07-06",
+            "registered": 359
+          },
+          {
+            "date": "2026-07-07",
+            "registered": 359
+          },
+          {
+            "date": "2026-07-08",
+            "registered": 359
+          },
+          {
+            "date": "2026-07-09",
+            "registered": 359
+          },
+          {
+            "date": "2026-07-10",
+            "registered": 358
+          },
+          {
+            "date": "2026-07-11",
+            "registered": 358
+          },
+          {
+            "date": "2026-07-12",
+            "registered": 358
+          },
+          {
+            "date": "2026-07-13",
+            "registered": 352
+          },
+          {
+            "date": "2026-07-14",
+            "registered": 352
+          },
+          {
+            "date": "2026-07-15",
+            "registered": 352
+          },
+          {
+            "date": "2026-07-16",
+            "registered": 351
+          },
+          {
+            "date": "2026-07-17",
+            "registered": 351
+          },
+          {
+            "date": "2026-07-18",
+            "registered": 351
+          },
+          {
+            "date": "2026-07-19",
+            "registered": 351
+          },
+          {
+            "date": "2026-07-20",
+            "registered": 372
+          },
+          {
+            "date": "2026-07-21",
+            "registered": 372
+          },
+          {
+            "date": "2026-07-22",
+            "registered": 372
+          },
+          {
+            "date": "2026-07-23",
+            "registered": 371
+          },
+          {
+            "date": "2026-07-24",
+            "registered": 371
+          },
+          {
+            "date": "2026-07-25",
+            "registered": 371
+          },
+          {
+            "date": "2026-07-26",
+            "registered": 371
+          },
+          {
+            "date": "2026-07-27",
+            "registered": 369
+          },
+          {
+            "date": "2026-07-28",
+            "registered": 369
+          },
+          {
+            "date": "2026-07-29",
+            "registered": 369
+          },
+          {
+            "date": "2026-07-30",
+            "registered": 369
+          },
+          {
+            "date": "2026-07-31",
+            "registered": 368
+          },
+          {
+            "date": "2026-08-01",
+            "registered": 368
+          },
+          {
+            "date": "2026-08-02",
+            "registered": 368
+          },
+          {
+            "date": "2026-08-03",
+            "registered": 382
+          },
+          {
+            "date": "2026-08-04",
+            "registered": 382
+          },
+          {
+            "date": "2026-08-05",
+            "registered": 382
+          },
+          {
+            "date": "2026-08-06",
+            "registered": 381
+          },
+          {
+            "date": "2026-08-07",
+            "registered": 381
+          },
+          {
+            "date": "2026-08-08",
+            "registered": 381
+          },
+          {
+            "date": "2026-08-09",
+            "registered": 381
+          },
+          {
+            "date": "2026-08-10",
+            "registered": 378
+          },
+          {
+            "date": "2026-08-11",
+            "registered": 377
+          },
+          {
+            "date": "2026-08-12",
+            "registered": 377
+          },
+          {
+            "date": "2026-08-13",
+            "registered": 377
+          },
+          {
+            "date": "2026-08-14",
+            "registered": 377
+          },
+          {
+            "date": "2026-08-15",
+            "registered": 377
+          },
+          {
+            "date": "2026-08-16",
+            "registered": 377
+          },
+          {
+            "date": "2026-08-17",
+            "registered": 386
+          },
+          {
+            "date": "2026-08-18",
+            "registered": 386
+          },
+          {
+            "date": "2026-08-19",
+            "registered": 386
+          },
+          {
+            "date": "2026-08-20",
+            "registered": 386
+          },
+          {
+            "date": "2026-08-21",
+            "registered": 386
+          },
+          {
+            "date": "2026-08-22",
+            "registered": 385
+          },
+          {
+            "date": "2026-08-23",
+            "registered": 385
+          },
+          {
+            "date": "2026-08-24",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-25",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-26",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-27",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-28",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-29",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-30",
+            "registered": 390
+          },
+          {
+            "date": "2026-08-31",
+            "registered": 385
+          },
+          {
+            "date": "2026-09-01",
+            "registered": 385
+          },
+          {
+            "date": "2026-09-02",
+            "registered": 384
+          },
+          {
+            "date": "2026-09-03",
+            "registered": 384
+          },
+          {
+            "date": "2026-09-04",
+            "registered": 384
+          },
+          {
+            "date": "2026-09-05",
+            "registered": 384
+          },
+          {
+            "date": "2026-09-06",
+            "registered": 384
+          },
+          {
+            "date": "2026-09-07",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-08",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-09",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-10",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-11",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-12",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-13",
+            "registered": 392
+          },
+          {
+            "date": "2026-09-14",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-15",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-16",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-17",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-18",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-19",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-20",
+            "registered": 392
+          },
+          {
+            "date": "2026-09-21",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-22",
+            "registered": 393
+          },
+          {
+            "date": "2026-09-23",
+            "registered": 393
+          }
+        ]
+      }
+    }
   },
   "B": {
     "period": "活跃窗口截至2026-09-24 UTC零时；各指标历史按自身频率，月度留存另按完整自然月",
