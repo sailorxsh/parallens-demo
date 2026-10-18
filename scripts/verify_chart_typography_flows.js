@@ -10,7 +10,7 @@ async(parent)=>{
     await p.goto(`${base}#/${route}`);
     await p.waitForFunction(()=>typeof lastRenderedHash!=='undefined'&&lastRenderedHash===location.hash&&document.querySelector('#main')?.getAttribute('aria-busy')==='false');
     if(route==='E?metric=39&panel=groups')await p.locator('.workspace-context > summary').filter({hasText:'其他付费结构与型号对照'}).click();
-    if(route==='E')await p.locator('.workspace-context > summary').filter({hasText:'查看付款人数与ARPPU趋势'}).click();
+    if(route==='E')await p.locator('.workspace-context > summary').filter({hasText:'查看12个月付款人数与ARPPU趋势'}).click();
     await settle();
   };
   const reveal=async()=>{

@@ -2327,23 +2327,27 @@ function modelSubscriptionRanking() {
     note:'按同一市场×主型号合成汇总中的主账号和订阅账号计算，不从展示率反推人数。'};
   return {spec,table};
 }
-function modelSubscriptionHeatmap() {
+function modelPerformanceRows() {
   const value=metric(39);
-  if(value.kind!=='group')return null;
-  const entries=Object.entries(value.value);
-  return {kind:'heatmap',title:'所选市场与型号 · 主账号活跃率和订阅率',unit:'%',
+  return value.kind==='group'?Object.entries(value.value).sort((a,b)=>b[1].owners-a[1].owners||
+    (a[0]<b[0]?-1:a[0]>b[0]?1:0)):[];
+}
+function modelSubscriptionHeatmap() {
+  const entries=modelPerformanceRows();
+  if(!entries.length)return null;
+  return {kind:'heatmap',sortBy:'owners-desc',title:'所选市场与型号 · 主账号活跃率和订阅率',unit:'%',
     labels:entries.map(([name])=>name),sampleSizes:entries.map(([,item])=>item.owners),
     sampleCounts:entries.map(([,item])=>[item.activeOwners,item.subscribedOwners]),
     dimensions:['30天活跃率','主账号订阅率'],
     series:[{name:'比例',values:entries.map(([,item])=>[item.activeRate*100,item.subscriptionRate*100])}],
-    note:'同一0–100%色阶；每格以所选市场中归属该主型号的主账号为分母。该样本不等于全部主账号。'};
+    note:'按当前范围主账号人数从上到下降序排列；人数相同按型号名排列。同一0–100%色阶；每格以所选市场中归属该主型号的主账号为分母。该样本不等于全部主账号。'};
 }
 function modelCalculationTable() {
-  const value=metric(39),contract=contractFor(39);
+  const entries=modelPerformanceRows(),contract=contractFor(39);
   return {title:'型号活跃与订阅 · 人数验算',columns:['型号','主账号（人）','活跃（人）','活跃率','订阅（人）','订阅率'],
-    rows:Object.entries(value.value).map(([name,part])=>[name,part.owners,part.activeOwners,percent(part.activeRate),
+    rows:entries.map(([name,part])=>[name,part.owners,part.activeOwners,percent(part.activeRate),
       part.subscribedOwners,percent(part.subscriptionRate)]),
-    note:`${contract.window}。活跃率＝30天活跃主账号÷该型号主账号；订阅率＝有效订阅主账号÷该型号主账号。按同一市场×主型号合成汇总重算；当前范围 ${number(Object.values(value.value).reduce((sum,part)=>sum+part.owners,0))} 个已归属主型号的主账号，不代表全部合资格主账号。型号内多设备占比待补同范围绑定关系明细。`};
+    note:`${contract.window}。按当前范围主账号人数降序，同规模按型号名排列，与矩阵从上到下顺序一致。活跃率＝30天活跃主账号÷该型号主账号；订阅率＝有效订阅主账号÷该型号主账号。按同一市场×主型号合成汇总重算；当前范围 ${number(entries.reduce((sum,[,part])=>sum+part.owners,0))} 个已归属主型号的主账号，不代表全部合资格主账号。型号内多设备占比待补同范围绑定关系明细。`};
 }
 function headlineTrend(id) {
   const history=metricHistory(id);
@@ -3647,9 +3651,11 @@ function drawDetailChart(box,spec) {
         return `${spec.labels[index]} · ${spec.dimensions[params.value[0]]}：${Number(params.value[2]).toFixed(1)}%${owners?
           `<br>${Number.isFinite(numerator)?`${params.value[0]===0?'30天活跃':'有效订阅'}主账号 ${number(numerator)} 人 / `:''}该型号主账号 ${number(owners)} 人`:''}`;
       }},
-      grid:{left:86,right:38,top:26,bottom:88},
+      grid:{left:spec.sortBy==='owners-desc'?112:86,right:38,top:26,bottom:88},
       xAxis:{type:'category',data:spec.dimensions,axisLabel:{color:'#506455'},axisTick:{show:false}},
-      yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
+      yAxis:{type:'category',inverse:spec.sortBy==='owners-desc',data:spec.labels,
+        axisLabel:{color:'#506455',interval:spec.sortBy==='owners-desc'?0:'auto',lineHeight:chartText(15),
+          formatter:spec.sortBy==='owners-desc'?((value,index)=>`${value}\n${number(spec.sampleSizes[index])}人`):undefined},axisTick:{show:false}},
       visualMap:{min:0,max:100,calculable:false,orient:'horizontal',left:'center',bottom:2,
         text:['100%','0%'],textStyle:{color:'#506455'},inRange:{color:['#eaf2e7','#a9caa9','#356d51']}},
       series:[{type:'heatmap',data:cells,label:{show:true,formatter:params=>`${Number(params.value[2]).toFixed(1)}%`,fontWeight:600},

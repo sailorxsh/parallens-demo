@@ -107,10 +107,11 @@ async(parent)=>{
     check(await p.locator('#metric-evidence-39 > .na-note').count()===0,'Restored valid counts retain a stale missing-data reason');
     for(const [id,page] of [[38,'E'],[40,'E'],[35,'E']]) {
       await p.goto(`${base}#/${page}?metric=${id}&panel=data`);await p.locator(`#metric-evidence-${id}`).waitFor();
-      const table=await p.locator(`#${page}-panel-data > .data-table-scroll`).evaluate(node=>({
+      const table=await p.locator(`#${page}-panel-data > .data-table-scroll:not(.payment-month-table)`).evaluate(node=>({
         columns:[...node.querySelectorAll('thead th')].map(cell=>cell.textContent),
         rows:[...node.querySelectorAll('tbody tr')].map(row=>[...row.children].map(cell=>cell.textContent))}));
-      const numerator=table.columns.indexOf('分子 / 数量'),result=table.columns.findIndex(column=>column.startsWith('结果'));
+      const numerator=table.columns.indexOf(id===38?'数量':'分子 / 数量'),result=table.columns.findIndex(column=>id===38?column==='占比':column.startsWith('结果'));
+      if(id===38)check(table.columns.join('|')==='统计对象|分组|数量|同口径分母|占比'&&table.rows.every(row=>row[2].endsWith(row[3].slice(-1))&&['人','台'].includes(row[3].slice(-1))),'Structure counts lost their separate population units');
       check(result>=0,'Semantic result column is missing');
       check(table.rows.every(row=>row.every((cell,index)=>!cell.endsWith('%')||index===result)),
         'A percentage is outside the semantic result column');
