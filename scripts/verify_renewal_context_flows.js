@@ -3,7 +3,7 @@ async(parent)=>{
  const base=new URL('.',parent.url()).href,browser=parent.context().browser(),engine=browser.browserType().name(),c=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',reducedMotion:'reduce'}),p=await c.newPage(),states=[],errors=[];
  p.on('pageerror',e=>errors.push(e.message));const check=(ok,m)=>{if(!ok)throw Error(m);};
  const source=async name=>(await(await parent.request.get(`${base}data/${name}.json`)).json());
- const [facts,diagnostics,snapshot,catalog]=await Promise.all(['monthly-renewal-facts','diagnostics','snapshot','metric-catalog'].map(source));
+ const [facts,diagnostics,snapshot,catalog,flowSource]=await Promise.all(['monthly-renewal-facts','diagnostics','snapshot','metric-catalog','subscription-flow'].map(source));
  const original=diagnostics.D.tables.find(t=>t.title==='转化与续费环节');
  const ready=async()=>{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));};
  const open=async(id,month='2026-08',extra='')=>{await p.goto(`${base}#/D?metric=${id}&panel=data&renewalMonth=${month}${extra?'&'+extra:''}`);await ready();};
@@ -14,7 +14,7 @@ async(parent)=>{
   check(JSON.stringify(cells)===JSON.stringify([`月度到期续订（${month}）`,want.renewed.toLocaleString('zh-CN'),want.due.toLocaleString('zh-CN'),(want.renewed/want.due*100).toFixed(1)+'%']),`Wrong monthly context #${id} ${month}: ${JSON.stringify(cells)}`);
   const flow=table().locator('tbody tr').filter({hasText:'本期权益退出（#21）'});check(JSON.stringify(await flow.locator('th,td').allTextContents())===JSON.stringify(['本期权益退出（#21）',snapshot.subscriptionLost.toLocaleString('zh-CN'),snapshot.subscribersOpening.toLocaleString('zh-CN'),(snapshot.subscriptionLost/snapshot.subscribersOpening*100).toFixed(1)+'%']),'Current September flow was replaced by monthly loss');
   const text=await table().locator('..').innerText(),raw=facts.months.find(m=>m.month===month),end=new Date(Date.parse(raw.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10);
-  check(text.includes(`${month}到期人群，观察至${end}（UTC）`)&&text.includes('2026-09-01—2026-09-24')&&text.includes('不等于同月到期未续订'),'Context loses separate period/observation bounds');
+  check(text.includes(`${month}到期人群，观察至${end}（UTC）`)&&text.includes(flowSource.window)&&text.includes('不等于同月到期未续订'),'Context loses separate period/observation bounds');
   check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Monthly labels cause page overflow');
   const current=await p.evaluate(()=>sourceData.diagnostics.D.tables.find(t=>t.title==='转化与续费环节'));
   check(JSON.stringify(current)===JSON.stringify(original),'Rendering mutates the preserved raw legacy sample');
@@ -44,6 +44,7 @@ async(parent)=>{
    await p.route('**/data/monthly-renewal-facts.json',r=>r.fulfill({json:bad}));await p.reload();await ready();const cells=await renewal().locator('th,td').allTextContents();check(cells[1]==='—'&&cells[2]==='—'&&!cells[3].includes('%'),'Bad monthly source falls back to reliable weekly numbers');check(await p.evaluate(()=>metric(18).kind)==='rate','Bad monthly context disables valid trial data');states.push({kind,cells});await p.unroute('**/data/monthly-renewal-facts.json');
   }
   await p.reload();await ready();await open(23,'2026-09');check((await renewal().innerText()).includes('无效')&&!(await renewal().innerText()).includes('86.0%'),'Invalid local month retains the old weekly sample');
+  await p.route('**/data/subscription-flow.json',r=>r.fulfill({json:{...flowSource,window:'2026-09-05 至 2026-09-24'}}));await p.reload();await ready();await open(23);check((await table().locator('..').innerText()).includes('2026-09-05 至 2026-09-24'),'Flow period inferred from snapshot instead of declared source window');await p.unroute('**/data/subscription-flow.json');
   check(!errors.length,errors.join('; '));return {status:'PASS',states,checks:['all 14 D metric placements','all 12 months from independently summed frequency counts','same monthly row and exact observation deadline','separate September flow counts preserved','raw old weekly sample not mutated','three desktop widths and actual 200% text','month interaction/reload/history','old saved issue baseline and draft preserved','missing/corrupt/invalid monthly source never falls back to weekly rate'],errors};
  }finally{await c.close();}
 }

@@ -1645,7 +1645,7 @@ function renewalMonthTable(part=renewalProjection()) {
 }
 function renewalContextTable(spec) {
   if(spec.title!=='转化与续费环节')return spec;
-  const part=renewalProjection(),r=part.current,rate=r?.renewal,flow=metric(21);
+  const part=renewalProjection(),r=part.current,rate=r?.renewal,flow=metric(21),flowWindow=sourceData.subscriptionFlow?.window??'窗口待核验';
   const period=r?`${r.month}到期人群，观察至${new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)}（UTC）`:'月度到期续订待核验，未沿用原周度样例';
   return {...spec,rows:spec.rows.map(row=>{
     if(row[0]==='到期续订')return [`月度到期续订${r?`（${r.month}）`:''}`,
@@ -1653,7 +1653,7 @@ function renewalContextTable(spec) {
     if(row[0]==='期初有效订阅退出')return ['本期权益退出（#21）',flow.kind==='group'?flow.value.lost:'—',
       flow.kind==='group'?flow.value.opening:'—',flow.kind==='group'&&flow.value.opening>=30?percent(flow.value.lost/flow.value.opening):'无可靠比例'];
     return row;
-  }),note:`到期续订：${period}；其余环节各按自身批次。权益退出仍为${sourceData.snapshot.asOf.slice(0,7)}-01—${sourceData.snapshot.asOf}订阅流转（#21），不等于同月到期未续订，也不等于离开产品。`};
+  }),note:`到期续订：${period}；其余环节各按自身批次。权益退出仍为${flowWindow}订阅流转（#21），不等于同月到期未续订，也不等于离开产品。`};
 }
 function renewalEvidence(panel,appendPair) {
   const part=renewalProjection();if(part.reason){const warning=element('p','na-note',part.reason);warning.dataset.evidenceKind='change';panel.append(warning);return;}
