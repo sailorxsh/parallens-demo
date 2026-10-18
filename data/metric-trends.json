@@ -280,28 +280,860 @@
     "source": "constructed-weekly-simulation"
   },
   "m24": {
+    "status": "approved-synthetic",
+    "classification": "entirely_synthetic",
+    "version": "synthetic-monthly-retention-v1",
+    "asOf": "2026-09-24",
+    "population": "正式复合活跃主账号；以基期冻结的国家／App平台归属分组，包含观察期未留存者",
     "labels": [
-      "7月",
-      "8月"
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08"
     ],
     "unit": "%",
     "kind": "rate",
     "points": [
       {
         "kind": "rate",
-        "numerator": 25200,
-        "denominator": 35000,
-        "value": 0.72
+        "baseMonth": "2025-08",
+        "observedMonth": "2025-09",
+        "observedThrough": "2025-09-30",
+        "numerator": 37440,
+        "denominator": 52000,
+        "activeObserved": 54000,
+        "value": 0.72,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 15210,
+            "retained": 11601,
+            "observedActive": 15795
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 18590,
+            "retained": 12964,
+            "observedActive": 19305
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 4212,
+            "retained": 3117,
+            "observedActive": 4374
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 5148,
+            "retained": 3483,
+            "observedActive": 5346
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2340,
+            "retained": 1837,
+            "observedActive": 2430
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 2860,
+            "retained": 2054,
+            "observedActive": 2970
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 1638,
+            "retained": 1126,
+            "observedActive": 1701
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2002,
+            "retained": 1258,
+            "observedActive": 2079
+          }
+        ]
       },
       {
         "kind": "rate",
-        "numerator": 27000,
-        "denominator": 35000,
-        "value": 0.7714285714285715
+        "baseMonth": "2025-09",
+        "observedMonth": "2025-10",
+        "observedThrough": "2025-10-31",
+        "numerator": 39204,
+        "denominator": 54000,
+        "activeObserved": 56000,
+        "value": 0.726,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 15795,
+            "retained": 12147,
+            "observedActive": 16380
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 19305,
+            "retained": 13575,
+            "observedActive": 20020
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 4374,
+            "retained": 3264,
+            "observedActive": 4536
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 5346,
+            "retained": 3648,
+            "observedActive": 5544
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2430,
+            "retained": 1924,
+            "observedActive": 2520
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 2970,
+            "retained": 2150,
+            "observedActive": 3080
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 1701,
+            "retained": 1179,
+            "observedActive": 1764
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2079,
+            "retained": 1317,
+            "observedActive": 2156
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2025-10",
+        "observedMonth": "2025-11",
+        "observedThrough": "2025-11-30",
+        "numerator": 41160,
+        "denominator": 56000,
+        "activeObserved": 58000,
+        "value": 0.735,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 16380,
+            "retained": 12754,
+            "observedActive": 16965
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 20020,
+            "retained": 14252,
+            "observedActive": 20735
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 4536,
+            "retained": 3427,
+            "observedActive": 4698
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 5544,
+            "retained": 3829,
+            "observedActive": 5742
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2520,
+            "retained": 2020,
+            "observedActive": 2610
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3080,
+            "retained": 2258,
+            "observedActive": 3190
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 1764,
+            "retained": 1237,
+            "observedActive": 1827
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2156,
+            "retained": 1383,
+            "observedActive": 2233
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2025-11",
+        "observedMonth": "2025-12",
+        "observedThrough": "2025-12-31",
+        "numerator": 43500,
+        "denominator": 58000,
+        "activeObserved": 60000,
+        "value": 0.75,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 16965,
+            "retained": 13478,
+            "observedActive": 17550
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 20735,
+            "retained": 15063,
+            "observedActive": 21450
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 4698,
+            "retained": 3622,
+            "observedActive": 4860
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 5742,
+            "retained": 4047,
+            "observedActive": 5940
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2610,
+            "retained": 2135,
+            "observedActive": 2700
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3190,
+            "retained": 2386,
+            "observedActive": 3300
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 1827,
+            "retained": 1308,
+            "observedActive": 1890
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2233,
+            "retained": 1461,
+            "observedActive": 2310
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2025-12",
+        "observedMonth": "2026-01",
+        "observedThrough": "2026-01-31",
+        "numerator": 45600,
+        "denominator": 60000,
+        "activeObserved": 62000,
+        "value": 0.76,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 17550,
+            "retained": 14129,
+            "observedActive": 18135
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 21450,
+            "retained": 15790,
+            "observedActive": 22165
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 4860,
+            "retained": 3797,
+            "observedActive": 5022
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 5940,
+            "retained": 4242,
+            "observedActive": 6138
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2700,
+            "retained": 2238,
+            "observedActive": 2790
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3300,
+            "retained": 2501,
+            "observedActive": 3410
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 1890,
+            "retained": 1371,
+            "observedActive": 1953
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2310,
+            "retained": 1532,
+            "observedActive": 2387
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-01",
+        "observedMonth": "2026-02",
+        "observedThrough": "2026-02-28",
+        "numerator": 47740,
+        "denominator": 62000,
+        "activeObserved": 64000,
+        "value": 0.77,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 18135,
+            "retained": 14792,
+            "observedActive": 18720
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 22165,
+            "retained": 16531,
+            "observedActive": 22880
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5022,
+            "retained": 3975,
+            "observedActive": 5184
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6138,
+            "retained": 4441,
+            "observedActive": 6336
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2790,
+            "retained": 2343,
+            "observedActive": 2880
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3410,
+            "retained": 2618,
+            "observedActive": 3520
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 1953,
+            "retained": 1436,
+            "observedActive": 2016
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2387,
+            "retained": 1604,
+            "observedActive": 2464
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-02",
+        "observedMonth": "2026-03",
+        "observedThrough": "2026-03-31",
+        "numerator": 49920,
+        "denominator": 64000,
+        "activeObserved": 65000,
+        "value": 0.78,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 18720,
+            "retained": 15468,
+            "observedActive": 19013
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 22880,
+            "retained": 17285,
+            "observedActive": 23237
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5184,
+            "retained": 4156,
+            "observedActive": 5265
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6336,
+            "retained": 4645,
+            "observedActive": 6435
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2880,
+            "retained": 2450,
+            "observedActive": 2925
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3520,
+            "retained": 2738,
+            "observedActive": 3575
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 2016,
+            "retained": 1501,
+            "observedActive": 2047
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2464,
+            "retained": 1677,
+            "observedActive": 2503
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-03",
+        "observedMonth": "2026-04",
+        "observedThrough": "2026-04-30",
+        "numerator": 50050,
+        "denominator": 65000,
+        "activeObserved": 66000,
+        "value": 0.77,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 19013,
+            "retained": 15508,
+            "observedActive": 19305
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 23237,
+            "retained": 17330,
+            "observedActive": 23595
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5265,
+            "retained": 4167,
+            "observedActive": 5346
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6435,
+            "retained": 4657,
+            "observedActive": 6534
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2925,
+            "retained": 2456,
+            "observedActive": 2970
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3575,
+            "retained": 2745,
+            "observedActive": 3630
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 2047,
+            "retained": 1506,
+            "observedActive": 2079
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2503,
+            "retained": 1681,
+            "observedActive": 2541
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-04",
+        "observedMonth": "2026-05",
+        "observedThrough": "2026-05-31",
+        "numerator": 48840,
+        "denominator": 66000,
+        "activeObserved": 67000,
+        "value": 0.74,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 19305,
+            "retained": 15133,
+            "observedActive": 19598
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 23595,
+            "retained": 16911,
+            "observedActive": 23952
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5346,
+            "retained": 4066,
+            "observedActive": 5427
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6534,
+            "retained": 4544,
+            "observedActive": 6633
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 2970,
+            "retained": 2397,
+            "observedActive": 3015
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3630,
+            "retained": 2679,
+            "observedActive": 3685
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 2079,
+            "retained": 1469,
+            "observedActive": 2110
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2541,
+            "retained": 1641,
+            "observedActive": 2580
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-05",
+        "observedMonth": "2026-06",
+        "observedThrough": "2026-06-30",
+        "numerator": 47570,
+        "denominator": 67000,
+        "activeObserved": 68000,
+        "value": 0.71,
+        "provenance": "constructed-monthly-simulation",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 19598,
+            "retained": 14739,
+            "observedActive": 19890
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 23952,
+            "retained": 16472,
+            "observedActive": 24310
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5427,
+            "retained": 3960,
+            "observedActive": 5508
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6633,
+            "retained": 4426,
+            "observedActive": 6732
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 3015,
+            "retained": 2335,
+            "observedActive": 3060
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3685,
+            "retained": 2609,
+            "observedActive": 3740
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 2110,
+            "retained": 1431,
+            "observedActive": 2142
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2580,
+            "retained": 1598,
+            "observedActive": 2618
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-06",
+        "observedMonth": "2026-07",
+        "observedThrough": "2026-07-31",
+        "numerator": 48960,
+        "denominator": 68000,
+        "activeObserved": 70000,
+        "value": 0.72,
+        "provenance": "reconstructed-demo-anchor",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 19890,
+            "retained": 15170,
+            "observedActive": 20475
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 24310,
+            "retained": 16953,
+            "observedActive": 25025
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5508,
+            "retained": 4077,
+            "observedActive": 5670
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6732,
+            "retained": 4555,
+            "observedActive": 6930
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 3060,
+            "retained": 2403,
+            "observedActive": 3150
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3740,
+            "retained": 2685,
+            "observedActive": 3850
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 2142,
+            "retained": 1472,
+            "observedActive": 2205
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2618,
+            "retained": 1645,
+            "observedActive": 2695
+          }
+        ]
+      },
+      {
+        "kind": "rate",
+        "baseMonth": "2026-07",
+        "observedMonth": "2026-08",
+        "observedThrough": "2026-08-31",
+        "numerator": 54000,
+        "denominator": 70000,
+        "activeObserved": 72000,
+        "value": 0.7714285714285715,
+        "provenance": "reconstructed-demo-anchor",
+        "records": [
+          {
+            "country": "US",
+            "appPlatform": "iOS",
+            "baseActive": 20475,
+            "retained": 16732,
+            "observedActive": 21060
+          },
+          {
+            "country": "US",
+            "appPlatform": "Android",
+            "baseActive": 25025,
+            "retained": 18698,
+            "observedActive": 25740
+          },
+          {
+            "country": "UK",
+            "appPlatform": "iOS",
+            "baseActive": 5670,
+            "retained": 4496,
+            "observedActive": 5832
+          },
+          {
+            "country": "UK",
+            "appPlatform": "Android",
+            "baseActive": 6930,
+            "retained": 5024,
+            "observedActive": 7128
+          },
+          {
+            "country": "DE",
+            "appPlatform": "iOS",
+            "baseActive": 3150,
+            "retained": 2650,
+            "observedActive": 3240
+          },
+          {
+            "country": "DE",
+            "appPlatform": "Android",
+            "baseActive": 3850,
+            "retained": 2962,
+            "observedActive": 3960
+          },
+          {
+            "country": "Other",
+            "appPlatform": "iOS",
+            "baseActive": 2205,
+            "retained": 1624,
+            "observedActive": 2268
+          },
+          {
+            "country": "Other",
+            "appPlatform": "Android",
+            "baseActive": 2695,
+            "retained": 1814,
+            "observedActive": 2772
+          }
+        ]
       }
     ],
-    "note": "按完整月成熟留存批次计算；仅有两个演示月份，不外推12周。",
-    "source": "diagnostic-summary"
+    "attributionNote": "演示样例的国家／平台归属固定；正式接入须确定基期归属，不能用观察期行为筛掉未留存者。不是逐账号事件日志。",
+    "note": "12个完整自然月；合并同范围留存与基期活跃人数后计算，不平均分组率。国家／App平台归属在合成样例中固定，包含未留存者；不是逐账号事件日志，不证明真实经营变化。",
+    "source": "constructed-monthly-simulation"
   },
   "m27": {
     "labels": [

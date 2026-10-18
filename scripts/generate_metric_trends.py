@@ -1,4 +1,5 @@
 """Generate bounded synthetic histories for selected headline metrics, anchored to the existing workbook snapshot."""
+from generate_monthly_retention import build_retention_history
 import json
 from datetime import date, timedelta
 from pathlib import Path
@@ -37,8 +38,7 @@ dataset={
  'm03':money(mrr,note='每7天一个MRR模拟快照，末点为9月24日底表值；其余点为构造数据。'),
  'm04':count([w['activity']['compositeMAU'] for w in weekly],note='每7天一个向前30天去重主账号的模拟滚动快照；末点为9月24日底表值，窗口互有重叠。'),
  'm15':count(unactivated,unit='台',note='绑定超3天仍未激活设备的模拟快照；末点为9月24日底表128台。'),
- 'm24':{'labels':['7月','8月'],'unit':'%','kind':'rate','points':[{'kind':'rate','numerator':25200,'denominator':35000,'value':.72},{'kind':'rate','numerator':27000,'denominator':35000,'value':27000/35000}],
-        'note':'按完整月成熟留存批次计算；仅有两个演示月份，不外推12周。','source':'diagnostic-summary'},
+ 'm24':build_retention_history(),
  'm27':rate(core_users,[w['activity']['compositeMAU'] for w in weekly],note='功能使用主账号/同期复合活跃主账号；每7天一个滚动快照，末点为9月24日底表26,000/68,000。'),
  'm34':count([value+150 for value in subscribers],note='每7天一个有效订阅或增值Pack付费主账号的模拟快照；末点为9月24日底表12,550人。历史由有效订阅快照加模拟的150名仅增值Pack用户构造，不是W1–W12批次。'),
  'm41':rate(active,effective,note='活跃设备来自周度演示汇总；有效且已激活设备分母按快照构造，最新点为85,278/139,800。'),

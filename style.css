@@ -632,6 +632,12 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .inspector-close {display:block;margin:0 0 .55rem auto;border:0;background:none;color:#52745e;cursor:pointer;font:inherit;font-size:var(--text-xs);text-decoration:underline;text-underline-offset:.18rem}
 .inspector-close:focus-visible {outline:2px solid var(--focus);outline-offset:2px}
 .trial-samples h3 {font-size:.95rem;margin:0 0 .35rem}
+.retention-month-control {display:flex;align-items:center;flex-wrap:wrap;gap:.6rem 1rem;padding:.65rem .8rem;background:#f1f5eb;border:1px solid var(--line);border-radius:var(--card-radius);margin:.75rem 0}
+.retention-month-control label {display:flex;align-items:center;flex-wrap:wrap;gap:.6rem;font-size:var(--text-sm);font-weight:600;color:#355b43}
+.retention-month-control select {font:inherit;background:var(--paper);color:var(--forest);border:1px solid #819782;border-radius:.3rem;padding:.4rem .55rem;max-width:100%}
+.retention-month-control select:focus-visible {outline:2px solid var(--focus);outline-offset:2px}
+.retention-month-control .table-note {margin:0;flex:1 1 16rem}
+.diagnostic-table tr[aria-current="date"]>* {background:#eaf2e5}
 .trial-readiness {container-type:inline-size;margin:0 0 1rem}
 .trial-readiness h3 {font-size:.95rem;margin:0 0 .35rem}
 .trial-readiness-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin-top:.8rem;align-items:start}

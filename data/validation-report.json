@@ -1,6 +1,6 @@
 {
-  "passed": 46,
-  "total": 46,
+  "passed": 47,
+  "total": 47,
   "checks": [
     {
       "rule": "catalog",
@@ -231,6 +231,11 @@
       "rule": "D24-historical-device-boundaries",
       "passed": true,
       "detail": "历史留存与解绑不按当前状态剔除流失者；未提供的入组状态和批次日期明确待补，已知解绑月份与来源一致"
+    },
+    {
+      "rule": "D25-monthly-retention-cohorts",
+      "passed": true,
+      "detail": "12个完整自然月、96个互斥国家×基期App平台分组、两期人数与相邻月接续闭合；不是逐账号事件链证明"
     }
   ]
 }

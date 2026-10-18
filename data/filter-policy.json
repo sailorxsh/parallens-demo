@@ -635,8 +635,8 @@
     {
       "id": 24,
       "page": "B",
-      "entity": "用户",
-      "window": "最近完整月或指标定义中的月窗口",
+      "entity": "Owner用户",
+      "window": "完整自然月；所选观察月与上一基期月（12个月历史）",
       "businessDimensions": [
         "appPlatform",
         "country"

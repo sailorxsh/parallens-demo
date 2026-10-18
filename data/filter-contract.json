@@ -542,25 +542,25 @@
     "id": 24,
     "name": "月度用户留存率",
     "page": "B",
-    "entity": "用户",
-    "window": "最近完整月或指标定义中的月窗口",
+    "entity": "Owner用户",
+    "window": "完整自然月；所选观察月与上一基期月（12个月历史）",
     "dimensions": [
       "country",
       "appPlatform"
     ],
-    "numerator": 27000,
-    "denominator": 35000,
-    "formula": "月度留存率＝上月复合活跃且本月仍复合活跃用户÷上月复合活跃用户。",
+    "numerator": 54000,
+    "denominator": 70000,
+    "formula": "月度留存率＝基期月与观察月均复合活跃的正式主账号÷基期月复合活跃正式主账号。",
     "source": "统一活跃事件事实表",
     "rateComponents": [
       {
         "name": "月度用户留存率",
-        "numerator": 27000,
-        "denominator": 35000
+        "numerator": 54000,
+        "denominator": 70000
       }
     ],
     "unsupported": "缺少明确归属关系的组合、未成熟批次、无样本分母或维度未列入本项适用表时显示不适用；不以0代替。",
-    "model": "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"
+    "model": "合成月份×国家×基期App平台互斥汇总；包含观察期未留存者，不是逐账号事件明细。"
   },
   {
     "id": 25,

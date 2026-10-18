@@ -189,7 +189,7 @@ metrics = {
     21: group({"opening":12020,"trialPaid":530,"directPaid":120,"recovered":90,"lost":360,"closing":12400}),
     22: group({"anyExhausted":rate(312,47880), "aiExhausted":rate(220,47880),
                "storageExhausted":rate(160,47880), "transferExhausted":rate(140,47880)}),
-    23: rate(430,500), 24: rate(27000,35000),
+    23: rate(430,500), 24: rate(54000,70000),
     25: group({"DAU":12600,"WAU":29800,"MAU":68000,"appMAU":46800}),
     26: group({"sessionsPerUser":2.1,"durationP50Minutes":4.5,"durationP90Minutes":26}),
     27: rate(26000,68000), 28: group({"D1":rate(1900,2500),"D7":rate(1500,2500),"D30":rate(1100,2500)}),
@@ -225,6 +225,7 @@ metrics = {
     52: count(168), 53: count(7),
     54: group({"eventLoss":rate(220,10000),"idMapping":rate(9650,10000),"status":"正常"}),
 }
+metrics[24]['value'] = 54000 / 70000
 values = {f"m{index:02}": metrics[index] for index in range(2,55)}
 write("metric-values.json", values)
 pages = {page: [] for page in "ABCDEFG"}
@@ -315,7 +316,7 @@ diagnostics = {
             ["推送点击活跃", 10000, ratio(10000, 68000), "可与其他来源重叠"],
         ], "来源人数之和不应等于复合MAU；本样本未提供交叉集合明细。"),
         table("留存与回流观察", ["指标", "分子", "分母", "结果"], [
-            ["月度留存", 27000, 35000, ratio(27000, 35000)],
+            ["月度留存", 54000, 70000, ratio(54000, 70000)],
             ["新客D1留存", 1900, 2500, ratio(1900, 2500)],
             ["新客D7留存", 1500, 2500, ratio(1500, 2500)],
             ["新客D30留存", 1100, 2500, ratio(1100, 2500)],
@@ -502,8 +503,8 @@ diagnostics["B"]["tables"].extend([
     ] + [["并集",sum(active_exclusive.values()),"100.0%"]],
     "七个单元互斥；App 46,800、内容 40,000、点击 10,000 均可从这些单元回算。"),
     table("完整月与新客留存批次", ["批次 / 观察期", "留存", "入组", "留存率"], [
-        ["2026-06→07 · 月度复合活跃",25200,35000,ratio(25200,35000)],
-        ["2026-07→08 · 月度复合活跃",27000,35000,ratio(27000,35000)],
+        ["2026-06→07 · 月度复合活跃",48960,68000,ratio(48960,68000)],
+        ["2026-07→08 · 月度复合活跃",54000,70000,ratio(54000,70000)],
         ["新客样本 · D1",1900,2500,ratio(1900,2500)],
         ["新客样本 · D7",1500,2500,ratio(1500,2500)],
         ["新客样本 · D30",1100,2500,ratio(1100,2500)],

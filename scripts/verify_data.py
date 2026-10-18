@@ -516,6 +516,35 @@ check('D24-historical-device-boundaries',
       historical_contracts[51]['window'].startswith(metrics['m51']['value']['cohort']+'解绑批次'),
       '历史留存与解绑不按当前状态剔除流失者；未提供的入组状态和批次日期明确待补，已知解绑月份与来源一致')
 
+retention = metric_trends['m24']
+retention_ok = (retention['status']=='approved-synthetic' and retention['classification']=='entirely_synthetic' and
+                retention['asOf']==snapshot['asOf'] and retention['version']=='synthetic-monthly-retention-v1' and
+                len(retention['points'])==12 and retention['labels']==months)
+previous_cells = None
+for i,row in enumerate(retention['points']):
+    year,month = map(int,months[i].split('-'))
+    start = date(year,month,1)
+    base_month = (start-timedelta(days=1)).strftime('%Y-%m')
+    next_month = date(year+int(month==12),month%12+1,1)
+    cells = {(r['country'],r['appPlatform']):r for r in row['records']}
+    retention_ok &= (row['observedMonth']==months[i] and row['baseMonth']==base_month and
+        row['observedThrough']==(next_month-timedelta(days=1)).isoformat() and row['observedThrough']<snapshot['asOf'] and
+        len(row['records'])==len(cells)==8 and set(cells)=={(c,p) for c in ('US','UK','DE','Other') for p in ('iOS','Android')} and
+        all(type(r[k]) is int and r[k]>=0 for r in row['records'] for k in ('baseActive','retained','observedActive')) and
+        all(r['retained']<=min(r['baseActive'],r['observedActive']) for r in row['records']) and
+        row['numerator']==sum(r['retained'] for r in row['records']) and
+        row['denominator']==sum(r['baseActive'] for r in row['records']) and
+        row['activeObserved']==sum(r['observedActive'] for r in row['records']) and
+        row['denominator']>0 and abs(row['value']-row['numerator']/row['denominator'])<1e-12)
+    if previous_cells:
+        retention_ok &= all(previous_cells[k]['observedActive']==r['baseActive'] for k,r in cells.items())
+    previous_cells = cells
+retention_ok &= ([(r['numerator'],r['denominator']) for r in retention['points'][-2:]]==[(48960,68000),(54000,70000)] and
+                 metrics['m24']['numerator']==54000 and metrics['m24']['denominator']==70000 and
+                 metrics['m24']['value']==54000/70000)
+check('D25-monthly-retention-cohorts',retention_ok,
+      '12个完整自然月、96个互斥国家×基期App平台分组、两期人数与相邻月接续闭合；不是逐账号事件链证明')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

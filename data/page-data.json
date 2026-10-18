@@ -102,9 +102,9 @@
       "metricId": 24,
       "value": {
         "kind": "rate",
-        "numerator": 27000,
-        "denominator": 35000,
-        "value": 0.771429
+        "numerator": 54000,
+        "denominator": 70000,
+        "value": 0.7714285714285715
       }
     },
     {

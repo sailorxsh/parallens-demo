@@ -197,9 +197,9 @@
   },
   "m24": {
     "kind": "rate",
-    "numerator": 27000,
-    "denominator": 35000,
-    "value": 0.771429
+    "numerator": 54000,
+    "denominator": 70000,
+    "value": 0.7714285714285715
   },
   "m25": {
     "kind": "group",

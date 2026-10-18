@@ -23,6 +23,7 @@ let dataset;
 let sourceData;
 let trialFactIndex;
 let filterState={};
+let retentionMonthRequest=[];
 let filterErrors=[];
 const filterDisclosure=new Map();
 let startupInProgress=false;
@@ -135,12 +136,12 @@ function savedIssueTarget(key,record) {
   if(typeof page!=='string'||!Object.hasOwn(pages,page)||!Number.isInteger(id)||!supportsPageMetric(page,id))
     return {reason:'记录中的专题或指标当前不可用。'};
   if(!filters||typeof filters!=='object'||Array.isArray(filters))return {reason:'旧记录未保存筛选快照，无法可靠恢复原范围。'};
-  const allowed=relevantFilters(page);
+  const allowed=[...relevantFilters(page),...(page==='B'&&id===24?['retentionMonth']:[])];
   if(Object.entries(filters).some(([name,value])=>!allowed.includes(name)||typeof value!=='string'||
     value!=='All'&&!availableOptions(page,name,filters).includes(value)))
     return {reason:'记录包含当前不支持的筛选值；保留原范围，不替换为总体。'};
   const selected=allowed.filter(name=>filters[name]&&filters[name]!=='All').map(name=>[name,filters[name]]);
-  const restoredScope=selected.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'默认演示范围';
+  const restoredScope=formatIssueScope(selected);
   if(scope!==restoredScope||key!==`record:${page}:${scope}:${id}`||
     record.issueId&&record.issueId!==issueIdForKey(key,page,id))
     return {reason:'历史范围或问题标识与当前规则不一致；请先核对保存详情。'};
@@ -219,6 +220,7 @@ function renderSavedIssues() {
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
+  if(id===24)return `完整月 ${retentionSelection().month}`;
   if(id===43)return '新设备留存批次日期待补';
   if(id===51) {
     const cohort=sourceData.metrics.m51?.value?.cohort;
@@ -444,6 +446,7 @@ const relevantFilters=page=>page?Object.entries(sourceData?.filterPolicy?.contro
   .filter(([,config])=>config.pages.includes(page)).map(([key])=>key):['country','productLine','appPlatform'];
 const selectedFilters=()=>Object.entries(filterState).filter(([,value])=>value&&value!=='All');
 function availableOptions(page,key,state=filterState) {
+  if(key==='retentionMonth')return retentionIndex().rows?.map(row=>row.observedMonth)??[];
   const config=sourceData.filterPolicy.controls[key];
   const productLine=sourceData.filterPolicy.controls.productLine.options.includes(state.productLine)?state.productLine:undefined;
   if(key==='week')return sourceData.weekly.map(w=>String(w.week));
@@ -465,6 +468,7 @@ function routeHref(page='',metricId,evidencePanel) {
     params.delete(error.key);error.values.forEach(value=>params.append(error.key,value));
   }
   if (metricId) params.set('metric',String(metricId));
+  if(page==='B')retentionMonthRequest.forEach(value=>params.append('retentionMonth',value));
   const issue=activeIssueMetrics.get(issueScopeKey(page));
   if(issue)params.set('issue',String(issue));
   const currentPage=location.hash.replace(/^#\/?/,'').split(/[/?]/)[0].toUpperCase();
@@ -488,6 +492,7 @@ function readRoute() {
   const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
+  retentionMonthRequest=page==='B'?params.getAll('retentionMonth'):[];
   diagnosticWorkspaceView=['change','groups','data'].includes(params.get('panel'))?params.get('panel'):'change';
   readFilters(pages[page]?page:'',params);
   const issue=Number(params.get('issue'));
@@ -500,6 +505,18 @@ function readRoute() {
 function activeFilterDescription() {
   return selectedFilters().map(([key,value])=>`${filterLabels[key]}：${key==='week'?`W${value}`:optionLabel(key,value)}`).join(' · ');
 }
+function formatIssueScope(entries) {
+  return entries.map(([key,value])=>`${key==='retentionMonth'?'留存观察月':filterLabels[key]}：${key==='week'?`W${value}`:key==='retentionMonth'?value:optionLabel(key,value)}`).join(' · ')||'默认演示范围';
+}
+function issueFilters(page,id) {
+  const result={...filterState};
+  if(page==='B'&&id===24&&retentionMonthRequest.length&&
+    !(retentionMonthRequest.length===1&&retentionMonthRequest[0]===currentPaymentMonth()))
+    result.retentionMonth=retentionMonthRequest.join(' / ');
+  return result;
+}
+const recordScope=(page,id)=>formatIssueScope(Object.entries(issueFilters(page,id)));
+const recordKey=(page,id)=>`record:${page}:${recordScope(page,id)}:${id}`;
 function filterBar(page='') {
   const bar=element('details','filter-bar');bar.setAttribute('aria-label','数据筛选');
   bar.open=filterErrors.length>0||(filterDisclosure.get(page)??false);
@@ -621,7 +638,7 @@ function changeFilter(page,key,value) {
   const currentMetric=Number(new URLSearchParams(location.hash.split('?')[1]??'').get('metric'))||null;
   const params=new URLSearchParams(location.hash.split('?')[1]??'');
   const previousErrors=new Set(filterErrors.map(error=>error.key));
-  if(!key)for(const field of relevantFilters(page))params.delete(field);
+  if(!key){for(const field of relevantFilters(page))params.delete(field);params.delete('retentionMonth');retentionMonthRequest=[];}
   else if(value==='All')params.delete(key);
   else params.set(key,value);
   readFilters(page,params);
@@ -1110,6 +1127,7 @@ function projectMetric(id,state=filterState) {
     if(!['week','functionType'].includes(key)&&!sourceData.slices[key]?.[value]) return na('未定义的筛选值');
   }
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
+  if(id===24)return retentionMetric(state);
   if(scoped.deviceStatus==='Inactive'&&[8,11,15,16,27,41,42,44,45,46,47].includes(id))
     return na('该指标以有效设备为统计对象，非有效设备不属于分母');
   if(product&&model&&product!=='All'&&model!=='All'&&((product==='Hunting')!==(model==='Hunt Pro')))
@@ -1367,6 +1385,7 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   return article;
 }
 function trendValues(id) {
+  if(id===24){const part=retentionProjection();return part.rows?part.rows.map(r=>r.value===null?null:r.value*100):null;}
   if(id===11||id===13){const values=sourceData.weekly.map(week=>{const value=projectMetric(id,{...filterState,week:String(week.week)});return value.kind==='rate'?value.value*100:null;});return values.some(Number.isFinite)?values:null;}
   if(id===41||id===44){const index=deviceActivityIndex();if(index.reason)return null;return index.snapshots.map(point=>{const value=deviceActivityMetric(id,filterState,point.at);return value.kind==='rate'?value.value*100:null;});}
   if(id===15) {
@@ -1422,6 +1441,93 @@ function currentPaymentMonth() {
   const asOf=sourceData.snapshot.asOf,ordinal=monthOrdinal(asOf?.slice(0,7));
   return baselineWindowEnd(`快照 ${asOf}`)&&ordinal!==null?ordinalMonth(ordinal-1):null;
 }
+function retentionIndex() {
+  const source=sourceData.metricTrends?.m24,latest=currentPaymentMonth(),end=monthOrdinal(latest);
+  const invalid=()=>({reason:'月度留存来源、批次、人数或分组接续待核验；不回退旧分片或总体值。'});
+  if(!source||source.version!=='synthetic-monthly-retention-v1'||source.status!=='approved-synthetic'||
+    source.classification!=='entirely_synthetic'||source.asOf!==sourceData.snapshot.asOf||end===null||
+    !Array.isArray(source.points)||source.points.length!==12||!Array.isArray(source.labels)||source.labels.length!==12)return invalid();
+  const whole=n=>Number.isSafeInteger(n)&&n>=0,keys=new Set(['US','UK','DE','Other'].flatMap(c=>['iOS','Android'].map(p=>`${c}:${p}`)));
+  for(const [i,row] of source.points.entries()) {
+    const observed=ordinalMonth(end-11+i),base=ordinalMonth(end-12+i),through=baselineWindowEnd(`完整月 ${observed}`);
+    if(!row||row.kind!=='rate'||!Number.isFinite(row.value)||row.observedMonth!==observed||row.baseMonth!==base||source.labels[i]!==observed||
+      row.observedThrough!==through||through>=sourceData.snapshot.asOf||!['constructed-monthly-simulation','reconstructed-demo-anchor'].includes(row.provenance)||
+      ![row.numerator,row.denominator,row.activeObserved].every(whole)||row.numerator>Math.min(row.denominator,row.activeObserved)||
+      row.denominator<=0||Math.abs(row.value-row.numerator/row.denominator)>1e-12||
+      !Array.isArray(row.records)||row.records.length!==8)return invalid();
+    const seen=new Set();
+    for(const r of row.records) {
+      if(!r||!keys.has(`${r.country}:${r.appPlatform}`)||seen.has(`${r.country}:${r.appPlatform}`)||
+        ![r.baseActive,r.retained,r.observedActive].every(whole)||r.retained>Math.min(r.baseActive,r.observedActive))return invalid();
+      seen.add(`${r.country}:${r.appPlatform}`);
+      const previous=source.points[i-1]?.records.find(p=>p.country===r.country&&p.appPlatform===r.appPlatform);
+      if(previous&&previous.observedActive!==r.baseActive)return invalid();
+    }
+    if(row.records.reduce((n,r)=>n+r.baseActive,0)!==row.denominator||row.records.reduce((n,r)=>n+r.retained,0)!==row.numerator||
+      row.records.reduce((n,r)=>n+r.observedActive,0)!==row.activeObserved)return invalid();
+  }
+  const last=source.points.at(-1),raw=sourceData.metrics.m24;
+  if(raw?.kind!=='rate'||!Number.isFinite(raw.value)||raw.numerator!==last.numerator||raw.denominator!==last.denominator||Math.abs(raw.value-last.value)>1e-12)return invalid();
+  return {rows:source.points,note:source.note};
+}
+function retentionSelection() {
+  const source=retentionIndex(),month=retentionMonthRequest.length?retentionMonthRequest[0]:currentPaymentMonth();
+  if(retentionMonthRequest.length>1||!source.rows?.some(r=>r.observedMonth===month))
+    return {month,reason:source.reason??'留存观察月无效或包含多个值；请重新选择一个有完整观察期的月份。'};
+  return {month,...source};
+}
+function retentionProjection(state=filterState) {
+  const selected=retentionSelection();if(selected.reason)return selected;
+  const filters=effectiveFor(24,state);
+  if(filters.some(([key])=>!['country','appPlatform'].includes(key)))return {reason:'当前范围缺少同源月度留存分组。'};
+  return {...selected,rows:selected.rows.map(row=>{
+    const records=row.records.filter(r=>filters.every(([key,value])=>r[key]===value));
+    const numerator=records.reduce((n,r)=>n+r.retained,0),denominator=records.reduce((n,r)=>n+r.baseActive,0);
+    return {...row,records,numerator,denominator,activeObserved:records.reduce((n,r)=>n+r.observedActive,0),value:denominator>=30?numerator/denominator:null};
+  })};
+}
+function retentionMetric(state=filterState) {
+  const source=retentionProjection(state);if(source.reason)return pending(source.reason);
+  const row=source.rows.find(r=>r.observedMonth===source.month);
+  return row.denominator>=30?{kind:'rate',numerator:row.numerator,denominator:row.denominator,value:row.value}:
+    na(`基期活跃 ${row.denominator} 人、留存 ${row.numerator} 人；${row.denominator?'样本不足30人':'无合格样本'}，不显示可靠留存率`);
+}
+function retentionTable() {
+  const part=retentionProjection();if(part.reason)return {title:'月度留存 · 待核验',columns:['状态'],rows:[[part.reason]]};
+  return {title:'月度留存 · 12个月人数验算',selectedPeriod:part.month,columns:['观察月','基期月','留存主账号（人）','基期活跃（人）','观察月活跃（人）','留存率'],
+    rows:part.rows.map(r=>[r.observedMonth,r.baseMonth,r.numerator,r.denominator,r.activeObserved,r.value===null?'样本不足30人':percent(r.value)]),
+    note:`所选观察月 ${part.month}；留存人数÷基期活跃人数。观察月活跃含新进入者，不能作为留存分母。${part.note}`};
+}
+function retentionContextTable(spec) {
+  if(spec.title==='完整月与新客留存批次') {
+    const source=retentionProjection();
+    return {...spec,rows:spec.rows.map(row=>{
+      if(!row[0].includes('月度复合活跃'))return row;
+      const point=source.rows?.find(r=>`${r.baseMonth}→${r.observedMonth.slice(5)}`===row[0].split(' · ')[0]);
+      return [row[0],point?.numerator??'—',point?.denominator??'—',point?.value===null?'样本不足30人':point?percent(point.value):'待核验'];
+    })};
+  }
+  if(spec.title!=='留存与回流观察')return spec;
+  const value=metric(24),month=retentionSelection().month;
+  return {...spec,rows:spec.rows.map(row=>row[0]==='月度留存'?[`${month}月度留存`,
+    value.kind==='rate'?value.numerator:'—',value.kind==='rate'?value.denominator:'—',value.kind==='rate'?percent(value.value):'待核验']:row)};
+}
+function retentionControl() {
+  const wrap=element('div','retention-month-control'),label=element('label','','留存观察月（仅#24）'),select=element('select','');
+  select.name='retentionMonth';select.setAttribute('aria-label','留存观察月（仅#24）');
+  const part=retentionSelection(),months=retentionIndex().rows??[];
+  if(part.reason){const option=element('option','',`待修正：${retentionMonthRequest.join(' / ')||'月份来源待核验'}`);option.value='invalid';option.disabled=true;select.append(option);}
+  for(const row of months){const option=element('option','',row.observedMonth);option.value=row.observedMonth;select.append(option);}
+  select.value=part.reason?'invalid':part.month;
+  select.addEventListener('change',()=>{
+    const params=new URLSearchParams(location.hash.split('?')[1]??'');params.delete('retentionMonth');
+    if(select.value!==currentPaymentMonth())params.set('retentionMonth',select.value);
+    pushRoute(`#/B?${params}`);renderRoute({preserveScroll:true});
+    document.querySelector('[name="retentionMonth"]')?.focus({preventScroll:true});
+    document.querySelector('#announcement').textContent=`留存观察月已切换为${select.value}；仅更新#24及其登记范围。`;
+  });
+  label.append(select);wrap.append(label,element('p','table-note','完整自然月；只更新本项留存、证据与问题范围，其他指标保留各自周期。'));return wrap;
+}
 function paymentMonthRows() {
   const source=sourceData.diagnostics.E.paymentMonths,current=currentPaymentMonth();
   const invalid=()=>({reason:'完整月付款历史缺失、月份不连续或人数／收入未闭合；当前单月值保留，暂停历史与收入变化比较。'});
@@ -1462,6 +1568,10 @@ function savedMonthLabel(period) {
 const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,27,34,35,41,42,44,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
+  if(id===24){const part=retentionProjection();if(part.reason)return null;return {labels:part.rows.map(r=>r.observedMonth),
+    values:part.rows.map(r=>r.value===null?null:r.value*100),selectedPeriod:part.month,
+    details:part.rows.map(r=>({...r,basisLabel:`${r.baseMonth} → ${r.observedMonth} 留存 / 基期活跃`,numeratorUnit:'人',denominatorUnit:'人'})),
+    unit:'%',title:'月度用户留存率',note:`虚线标示所选观察月 ${part.month}；末端标签对应 ${part.rows.at(-1).observedMonth}。${part.note}`};}
   if(id===41||id===44) {
     const index=deviceActivityIndex();if(index.reason)return null;
     const threshold=filterState.season==='Other'?30:21;
@@ -1753,7 +1863,7 @@ function modelCalculationTable() {
 function headlineTrend(id) {
   const history=metricHistory(id);
   if(!history)return null;
-  const index=filterState.week&&/^W\d+$/.test(history.labels[0])?Math.max(0,history.labels.indexOf(`W${filterState.week}`)):history.values.length-1;
+  const index=history.selectedPeriod?history.labels.indexOf(history.selectedPeriod):filterState.week&&/^W\d+$/.test(history.labels[0])?Math.max(0,history.labels.indexOf(`W${filterState.week}`)):history.values.length-1;
   const current=history.values[index],before=history.values[index-1];
   const delta=current==null||before==null?null:current-before;
   const moneyChange=history.unit==='美元/人'&&delta!==null?arppuChangeLabel(delta):null;
@@ -2482,6 +2592,7 @@ function metricCardSummary(id) {
     34:'当前有效付费权益，含订阅或增值Pack',48:'绑定2台及以上的主账号占比',49:'至少共享给1人的主账号绑定设备占比',
     52:'命中流失风险信号的主账号去重',53:'当日演示事件数，不代表受影响用户数'};
   summary.context=contexts[id]??'';
+  if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)summary.context=`${row.baseMonth} → ${row.observedMonth} · 完整自然月` ;}
   if(id===3)summary.unit='/月';
   if(value.kind==='group') {
     const v=value.value;
@@ -2540,6 +2651,8 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===24&&metric(24).kind==='rate') {const part=retentionProjection(),row=part.rows.find(r=>r.observedMonth===part.month);
+    return `${percent(row.value)}（${number(row.numerator)} / ${number(row.denominator)}人；${row.baseMonth} → ${row.observedMonth}）`;}
   const summary=metricCardSummary(id);
   if(!summary.fields.length)return `${summary.text}${summary.unit}`;
   const parts=[`${summary.label}：${summary.text}${summary.unit}`,
@@ -2604,6 +2717,7 @@ function dataTable(spec, extraClass='') {
   const tbody=element('tbody','');
   spec.rows.forEach(row=>{
     const tr=element('tr','');
+    if(spec.selectedPeriod&&row[0]===spec.selectedPeriod){tr.setAttribute('aria-current','date');tr.dataset.observedMonth=row[0];}
     row.forEach((cell,index)=>{const node=element(index===0?'th':'td','',typeof cell==='number'?number(cell):String(cell));
       if(index===0)node.scope='row';tr.append(node);});
     tbody.append(tr);
@@ -3087,6 +3201,7 @@ function drawDetailChart(box,spec) {
           return {value,label:{position:value<0?'bottom':'top',color:value===0?'#58695b':adverse?'#97541c':'#315e41'},
             itemStyle:{color:value===0?'#718078':adverse?'#bc6a20':'#356d51'}};
         }):line.values,smooth:false,symbolSize:6,
+        markLine:index===0&&spec.selectedPeriod?{silent:true,symbol:'none',label:{show:false},lineStyle:{type:'dashed',color:'#718777'},data:[{xAxis:spec.selectedPeriod}]}:undefined,
         barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
         lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
         endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
@@ -3260,16 +3375,18 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
+  if(id===24)panel.append(retentionControl());
   const filterContext=metricFilterContext(id);
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
     `${filterContext.applied.length?`本项应用：${filterContext.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、')}`:'本项仍为总体范围'}${filterContext.ignored.length?`；未应用：${filterContext.ignoredText}（不适用于本项）`:''}。`));
   if(value.kind==='na') {panel.append(element('p','na-note',`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}。`));return {node:panel,specs:[]};}
   panel.append(registerIssueButton(page,id,{compact:true}));
+  if(id===24){const table=dataTable(retentionTable(),'retention-calculation');table.dataset.evidenceKind='data';panel.append(table);}
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
   const specs=[];
   if(id===15)panel.append(bindingDeviceList(page));
@@ -3327,13 +3444,13 @@ function metricEvidence(id,page) {
     const qualityDetails=id===54?history.details?.map(detail=>detail?{...detail,
       basisLabel:'丢失事件 / 预期事件',numeratorUnit:'次',denominatorUnit:'次'}:null):null;
     const spec={title:`${history.title} · ${history.labels.length}期趋势`,unit:history.unit,labels:history.labels,details:qualityDetails??history.details,
-      series:[{name:history.title,values:history.values}],note:history.note};
+      series:[{name:history.title,values:history.values}],selectedPeriod:history.selectedPeriod,note:history.note};
     const rows=history.labels.map((label,index)=>[label,history.values[index]==null?'不适用':
         history.unit==='%'?`${history.values[index].toFixed(1)}%`:history.unit==='美元/人'?`$${history.values[index].toFixed(2)}`:
           history.unit==='美元'?`$${number(history.values[index])}`:`${number(history.values[index])}${history.unit}`]);
     if(qualityDetails)rows.forEach((row,index)=>row.push(qualityDetails[index]?number(qualityDetails[index].numerator):'—',
       qualityDetails[index]?number(qualityDetails[index].denominator):'—'));
-    appendEvidencePair(spec,{title:`${history.title} · 趋势数据`,columns:qualityDetails?['日期','丢失率','丢失事件（次）','预期事件（次）']:['周期','值'],rows,
+    appendEvidencePair(spec,id===24?retentionTable():{title:`${history.title} · 趋势数据`,columns:qualityDetails?['日期','丢失率','丢失事件（次）','预期事件（次）']:['周期','值'],rows,
       note:history.note},'change');
     if(id===54)panel.append(element('p','table-note','ID映射覆盖率仅有当前快照，暂无可比历史；当前分子、分母见下方完整值。'));
   }
@@ -3526,7 +3643,7 @@ function metricEvidence(id,page) {
       const comparison=filteredBreakdown(page);
       const comparisonNote=comparison?.metricId===id&&comparison.dimension===dimension?comparison.comparisonScope:'';
       const groupNote=[[11,13].includes(id)?'按当前批次与筛选交集汇总同一合成频数；成功率与耗时同源，不是独立分片估算，仍非真实经营日志。':
-    id===15?'按同一合成设备台账逐台计数；产品线由设备型号确定，各分组合计回到同范围总数。':[41,44].includes(id)?'按同一行为间隔聚合事实汇总互斥分组；产品线由型号确定，固件按组内归属，不使用独立分片。':id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。',comparisonNote].filter(Boolean).join(' ');
+    id===15?'按同一合成设备台账逐台计数；产品线由设备型号确定，各分组合计回到同范围总数。':id===24?'按同一完整自然月×国家×基期App平台的互斥合成分组重算；保留其他条件，仅切换本分组，不平均比例。':[41,44].includes(id)?'按同一行为间隔聚合事实汇总互斥分组；产品线由型号确定，固件按组内归属，不使用独立分片。':id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。',comparisonNote].filter(Boolean).join(' ');
       const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,groupDimension:dimension,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote,
         scopeNote:`${actionBaselineWindow(id)} · 比较当前分组水平，不表示跨期变化贡献。${groupNote}`};
       appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
@@ -3752,7 +3869,7 @@ function comparisonEvidenceSection(id,record) {
 function actionRecord(page,evidenceId) {
   const defaultId=evidenceId;
   evidenceId=activeIssueMetrics.get(issueScopeKey(page))??evidenceId;
-  const scope=activeFilterDescription()||'默认演示范围';
+  const scope=recordScope(page,evidenceId);
   const key=`record:${page}:${scope}:${evidenceId}`;
   const current=simulatedActionState[key]??{};
   const draft=actionDrafts.get(key),initial=draft??current;
@@ -3769,16 +3886,17 @@ function actionRecord(page,evidenceId) {
   const filterContext=metricFilterContext(evidenceId),scopeDetails=element('dl','action-scope');
   const calculationScope=filterContext.applied.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'总体 · 默认业务对象';
   const calculationDescription=element('dd','',calculationScope);
+  if(evidenceId===24)calculationDescription.append(element('p','table-note',`留存观察月：${retentionSelection().month}；完整月，分母为上一基期月的复合活跃主账号。`));
   if(filterContext.ignored.length)calculationDescription.append(element('span','action-scope-ignored',
     `未参与计算：${filterContext.ignoredText}（不适用于本指标）。`));
   scopeDetails.append(element('dt','','计算范围'),calculationDescription,element('dt','','界面条件'),element('dd','',scope));
   scopeDetails.id=`scope-${issueId}`;form.setAttribute('aria-describedby',scopeDetails.id);form.append(scopeDetails);
   const issueIds=[...new Set([defaultId,evidenceId,...sourceData.catalog.filter(item=>supportsPageMetric(page,item.id)&&
-    (simulatedActionState[`record:${page}:${scope}:${item.id}`]||actionDrafts.has(`record:${page}:${scope}:${item.id}`))).map(item=>item.id)])];
+    (simulatedActionState[recordKey(page,item.id)]||actionDrafts.has(recordKey(page,item.id)))).map(item=>item.id)])];
   const switchLabel=element('label','issue-switch','同一界面条件下的问题单');
   const switcher=element('select','');switcher.name='issueMetric';
   const issueOptionLabel=id=>{
-    const issueKey=`record:${page}:${scope}:${id}`;
+    const issueKey=recordKey(page,id);
     const state=actionDrafts.has(issueKey)?'未保存草稿':simulatedActionState[issueKey]?'已保存':'';
     return `${state?`${state} · `:''}#${id} ${catalogItem(id).name}`;
   };
@@ -3792,6 +3910,8 @@ function actionRecord(page,evidenceId) {
   switchLabel.append(switcher);form.append(switchLabel);
   if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note',
     `当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
+  if(evidenceId===24&&current.baseline&&!current.baseline.includes('→'))form.append(element('p','action-baseline-note',
+    '原登记未保存留存人数与基期月份；保留原文字基线，不补写或反推历史人数。'));
   if([41,44].includes(evidenceId)&&!baselineAt.includes('设备行为口径v1'))form.append(element('p','action-baseline-note device-definition-warning',
     '原登记未记录设备行为口径v1；旧观察窗口或来源不同，不能自动作同口径比较。即使百分比相同也不表示未变化。原编号、范围、基线和草稿保留，更新进度不改写原口径。'));
   const stages=element('ol','action-stages');stages.setAttribute('aria-label','问题单处理进度');
@@ -3913,7 +4033,7 @@ function actionRecord(page,evidenceId) {
     const updatedAt=new Date().toLocaleString('zh-CN',{hour12:false});
     const record={issueId,owner:owner.value.trim()||'待指派',status:status.value,note:note.value.trim(),
       due:due.value,target:target.value.trim(),linkedSample:linkedSample.value.trim(),reviewValue:reviewValue.value.trim(),reviewedAt:reviewedAt.value,
-      updatedAt,page,evidenceId,scope,filters:{...filterState},baseline,baselineAt,reviewMetric:evidenceId};
+      updatedAt,page,evidenceId,scope,filters:issueFilters(page,evidenceId),baseline,baselineAt,reviewMetric:evidenceId};
     const previous=simulatedActionState[key];
     if(previous&&Object.hasOwn(previous,'comparisonEvidence'))record.comparisonEvidence=previous.comparisonEvidence;
     else if(!previous&&comparisonEvidenceIds.has(evidenceId))record.comparisonEvidence=currentComparisonEvidence(evidenceId);
@@ -4007,7 +4127,7 @@ function filteredFinding(page,requestedId) {
   const recentChange=id=>{
     const history=metricHistory(id);
     if(!history)return null;
-    const index=filterState.week&&history.labels[0]?.startsWith('W')?
+    const index=history.selectedPeriod?history.labels.indexOf(history.selectedPeriod):filterState.week&&history.labels[0]?.startsWith('W')?
       history.labels.indexOf(`W${filterState.week}`):history.values.length-1;
     const now=history.values[index],before=history.values[index-1];
     return index>0&&Number.isFinite(now)&&Number.isFinite(before)?
@@ -4164,6 +4284,7 @@ function metricInspector(id,page) {
   summary.fields.forEach(([label,text])=>fact(label,text));
   fact('统计对象',metricEntityLabel(contract.entity));
   fact('时间窗口',contract.window);
+  if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)fact('基期 → 观察期',`${row.baseMonth} → ${row.observedMonth}`);}
   if(id===54&&value.kind==='group') {
     const quality=dataQualityState(value);fact('演示判定',quality.label);fact('判定依据',quality.reason);
   }
@@ -4178,7 +4299,7 @@ function metricInspector(id,page) {
   }
   const history=metricHistory(id);
   if(history) {
-    const index=filterState.week&&history.labels[0]?.startsWith('W')?
+    const index=history.selectedPeriod?history.labels.indexOf(history.selectedPeriod):filterState.week&&history.labels[0]?.startsWith('W')?
       history.labels.indexOf(`W${filterState.week}`):history.values.length-1;
     const current=history.values[index],previous=history.values[index-1];
     if(index>0&&Number.isFinite(current)&&Number.isFinite(previous)) {
@@ -4195,6 +4316,7 @@ function metricInspector(id,page) {
   if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
+    id===24?'按所选完整自然月、国家与基期App平台汇总同一合成分组；人数重算留存率，不平均分组率。不是逐账号事件日志或真实经营历史。':
     [11,13].includes(id)?'按当前批次与筛选交集汇总同一合成频数；成功率与耗时同源，不是独立分片估算，仍非真实经营日志。':
     id===15?'按同一合成设备台账逐台筛选和回算历史；不是独立分片估算，仍不代表真实运营数据。':
     id===42?'周×型号×固件合成触发计数重算；缺少维度明细时显示待补数据。':id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
@@ -4379,10 +4501,11 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     if(availability)panel.setAttribute('aria-describedby',availability.id);
     tabs.append(button);panels.set(key,panel);buttons.set(key,button);
   }
-  left.replaceChildren(heading,original[1],...(availability?[availability]:[]),tabs,...panels.values());
+  const localControl=original.find(node=>node.matches('.retention-month-control'));
+  left.replaceChildren(heading,original[1],...(localControl?[localControl]:[]),...(availability?[availability]:[]),tabs,...panels.values());
   let previousKind='data';
   for(const node of original.slice(2)) {
-    if(node===availability||node.matches('.issue-register'))continue;
+    if(node===availability||node===localControl||node.matches('.issue-register'))continue;
     const kind=node.dataset.evidenceKind??(node.matches('.na-note')?'change':node.matches('.detail-chart')?'groups':
       node.matches('.table-note')?previousKind:'data');
     previousKind=kind;
@@ -4801,7 +4924,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(explorer.node);
     }
     const grids=element('div','evidence-grid');
-    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):spec));});
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):spec));});
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));
