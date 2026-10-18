@@ -168,9 +168,15 @@ function updateSavedIssueSummary() {
 }
 function renderSavedIssues() {
   savedIssueTableObserver?.disconnect();
-  const all=savedIssueEntries(),query=document.querySelector('#saved-issues-query').value.trim().toLocaleLowerCase('zh-CN');
-  const rows=all.filter(({record,title})=>[title,record.issueId,record.scope,record.owner,pages[record.page]?.title,
-    issueStatusLabel(record.status),record.due].filter(Boolean).join(' ').toLocaleLowerCase('zh-CN').includes(query));
+  const all=savedIssueEntries(),normalize=text=>String(text).normalize('NFKC').toLocaleLowerCase('zh-CN');
+  const terms=normalize(document.querySelector('#saved-issues-query').value).trim().split(/\s+/).filter(Boolean);
+  const rows=all.filter(({record,title})=>{
+    const text=normalize([title,record.issueId,record.scope,record.owner,pages[record.page]?.title,
+      issueStatusLabel(record.status),record.due].filter(Boolean).join(' '));
+    const id=typeof record.evidenceId==='number'?record.evidenceId:
+      typeof record.evidenceId==='string'&&/^\d+$/.test(record.evidenceId)?Number(record.evidenceId):null;
+    return terms.every(term=>/^#\d+$/.test(term)?id!==null&&Number(term.slice(1))===id:text.includes(term));
+  });
   document.querySelector('#saved-issues-count').textContent=`${rows.length} / ${all.length} 条已保存问题 · 按处理进度与计划复查日排列`;
   const content=document.querySelector('#saved-issues-content');content.replaceChildren();
   if(!rows.length) {
@@ -5680,6 +5686,7 @@ function bindAppEvents() {
         return;
       }
       if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k') {event.preventDefault();openSearch();return;}
+      if(event.key==='Escape'&&savedIssues.open) {event.preventDefault();savedIssues.close();return;}
       if(event.key==='Escape'&&search.open) {event.preventDefault();search.close();return;}
       if(event.key==='Escape'&&definitionPopoverIsOpen()) {
         event.preventDefault();closeDefinitionPopover();

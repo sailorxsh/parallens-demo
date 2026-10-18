@@ -7,8 +7,8 @@
   <meta name="description" content="Parallens 用户与设备经营看板演示原型；页面数据为模拟数据。">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <title>用户与设备经营总览 · Parallens</title>
-  <link rel="stylesheet" href="./style.css?v=20261019-148">
-  <script defer src="./app.js?v=20261019-148"></script>
+  <link rel="stylesheet" href="./style.css?v=20261019-149">
+  <script defer src="./app.js?v=20261019-149"></script>
   <script id="chart-library" defer src="./vendor/echarts.min.js?v=20261011-81"></script>
 </head>
 <body>
@@ -62,7 +62,7 @@
     <div class="metric-search-head"><h2 id="saved-issues-title">已登记问题</h2><button id="close-saved-issues" type="button">关闭 <kbd>Esc</kbd></button></div>
     <p class="metric-search-hint" id="saved-issues-hint">A–G 全部范围 · 仅此浏览器的已保存问题。打开后恢复登记时的范围与原基线；未保存草稿仍留在当前页面会话。</p>
     <label class="metric-search-label" for="saved-issues-query">查找问题、范围、负责人或处理状态</label>
-    <input id="saved-issues-query" type="search" placeholder="试试：美国、核查中、试用转正…" autocomplete="off">
+    <input id="saved-issues-query" type="search" placeholder="试试：#18；也可用空格组合：美国 核查中" autocomplete="off">
     <p class="metric-search-count" id="saved-issues-count" role="status"></p>
     <div id="saved-issues-content"></div>
   </dialog>
