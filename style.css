@@ -940,3 +940,7 @@ article.trial-sample-item {cursor:auto}
 .binding-device-back {display:block;background:none;border:0;padding:0;margin:0 0 .75rem;color:#315d42;font:inherit;font-size:var(--text-sm);text-decoration:underline;text-underline-offset:.2em;cursor:pointer}
 .binding-device-back:focus-visible {outline:2px solid var(--focus);outline-offset:2px}
 .binding-device-detail .inspector-facts {margin:.75rem 0}
+
+/* The one-row device return table can wrap instead of pinning clipped cells. */
+.device-return-evidence .diagnostic-table {min-width:0}
+.device-return-evidence .diagnostic-table thead th {white-space:normal}

@@ -60,6 +60,7 @@ async(parent)=>{
   // The new date column remains reachable at actual 200% text size.
   await open(44,{},'&panel=data');await p.setViewportSize({width:1366,height:1000});await p.evaluate(()=>document.documentElement.style.fontSize='32px');
   const historyTable=p.locator('.device-return-evidence');await historyTable.scrollIntoViewIfNeeded();await p.evaluate(()=>updateScrollableTables());
+  check(await historyTable.evaluate(n=>n.scrollWidth<=n.clientWidth+1),'The single-row return table still requires clipping when its headers can wrap');
   if(await historyTable.evaluate(n=>n.scrollWidth>n.clientWidth+1)){
    check(await historyTable.getAttribute('tabindex')==='0'&&await historyTable.locator('.table-scroll-hint').isVisible(),'Enlarged historical dates lack a keyboard scroll route');
    await historyTable.focus();for(let i=0;i<20;i++)await historyTable.press('ArrowRight');
