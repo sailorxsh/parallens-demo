@@ -28,7 +28,7 @@ async(page)=>{
   check(actual.values.length===actual.expected.length&&actual.values.every((value,i)=>Math.abs(value-actual.expected[i])<1e-9),'Chart contribution disagrees with raw trial records');
   check(Math.abs(actual.values.reduce((sum,value)=>sum+value,0)-actual.overall)<1e-9,'Disjoint groups do not reconcile to the overall rate change');
   check(actual.min<0&&actual.max===-actual.min,'Contribution axis excludes zero or uses unequal positive/negative scales');
-  check(actual.text.includes('个百分点')&&actual.text.includes('pp表示百分点'),'Chart omits contribution units');
+  check(actual.text.includes('个百分点')&&actual.text.includes('pp＝百分点'),'Chart omits contribution units');
   return actual;
  };
  try{

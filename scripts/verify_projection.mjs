@@ -280,6 +280,22 @@ for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'}]) {
 }
 project({});
 const comparisons=evaluate('homeComparisons()');
+assert.equal(evaluate('homeStartingPoint(homeComparisons()).id'),18,
+  'Verifiable segmented decline must take precedence over the larger activation delta');
+assert.equal(evaluate('homeStartingPoint(homeComparisons()).kind'),'supported');
+assert.equal(evaluate('homeStartingPoint(homeComparisons().map(item=>({...item,before:{...item.before,denominator:item.before.denominator*2}}))).kind'),'unsegmented',
+  'Matching deltas alone cannot prove that group contributions use the same denominators');
+for(const filters of [{productLine:'Hunting'},{appPlatform:'iOS'},{week:'12'}]) {
+  project(filters);
+  assert.notEqual(evaluate('homeStartingPoint(homeComparisons()).kind'),'supported',
+    'A single residual group or a selected week cannot claim matched segmented evidence');
+}
+project({});
+assert.equal(evaluate('homeStartingPoint(homeComparisons().map(item=>({...item,delta:0}))).kind'),'no-decline');
+assert.equal(evaluate('homeStartingPoint(homeComparisons().map(item=>({...item,delta:1}))).kind'),'no-decline');
+assert.equal(evaluate('homeStartingPoint([]).kind'),'unavailable');
+assert.equal(evaluate('homeStartingPoint([{id:13,delta:-.1},{id:18,delta:-20}]).id'),13,
+  'Unsupported declines follow mainline order, never cross-metric magnitude');
 const income=evaluate('subscriptionIncomeChange()');
 assert.equal(income.before.numerator,49980);
 assert.equal(income.after.numerator,52000);

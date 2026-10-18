@@ -33,7 +33,8 @@ const chartMotionPreference=window.matchMedia?.('(prefers-reduced-motion: reduce
 const chartAnimationDuration=duration=>chartMotionPreference?.matches?0:duration;
 let definitionReturnFocus;
 let chart;
-let homeTrendFocus=13;
+let homeTrendFocus=null;
+let homeSelectionMode='auto';
 let statusChart;
 const sparklines=[];
 const detailCharts=[];
@@ -335,13 +336,21 @@ function trialGroupContributions(periodRows) {
   });
   return {overall,groups,changes,effects};
 }
-function homeTrialClue(comparison) {
-  if(comparison.id!==18||filterState.week||Math.abs(comparison.delta)<.05)return '';
+function homeTrialEvidence(comparison) {
+  if(comparison.id!==18||filterState.week||Math.abs(comparison.delta)<.05)return null;
   const parts=trialGroupContributions(['previous','current'].map(period=>trialRows(filterState,period).rows));
-  if(!parts||Math.abs((parts.overall[1].value-parts.overall[0].value)*100-comparison.delta)>.00001)return '';
+  if(!parts||['before','after'].some((key,index)=>
+    parts.overall[index].numerator!==comparison[key]?.numerator||parts.overall[index].denominator!==comparison[key]?.denominator)||
+    Math.abs((parts.overall[1].value-parts.overall[0].value)*100-comparison.delta)>.00001)return null;
   const leader=parts.changes.map((value,index)=>({value,index}))
     .filter(item=>item.value*comparison.delta>0).sort((a,b)=>Math.abs(b.value)-Math.abs(a.value))[0];
-  if(!leader||Math.abs(leader.value)<.005)return '';
+  if(!leader||Math.abs(leader.value)<.005)return null;
+  return {parts,leader};
+}
+function homeTrialClue(comparison) {
+  const evidence=homeTrialEvidence(comparison);
+  if(!evidence)return '';
+  const {parts,leader}=evidence;
   const signed=value=>`${value<0?'−':'+'}${Math.abs(value).toFixed(2)} 个百分点`;
   const remainder=parts.changes.reduce((sum,value,index)=>sum+(index===leader.index?0:value),0);
   return `${parts.groups[leader.index].name}对本次变化贡献 ${signed(leader.value)}${Math.abs(remainder)>=.005?`，其余合计 ${signed(remainder)}`:''}；这是数学分解，不证明因果。`;
@@ -551,6 +560,7 @@ function readingControls(selector='details') {
 function rememberReadingView() {
   if(!currentReadingEntry||lastRenderedHash===undefined||!main.querySelector('h1'))return;
   readingViews.set(currentReadingEntry,{hash:lastRenderedHash,left:scrollX,top:scrollY,
+    homeSelection:{focus:homeTrendFocus,mode:homeSelectionMode},
     disclosures:readingControls().map(([node,key])=>[key,node.open]),
     legends:readingControls('.chart-legend').map(([node,key])=>[key,[...node.querySelectorAll('button')].map(button=>[button.textContent,button.getAttribute('aria-pressed')])])});
 }
@@ -1610,6 +1620,19 @@ function homeComparisons() {
   if(trial)comparisons.push({...trial,page:'D',name:'试用转正'});
   return comparisons;
 }
+function homeStartingPoint(comparisons) {
+  // These two process rates both deteriorate when falling. Compare evidence readiness,
+  // never magnitudes across different cohorts or denominators.
+  const adverse=comparisons.filter(item=>item.delta<=-.05);
+  const supported=adverse.find(item=>{
+    const evidence=homeTrialEvidence(item);
+    return evidence&&evidence.parts.groups.length>1;
+  });
+  if(supported)return {id:supported.id,kind:'supported',reason:'先看试用转正：同范围、同周期的分组贡献可验算。此为排查起点，不代表业务损失最大。'};
+  if(adverse.length)return {id:adverse[0].id,kind:'unsegmented',reason:'有可比下降，暂无充分的分组贡献证据；按主线顺序展开，不判断业务影响大小。'};
+  return {id:comparisons[0]?.id??null,kind:comparisons.length?'no-decline':'unavailable',reason:comparisons.length?
+    '当前可比线索未见明显下降；展示事实，不生成异常优先级。':'当前范围缺少可比样本，不判定异常或优先级。'};
+}
 function homeComparisonChange(comparison) {
   return Math.abs(comparison.delta)<0.05?'基本持平':`${comparison.delta>0?'+':'−'}${Math.abs(comparison.delta).toFixed(1)} 个百分点`;
 }
@@ -1678,7 +1701,9 @@ function renderHome() {
   const trend=element('section','trend-panel');
   const panelHeader=element('div','panel-header');
   const comparisons=homeComparisons();
-  if(homeTrendFocus&&!comparisons.some(item=>item.id===homeTrendFocus))homeTrendFocus=comparisons[0]?.id??null;
+  const startingPoint=homeStartingPoint(comparisons);
+  if(homeSelectionMode==='manual'&&homeTrendFocus!==null&&!comparisons.some(item=>item.id===homeTrendFocus))homeSelectionMode='auto';
+  if(homeSelectionMode==='auto')homeTrendFocus=startingPoint.id;
   const heading=element('h3','');
   const period=element('p','panel-sub',`${periodLabel('W1').split(' · ')[1].split('–')[0]}–${periodLabel('W12').split('–')[1]} · 12个观察周${filterState.week?` · 已选W${filterState.week}，保留完整趋势`:''}`);
   const labels=element('div','trend-heading');labels.append(element('p','section-kicker','02 / CHANGE · 变化线索'),heading,period);
@@ -1691,6 +1716,11 @@ function renderHome() {
   trend.append(createTrendTable());
   const insight=element('aside','insight-panel');
   insight.append(element('h3','signal-heading','变化解读与行动建议'));
+  const selection=element('div','home-selection');
+  const selectionReason=element('p','home-selection-reason');
+  const resetSelection=element('button','home-selection-reset','恢复建议起点');resetSelection.type='button';
+  resetSelection.setAttribute('aria-controls','trendChart home-comparison-context');
+  selection.append(selectionReason,resetSelection);insight.append(selection);
   const signals=element('div','home-signals');
   comparisons.forEach(item=>{
     const button=element('button',`home-signal signal-${item.id}`);button.type='button';button.dataset.metricId=item.id;
@@ -1710,8 +1740,16 @@ function renderHome() {
   insight.append(context);
   insight.append(element('p','home-signal-guardrail','两条线各自计算，不构成连续漏斗；变化提供排查线索。'));
   if(!comparisons.length)signals.append(element('p','','当前范围缺少可用于前后期趋势比较的样本；可查看下方数据表中的可用趋势。'));
-  function selectSignal(id,redraw=true) {
+  function selectSignal(id,redraw=true,manual=true) {
+    if(manual) {
+      homeSelectionMode='manual';
+      // A new reading choice supersedes any queued back/forward focus restoration.
+      readingRevision++;
+    }
     homeTrendFocus=id;
+    selectionReason.textContent=homeSelectionMode==='auto'?`选择依据 · ${startingPoint.reason}`:
+      id===null?'已切换为并列对照；筛选更新后保留此视图。':'当前为手动选择；筛选更新后，线索可用时继续保留。';
+    resetSelection.hidden=homeSelectionMode==='auto';
     const selected=comparisons.find(item=>item.id===id);
     heading.textContent=selected?`${selected.name} · 周度变化`:'激活与转正 · 周度对照';
     overview.setAttribute('aria-pressed',String(!selected));
@@ -1728,10 +1766,13 @@ function renderHome() {
       link.setAttribute('aria-label',`进入${pages[selected.page].title}，核对${selected.name}分组证据`);
       const action=element('div','home-signal-actions');action.append(link,basis);
       const movement=Math.abs(selected.delta)<.05?'基本持平':`较前期${selected.delta>0?'上升':'下降'} ${Math.abs(selected.delta).toFixed(1)} 个百分点`;
-      const advice=homeTrialClue(selected)||(selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。');
+      const adverse=selected.delta<=-.05;
+      const advice=homeTrialClue(selected)||(adverse?
+        selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。':
+        '可查看分组与批次明细；当前变化不作为异常处置依据。');
       context.append(element('strong','home-observation-label','观察'),
         element('p','signal-explanation',`近期合并率${movement}。${advice}`),
-        element('strong','home-observation-label','建议优先行动'),action);
+        element('strong','home-observation-label',adverse?'建议优先行动':'建议查看'),action);
       const selectedButton=signals.querySelector(`[data-metric-id="${selected.id}"]`);
       const keepFocus=document.activeElement===selectedButton;
       if(signals.firstElementChild!==selectedButton)signals.prepend(selectedButton);
@@ -1742,7 +1783,12 @@ function renderHome() {
     if(redraw)drawTrend(homeTrendFocus,selected);
   }
   overview.addEventListener('click',()=>selectSignal(null));
-  selectSignal(homeTrendFocus,false);
+  resetSelection.addEventListener('click',()=>{
+    readingRevision++;
+    homeSelectionMode='auto';selectSignal(startingPoint.id,true,false);
+    (startingPoint.id===null?overview:signals.querySelector(`[data-metric-id="${startingPoint.id}"]`)).focus({preventScroll:true});
+  });
+  selectSignal(homeTrendFocus,false,false);
   story.append(trend,insight); dash.append(story,journeyTitle,rail);
 
   const lower=element('div','lower-grid');
@@ -4005,6 +4051,9 @@ function handleRouteChange(event) {
   const view=traversal?readingViews.get(history.state?.parallensReadingEntry):null;
   rememberReadingView();selectReadingEntry();
   const restore=view?.hash===location.hash?view:null;
+  if(restore?.homeSelection) {
+    homeTrendFocus=restore.homeSelection.focus;homeSelectionMode=restore.homeSelection.mode;
+  }
   if(changed)renderRoute({preserveScroll:Boolean(restore)});
   if(restore)restoreReadingView(restore);
 }
