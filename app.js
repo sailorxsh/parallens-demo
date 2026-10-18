@@ -955,7 +955,10 @@ function dataQualityState(value) {
   if(!validRate(eventLoss)||!validRate(idMapping)||!validThreshold(thresholds?.eventLossMax)||!validThreshold(thresholds?.idMappingMin))
     return {label:'待核验',reason:'质量指标缺少可核验的分子、分母或演示阈值，不能判定正常。'};
   const warning=eventLoss.value>thresholds.eventLossMax||idMapping.value<thresholds.idMappingMin;
-  return {label:warning?'演示预警':'演示正常',
+  const checks=[{key:'eventLoss',name:'事件丢失率',...eventLoss,limit:thresholds.eventLossMax,upper:true,unit:'事件'},
+    {key:'idMapping',name:'ID映射覆盖率',...idMapping,limit:thresholds.idMappingMin,upper:false,unit:'记录'}]
+    .map(check=>({...check,warning:check.upper?check.value>check.limit:check.value<check.limit}));
+  return {label:warning?'演示预警':'演示正常',checks,
     reason:`演示阈值：事件丢失率≤${percent(thresholds.eventLossMax)}，ID映射覆盖率≥${percent(thresholds.idMappingMin)}；尚未确认生产达标标准。`};
 }
 function projectDataset() {
@@ -1643,6 +1646,7 @@ function intro() {
   tags.append(element('span','meta-tag',`快照 ${s.asOf}`),element('span','meta-tag accent',s.season));
   const qualityState=dataQualityState(metric(54));
   const quality=element('a','meta-tag quality-status',`数据质量：${qualityState.label} ↗`);
+  quality.dataset.state=qualityState.label==='演示预警'?'warning':qualityState.label==='演示正常'?'normal':'unavailable';
   quality.href=routeHref('G',54);quality.setAttribute('aria-describedby','quality-status-description');
   const qualityDescription=element('span','visually-hidden',qualityState.reason);qualityDescription.id='quality-status-description';
   tags.append(quality,qualityDescription);
@@ -2699,7 +2703,7 @@ function metricEvidence(id,page) {
     id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
-  const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本页可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
+  const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
   const filterContext=metricFilterContext(id);
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
@@ -3551,6 +3555,21 @@ function metricInspector(id,page) {
   if(value.kind!=='na')panel.append(registerIssueButton(page,id));
   return panel;
 }
+function qualityCheckSummary() {
+  const quality=dataQualityState(metric(54));
+  if(!quality.checks)return null;
+  const list=element('dl','quality-checks');list.setAttribute('aria-label','当前数据质量检查');
+  quality.checks.forEach(check=>{
+    const row=element('div','quality-check');row.dataset.check=check.key;row.dataset.state=check.warning?'warning':'normal';
+    const result=element('dd','quality-check-result');
+    result.append(element('strong','',percent(check.value)),element('span','quality-check-status',
+      check.warning?check.upper?'高于演示上限':'低于演示下限':'演示范围内'));
+    row.append(element('dt','',check.name),result,element('dd','quality-check-basis',
+      `${number(check.numerator)} / ${number(check.denominator)} ${check.unit} · 演示${check.upper?'上限 ≤':'下限 ≥'}${percent(check.limit)}`));
+    list.append(row);
+  });
+  return list;
+}
 function diagnosticFinding(page,id,observation,{current=true}={}) {
   const finding=element(current?'aside':'div',current?'detail-finding':'page-observation-body');
   finding.dataset.metricId=String(id);
@@ -3561,7 +3580,10 @@ function diagnosticFinding(page,id,observation,{current=true}={}) {
     finding.append(element('h3',current?'finding-title':'page-finding-title',end>=0?text.slice(0,end):text));
     if(observation.comparison)finding.append(findingComparison(observation.comparison));
     if(observation.incomeChange)finding.append(incomeDriverSummary(observation.incomeChange));
-    if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
+    const qualitySummary=id===54?qualityCheckSummary():null;
+    if(qualitySummary)finding.append(qualitySummary,element('p','finding-context',
+      '按当前演示阈值分别判断，尚未确认生产达标标准。趋势数据仅覆盖事件丢失率；ID映射覆盖率只有当前快照。'));
+    else if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
     const basis=element('details','finding-basis');
     basis.append(element('summary','','合成数据 · 查看观察依据'));
     if(observation.comparison)basis.append(findingCalculation(observation.comparison));

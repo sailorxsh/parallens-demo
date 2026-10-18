@@ -38,6 +38,7 @@ h1 {font-size:clamp(2.1rem,3.1vw,3.25rem);font-weight:600;letter-spacing:-.045em
 .heading-meta {display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .meta-tag {border:1px solid #587064;color:#dfe8dc;padding:.45rem .7rem;font-size:var(--text-xs);letter-spacing:.03em;background:#1c352b}
 .meta-tag.accent {border-color:#926d3b;color:#ffd6a5}
+.quality-status[data-state=warning] {background:#ffecd9;color:#743617;border-color:#e6ad78;font-weight:600}
 .dashboard {background:var(--cream);margin:0 calc(-1 * clamp(1rem,3.2vw,3.8rem));padding:2.15rem clamp(1rem,3.2vw,3.8rem) 3.5rem;border-radius:1.3rem 1.3rem 0 0}
 .section-top {display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin:0 0 .8rem}
 .section-kicker {color:#58695b;font-size:var(--text-xs);letter-spacing:.16em;font-weight:700;text-transform:uppercase;margin:0}
@@ -706,6 +707,17 @@ article.trial-sample-item {cursor:auto}
 .income-driver-values dt {font-size:.75rem;color:#52694f;margin-bottom:.15rem}
 .income-driver-values dd {display:flex;flex-wrap:wrap;gap:.2rem .6rem;margin:0;font-size:.82rem;color:#203c2b;line-height:1.5}
 .income-driver-delta {font-size:.75rem;color:#405a48}
+.quality-checks {margin:.6rem 0;border-block:1px solid #d5dfce;font-variant-numeric:tabular-nums}
+.quality-check {padding:.6rem 0;min-width:0}
+.quality-check+.quality-check {border-top:1px solid #d5dfce}
+.quality-check dt {font-size:.78rem;color:#405a48;margin-bottom:.2rem}
+.quality-check dd {margin:0;overflow-wrap:anywhere}
+.quality-check-result {display:flex;align-items:baseline;flex-wrap:wrap;gap:.25rem .6rem}
+.quality-check-result strong {font-size:1.15rem;color:#203c2b}
+.quality-check-status {font-size:.72rem;color:#315e41}
+.quality-check[data-state=warning] .quality-check-status {color:#97541c;font-weight:600}
+.quality-check[data-state=warning] .quality-check-result strong {color:#97541c}
+.quality-check-basis {font-size:.72rem;color:#52694f;line-height:1.65;padding-top:.15rem}
 .income-context .detail-finding .finding-meta {font-size:var(--text-xs);line-height:1.6}
 .income-context .detail-finding .issue-register {display:block;margin-top:1rem}
 .income-context .finding-summary-status {font-size:var(--text-xs);color:#536a53;margin:.5rem 0 .75rem}

@@ -46,8 +46,8 @@ async(parent)=>{
   }
   // Actual quality-header entry now registers quality, while #53 remains available explicitly.
   await open('');await p.locator('.quality-status').click();await ready();
-  check(p.url().includes('/G?metric=54')&&(await current().innerText()).includes('事件丢失率 2.2%')&&
-   (await current().innerText()).includes('ID映射覆盖率 96.5%'),'Quality entry loses its own measured facts');
+  check(p.url().includes('/G?metric=54')&&(await current().locator('[data-check=eventLoss]').innerText()).includes('2.2%')&&
+   (await current().locator('[data-check=idMapping]').innerText()).includes('96.5%'),'Quality entry loses its own measured facts');
   await current().locator('.issue-register').click();await ready();
   check(await input('issueMetric').inputValue()==='54'&&p.url().includes('issue=54'),'Quality entry registers abnormal-event metric');
   await input('owner').fill('质量核查演示');await input('note').fill('质量指标草稿，切换事件证据不更改');
