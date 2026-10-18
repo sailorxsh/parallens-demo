@@ -40,9 +40,10 @@ async(parent)=>{
               check(!metadata.includes('模拟分片')&&!metadata.includes('事件汇总'),`${id}: unavailable result claims a computed source`);
               check(!await node.locator('.metric-value-unit').count()&&/待补数据|不适用/.test(value),`${id}: unavailable value fabricated`);
             }else{
+              if(id===41)check(note.includes('近30天'),'Device activity window is missing from its homepage card');
               if(defaults)check(note===defaults[id].note,`${id}: filtering hides the original business definition`);
               check(!/NaN|undefined/.test(value),`${id}: invalid number`);
-              if(applied.length)check(metadata.includes(id===42?'合成触发事件汇总':'模拟分片估算'),`${id}: filtered source is undisclosed`);
+              if(applied.length){const expected=({15:'合成设备台账逐台计数',41:'合成设备行为间隔汇总',42:'合成触发事件汇总'})[id]??'模拟分片估算';check(metadata.includes(expected),`${id}: filtered source is undisclosed`);if([15,41,42].includes(id))check(!metadata.includes('模拟分片估算'),`${id}: fact aggregation is mislabeled as independent estimates`);}
             }
             if(ignored.length){
               check(metadata.includes('未应用：'),`${id}: ignored filters are undisclosed`);

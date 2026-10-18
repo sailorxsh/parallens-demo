@@ -1,0 +1,56 @@
+{
+  "sourceCommit": "6b0fd13a2dd236ba131959f7ed91a44e73a6174f",
+  "classification": "synthetic browser regression fixture, no real user data",
+  "records": {
+    "record:A:设备型号：Hunt Pro:13": {
+      "issueId": "DEMO-A-13-TBQBAQ",
+      "owner": "模拟历史核查",
+      "status": "pending",
+      "note": "历史模拟记录，不代表真实狩猎线激活定义",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 18:49:14",
+      "page": "A",
+      "evidenceId": 13,
+      "scope": "设备型号：Hunt Pro",
+      "filters": {
+        "deviceModel": "Hunt Pro"
+      },
+      "baseline": "46.2%",
+      "baselineAt": "完整周 W12 · 2026-09-13",
+      "reviewMetric": 13,
+      "comparisonEvidence": {
+        "version": 1,
+        "metricId": 13,
+        "filters": [
+          [
+            "deviceModel",
+            "Hunt Pro"
+          ]
+        ],
+        "asOf": "2026-09-24",
+        "rule": "demo-2026-10-18-v5",
+        "kind": "rate",
+        "source": "模拟分片估算",
+        "unit": "人",
+        "periods": [
+          {
+            "label": "前8周合并率 · W1–W8 · 6/22–8/16",
+            "numerator": 1754,
+            "denominator": 3252
+          },
+          {
+            "label": "近4周合并率 · W9–W12 · 8/17–9/13",
+            "numerator": 802,
+            "denominator": 1735
+          }
+        ],
+        "groups": [],
+        "groupNote": "当前比较未提供可核验的分组贡献，未保存分组判断。"
+      }
+    }
+  }
+}

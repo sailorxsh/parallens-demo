@@ -252,6 +252,14 @@ for(const dimension of [{country:'US'},{season:'Migration'},{deviceModel:'K6',fi
   assert.equal(evaluate('metricHistory(42)'),null);
   assert.equal(evaluate('weeklyRateComparison(42)'),null);
 }
+// Model attribution cannot turn the bird-only activation cohort into a hunting cohort.
+for(const filters of [{deviceModel:'Hunt Pro'},{deviceModel:'Hunt Pro',country:'US',appPlatform:'Android',week:'12'},
+ {deviceModel:'Hunt Pro',week:'1'},{productLine:'Hunting',deviceModel:'Hunt Pro'}]) {
+ assert.equal(project(filters).m13.kind,'na');assert.equal(evaluate('metricHistory(13)'),null);
+ assert.equal(evaluate('trendValues(13)'),null);assert.equal(evaluate('weeklyRateComparison(13)'),null);
+ assert.ok(evaluate('weeklyRateDetails(13).every(point=>point===null)'));
+}
+assert.equal(project({deviceModel:'K6'}).m13.kind,'rate');project({});assert.equal(evaluate('metric(13).value'),.48);
 assert.equal(project({deviceModel:'Hunt Pro'}).m42.kind,'na');
 assert.equal(project({deviceStatus:'Inactive'}).m42.kind,'na');
 evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.weekly.at(-1).deviceEventsBird.records=[{model:"K6",firmware:"2.8",triggers:10,empty:8}]');

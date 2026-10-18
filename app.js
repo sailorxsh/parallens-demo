@@ -1015,6 +1015,7 @@ function projectMetric(id,state=filterState) {
   if(product&&scoped.plan&&((product==='Bird'&&scoped.plan==='Starter')||(product==='Hunting'&&scoped.plan==='Free')))
     return na('该套餐不属于所选产品线');
   if(product==='Hunting'&&[13,22,42].includes(id))return na('本指标只定义观鸟线，狩猎线口径待定义');
+  if(id===13&&model==='Hunt Pro')return na('7日价值激活率只定义观鸟线；Hunt Pro属于狩猎线，当前口径不适用');
   if(scoped.plan==='Free'&&paidPlanMetricIds.has(id))
     return na('Free不是付费试用、订阅或续费套餐，不构成该指标的分母');
   if(id===22&&scoped.plan&&scoped.plan!=='Free')return na('本项只统计观鸟Free权益');
@@ -1296,7 +1297,7 @@ function trendValues(id) {
     });
     return values.some(value=>value!==null)?values:null;
   }
-  if(filterState.productLine==='Hunting'&&[13,42].includes(id))return null;
+  if((filterState.productLine==='Hunting'||filterState.deviceModel==='Hunt Pro')&&[13,42].includes(id))return null;
   const invalid=effectiveFor(id).some(([key])=>key!=='week'&&!policyFor(id).demonstrableDimensions.includes(key));
   if(invalid) return null;
   const applicable=effectiveFor(id).filter(([key])=>key!=='week'&&
@@ -1358,6 +1359,7 @@ function metricHistory(id) {
     note:`${id===42?'周×型号×固件合成触发计数逐周汇总；保留原有总体及K6固件2.8分组，其他型号分配为构造样本。':history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
 }
 function weeklyRateDetails(id) {
+  if(id===13&&(filterState.productLine==='Hunting'||filterState.deviceModel==='Hunt Pro'))return sourceData.weekly.map(()=>null);
   if(id===42)return sourceData.weekly.map(week=>{const value=deviceEventMetric(filterState,week.week);return value.kind==='rate'?{...value,numeratorUnit:'次',denominatorUnit:'次'}:null;});
   if(id===18)return sourceData.weekly.map(week=>{
     const result=trialRows(Object.fromEntries(effectiveFor(id,{...filterState,week:String(week.week)})));
@@ -1801,7 +1803,7 @@ function miniCard({id,label,page,value,unit='',note='',critical=false,alert=fals
     scope+=`；未应用：${filterContext.ignoredText}`;
   }
   const source=measure.kind!=='na'&&filterContext.applied.length?
-    (id===15?'合成设备台账逐台计数':id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
+    (id===15?'合成设备台账逐台计数':id===41?'合成设备行为间隔汇总':id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
   const context=[scope,source].filter(Boolean).join('；');
   if(context)link.append(element('p','metric-filter-scope',context));
   body.append(link);
@@ -2024,7 +2026,7 @@ function renderHome() {
   const foundation=element('section',''); foundation.append(sectionTitle('04  /  FOUNDATION','设备与用户结构'));
   const foundationCards=element('div','foundation-grid');
   [
-    {id:41,label:'设备活跃率',page:'C',value:formatMetric(41),note:'有效设备行为；心跳不计活跃'},
+    {id:41,label:'设备活跃率',page:'C',value:formatMetric(41),note:'近30天有效设备行为；心跳不计活跃'},
     {id:42,label:'空触发率',page:'C',value:formatMetric(42),note:'观鸟线 · K6 固件2.8集中偏高'},
     {id:48,label:'多设备用户占比',page:'F',value:formatMetric(48),note:'已绑定主账号'},
     {id:49,label:'设备共享率',page:'F',value:formatMetric(49),note:'当前绑定设备'},
@@ -3067,7 +3069,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
