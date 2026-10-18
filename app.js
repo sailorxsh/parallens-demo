@@ -2164,6 +2164,7 @@ const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU
     49:'设备共享率',52:'流失高危主账号',53:'当日异常事件数',54:'事件丢失率'};
 const metricCountUnits={2:'人',4:'人',9:'人',15:'台',16:'台',34:'人',52:'人',53:'条'};
 const metricSearchSubitems={
+  11:['首次绑定失败原因','蓝牙配对','WiFi连接','App流程','绑定过程耗时'],
   7:['当前绑定主账号'],8:['当前绑定设备'],
   22:['Free权益用满主账号'],29:['季节阈值未使用主账号'],
   25:['WAU 周活主账号','MAU 月活主账号'],
@@ -2435,6 +2436,7 @@ function bindChartTableSelection(instance,table,describe,{indexFor=params=>param
     if(!Number.isInteger(index))return;
     const row=table.querySelectorAll('tbody tr')[index];
     if(!row)return;
+    instance.dispatchAction({type:'hideTip'});
     clear();if(details)details.open=true;
     row.classList.add('chart-selected');
     const column=columnFor?.(params);if(Number.isInteger(column))row.children[column]?.classList.add('chart-selected-cell');
@@ -2813,6 +2815,30 @@ function compactMetricValueTable(spec) {
   return {...spec,columns,rows:spec.rows.map(row=>keep.map(index=>row[index])),
     note:`${spec.note}${partialRatios?' 仅有结果的比例项未提供同口径分子、分母明细。':''}`};
 }
+function bindingFailureEvidence() {
+  const filters=effectiveFor(11),week=filterState.week?Number(filterState.week):sourceData.weekly.at(-1)?.week;
+  if(week!==12||filters.some(([key])=>key!=='week'))
+    return {reason:'失败原因待补：目前仅有W12总体原因明细，当前周或筛选范围没有同源明细；不沿用总体分布。'};
+  const source=sourceData.diagnostics.A.tables.find(table=>table.title==='首次绑定失败原因 · W12');
+  const weekly=sourceData.weekly.find(row=>row.week===12),attempts=weekly?.bindingAttempts;
+  const rows=source?.rows?.filter(row=>row[0]!=='合计'),totals=source?.rows?.filter(row=>row[0]==='合计');
+  const whole=value=>Number.isSafeInteger(value)&&value>=0;
+  const current=metric(11),failed=attempts?.total-attempts?.successful;
+  if(!attempts||!whole(attempts.total)||!whole(attempts.successful)||attempts.successful>attempts.total||
+    current.kind!=='rate'||current.denominator!==attempts.total||current.numerator!==attempts.successful||
+    !rows?.length||totals?.length!==1||!rows.every(row=>typeof row[0]==='string'&&row[0].trim()&&whole(row[1]))||
+    new Set(rows.map(row=>row[0])).size!==rows.length||rows.reduce((sum,row)=>sum+row[1],0)!==failed||totals[0][1]!==failed)
+    return {reason:'失败原因待核对：原因次数、失败合计与同周绑定尝试不一致，暂不显示可靠分布。'};
+  const ordered=[...rows].sort((a,b)=>b[1]-a[1]);
+  const scope=`${periodLabel('W12')}；总尝试 ${number(attempts.total)} 次，成功 ${number(attempts.successful)} 次，失败 ${number(failed)} 次。`;
+  const note='同周合成演示数据；每次失败尝试仅归入一个原因，比例分母为失败尝试次数，不是全部绑定尝试或设备人数。原因分类不等于已验证的故障根因。';
+  const share=count=>failed>=30?percent(count/failed):failed===0?'无失败尝试':'样本不足（少于30次）';
+  return {spec:{title:'首次绑定失败原因 · W12',unit:'次',labels:ordered.map(row=>row[0]),scopeNote:scope,note,
+    series:[{name:'失败尝试',values:ordered.map(row=>row[1])}]},
+    table:{title:'首次绑定失败原因 · 次数与占比',columns:['失败原因','失败次数（次）','全部失败尝试（次）','占失败尝试','建议核对'],
+      rows:[...ordered.map(row=>[row[0],row[1],failed,share(row[1]),row[3]??'—']),['合计',failed,failed,share(failed),'总尝试−成功尝试']],
+      note:`${scope}${note}`}};
+}
 function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
@@ -2845,6 +2871,13 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===11) {
+    const failure=bindingFailureEvidence();
+    if(failure.spec)appendEvidencePair(failure.spec,failure.table);
+    else {const missing=element('p','na-note binding-failure-unavailable',failure.reason);missing.dataset.evidenceKind='groups';panel.append(missing);}
+    const timing=element('p','table-note binding-timing-unavailable','绑定过程耗时中位数／P90：待补数据。绑定→首图时长属于#14，不能替代从开始绑定到绑定成功的耗时。');
+    timing.dataset.evidenceKind='change';panel.append(timing);
+  }
   const history=metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&(id!==primaryId||id===54||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {

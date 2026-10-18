@@ -22,6 +22,21 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+// Failure categories are exact W12 attempts, never estimates borrowed for another scope.
+const binding=evaluate('bindingFailureEvidence()');
+assert.deepEqual(JSON.parse(JSON.stringify(binding.spec.series[0].values)),[85,70,45]);
+assert.equal(binding.table.rows.at(-1)[1],200);
+assert.equal(binding.table.rows[0][3],'42.5%');
+for(const filters of [{week:'12'},{country:'US'},{productLine:'Bird'},{country:'US',week:'12'}]) {
+  project(filters);assert.ok(evaluate('bindingFailureEvidence().spec'),'Applicable W12 overall failure evidence was hidden');
+}
+for(const filters of [{week:'1'},{week:'11'},{appPlatform:'iOS'},{deviceModel:'K6'},{deviceStatus:'Effective'},{week:'12',appPlatform:'Android'}]) {
+  project(filters);assert.ok(evaluate('bindingFailureEvidence().reason'),'Another scope borrowed overall failure causes');
+  assert.equal(evaluate('bindingFailureEvidence().spec'),undefined);
+}
+evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.diagnostics.A.tables.find(t=>t.title==="首次绑定失败原因 · W12").rows[0][1]++');
+project({});assert.ok(evaluate('bindingFailureEvidence().reason'),'Corrupt failure categories still draw a distribution');
+evaluate('sourceData=__fixtures');project({});
 // One user belongs to one activity cell; filtered union and all source margins agree.
 const activitySource=fixtures.metrics.m30.value;
 const activityMemberships={app:['appOnly','appContentOnly','appPushOnly','allThree'],
