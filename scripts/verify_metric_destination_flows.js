@@ -11,7 +11,7 @@ async (parent) => {
     await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   };
   const selected=page=>p.locator(`#${page}-tab-data`);
-  const tableCases=[['A',7],['A',12],['B',26],['B',28],['B',30],['B',31],['C',8],['C',43],['C',45],
+  const tableCases=[['A',7],['A',12],['B',26],['B',28],['B',31],['C',8],['C',43],['C',45],
     ['D',20],['D',22],['D',32],['D',33],['E',36],['E',37],['E',38],['E',40],['F',51]];
   try {
     for(const width of [1366,1600,1920]) {
@@ -42,6 +42,17 @@ async (parent) => {
         if(id===5)check(state.values.length===6&&[0,1].every(index=>Math.abs(state.values.reduce((sum,line)=>sum+line[index],0)-100)<1e-9),'Subscription state shares do not close to 100%');
         results.push({width,page,id,view:'groups',title});
       }
+      await open('B?metric=30');
+      check(await p.locator('#B-tab-groups').getAttribute('aria-selected')==='true','Activity composition hides its own source-backed chart');
+      const activity=p.locator('#B-panel-groups .evidence-pair[data-evidence-metric="30"] .detail-chart');
+      await activity.locator('svg').waitFor();
+      const composition=await activity.evaluate(node=>echarts.getInstanceByDom(node).getOption().series[0].data);
+      const source30=await p.evaluate(async()=>(await(await fetch('./data/metric-values.json')).json()).m30.value);
+      check(JSON.stringify(composition)===JSON.stringify(Object.values(source30.exclusiveCells))&&
+        composition.reduce((sum,n)=>sum+n,0)===source30.composite,'Activity composition changes source cells or union');
+      await open('B?metric=30&panel=data');
+      check(await selected('B').getAttribute('aria-selected')==='true','Activity composition overrides an explicit complete-data request');
+      results.push({width,page:'B',id:30,view:'groups',explicitData:true});
       for(const page of ['A','B','C','D','E','F','G']) {
         await open(page);
         check(await p.locator(`#${page}-tab-change`).getAttribute('aria-selected')==='true',`${page} hides its approved default trend`);
@@ -78,7 +89,7 @@ async (parent) => {
     check(await selected('C').getAttribute('aria-selected')==='true'&&
       (await p.locator('#metric-evidence-43 .evidence-meta').innerText()).includes('国家/市场 美国'),'Filtered retention destination loses its scope');
     check(!errors.length,errors.join('; '));
-    return {status:'PASS',checks:['eighteen table-only metrics at three widths','four source-related charts at three widths',
+    return {status:'PASS',checks:['seventeen table-only metrics at three widths','four source-related charts at three widths','activity composition source cells and explicit data at three widths',
       'A–G default trends','explicit panel and refresh','keyboard tabs and history','catalog and search destinations',
       'auxiliary evidence preserves issue and draft','filtered table-only destination'],results};
   } finally {await context.close();}

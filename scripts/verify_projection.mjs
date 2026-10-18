@@ -22,6 +22,37 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+// One user belongs to one activity cell; filtered union and all source margins agree.
+const activitySource=fixtures.metrics.m30.value;
+const activityMemberships={app:['appOnly','appContentOnly','appPushOnly','allThree'],
+  content:['contentOnly','appContentOnly','contentPushOnly','allThree'],
+  pushClicked:['pushOnly','appPushOnly','contentPushOnly','allThree']};
+for(const country of ['', 'US','UK','DE','Other'])for(const appPlatform of ['', 'iOS','Android'])for(const productLine of ['', 'Bird','Hunting']) {
+  const filters=Object.fromEntries(Object.entries({country,appPlatform,productLine}).filter(([,v])=>v));
+  const result=project(filters),part=result.m30;
+  assert.equal(part.kind,'group',`Activity projection unavailable: ${JSON.stringify(filters)}`);
+  const values=part.value,cells=values.exclusiveCells;
+  const scale=Object.entries(filters).reduce((s,[key,value])=>s*fixtures.slices[key][value].denominatorShare,1);
+  assert.equal(values.composite,Math.round(activitySource.composite*scale));
+  assert.equal(Object.values(cells).reduce((s,n)=>s+n,0),values.composite,'Exclusive cells inflate or lose the union');
+  for(const [field,keys] of Object.entries(activityMemberships)) {
+    assert.equal(keys.reduce((s,key)=>s+cells[key],0),values[field],`Activity source ${field} disagrees with its cells`);
+    assert.equal(values[field],Math.round(activitySource[field]*scale),'Independent source margin changed');
+  }
+  for(const [key,value] of Object.entries(cells)) {
+    assert.ok(Number.isInteger(value)&&value>=0&&Math.abs(value-activitySource.exclusiveCells[key]*scale)<1+1e-8);
+  }
+  assert.equal(values.composite,result.m04.value,'Composite activity disagrees across metrics');
+  assert.equal(values.composite,result.m25.value.MAU);
+  assert.equal(values.app,result.m25.value.appMAU,'App MAU disagrees across metrics');
+}
+project({});
+assert.deepEqual(JSON.parse(evaluate('JSON.stringify(metric(30).value)')),activitySource,'Unfiltered source facts changed');
+for(const corrupt of ['sourceData.metrics.m30.value.exclusiveCells.appOnly++','sourceData.metrics.m30.value.app--']) {
+  evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));${corrupt}`);project({});
+  assert.equal(evaluate('metric(30).availability'),'pending','Inconsistent activity cells were silently rebalanced');
+}
+evaluate('sourceData=__fixtures');project({});
 // A comparison archive contains exact aggregates, not the current single-point baseline.
 for(const id of [13,18,35,42]) {
   const evidence=evaluate(`currentComparisonEvidence(${id})`);

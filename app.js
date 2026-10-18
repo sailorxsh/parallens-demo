@@ -835,6 +835,43 @@ function technicalMetric(id,state,filters) {
   const failures={upload:'uploadFailures',live:'liveFailures',push:'pushFailures'};
   return {kind:'group',value:Object.fromEntries(names.map(name=>[name,rateFor(failures[name])]))};
 }
+const activityCombinations=[
+  {key:'appOnly',label:'仅App',sources:['app']},
+  {key:'contentOnly',label:'仅内容',sources:['content']},
+  {key:'pushOnly',label:'仅推送',sources:['pushClicked']},
+  {key:'appContentOnly',label:'App＋\n内容',sources:['app','content']},
+  {key:'appPushOnly',label:'App＋\n推送',sources:['app','pushClicked']},
+  {key:'contentPushOnly',label:'内容＋\n推送',sources:['content','pushClicked']},
+  {key:'allThree',label:'三者\n都有',sources:['app','content','pushClicked']},
+];
+function projectActivityComposition(raw,filters,shares) {
+  const v=raw?.value,cells=v?.exclusiveCells,fields=['composite','app','content','pushClicked'];
+  const whole=value=>Number.isSafeInteger(value)&&value>=0;
+  const sumFor=(values,field)=>activityCombinations.reduce((sum,item,index)=>
+    sum+(!field||item.sources.includes(field)?values[index]:0),0);
+  const source=activityCombinations.map(item=>cells?.[item.key]);
+  if(raw?.kind!=='group'||!cells||Object.keys(cells).length!==7||!fields.every(key=>whole(v[key]))||
+    !source.every(whole)||sumFor(source)!==v.composite||fields.slice(1).some(key=>sumFor(source,key)!==v[key]))
+    return pending('复合活跃互斥分组与来源人数不闭合，需核对源数据后再显示构成。');
+  const targets=Object.fromEntries(fields.map(key=>[key,allocatedCount(v[key],filters,30,'denominator',shares)]));
+  const exact=source.map(count=>{
+    const value=count*shares.denominator,nearest=Math.round(value);
+    return Math.abs(value-nearest)<1e-9?nearest:value;
+  });
+  const floors=exact.map(Math.floor);
+  // Seven exclusive cells: jointly round their union and all three source margins.
+  // Independent rounding can otherwise make the same people disagree across tables.
+  let best,score=Infinity;
+  for(let mask=0;mask<128;mask++) {
+    const values=floors.map((value,index)=>value+((mask>>index)&1));
+    if(values.some((value,index)=>value>Math.ceil(exact[index]))||sumFor(values)!==targets.composite||
+      fields.slice(1).some(key=>sumFor(values,key)!==targets[key]))continue;
+    const distance=values.reduce((sum,value,index)=>sum+(value-exact[index])**2,0);
+    if(distance<score-1e-12){best=values;score=distance;}
+  }
+  if(!best)return pending('当前模拟分片取整后无法同时核对并集与三类来源，待补可核验的同范围构成。');
+  return {...raw,value:{...v,...targets,exclusiveCells:Object.fromEntries(activityCombinations.map((item,index)=>[item.key,best[index]]))}};
+}
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -880,6 +917,7 @@ function projectMetric(id,state=filterState) {
   }
   if(id===18)return trialMetric(scoped);
   if(id===42)return deviceEventMetric(scoped);
+  if(id===30)return projectActivityComposition(sourceData.metrics.m30,filters,sharesFor(filters,30));
   let raw=sourceData.metrics[`m${String(id).padStart(2,'0')}`];
   if(scoped.week&&contract.dimensions.includes('week')) {
     const weekly=sourceData.weekly.find(w=>String(w.week)===scoped.week);
@@ -2129,6 +2167,7 @@ const metricSearchSubitems={
   7:['当前绑定主账号'],8:['当前绑定设备'],
   22:['Free权益用满主账号'],29:['季节阈值未使用主账号'],
   25:['WAU 周活主账号','MAU 月活主账号'],
+  30:['复合活跃主账号','互斥活跃组合','App主动活跃','内容活跃','推送点击活跃'],
   35:['月内订阅付款主账号'],39:['型号订阅率最高','所选型号订阅率','同型号活跃率'],
   46:['关键功能最低成功率','上传成功率','直播成功率','推送成功率'],54:['ID映射覆盖率']
 };
@@ -2175,6 +2214,10 @@ function metricCardSummary(id) {
     } else if(id===35) {
       summary.unit='/人';summary.fields=[['月内订阅付款主账号',`${number(v.monthlySubscriptionPayers)}人`]];
       summary.context=`${metricHistory(id)?.labels.at(-1)??'完整月'} · 订阅净收入÷当月付款主账号`;
+    } else if(id===30) {
+      summary.label='复合活跃主账号';summary.text=number(v.composite);summary.unit='人';
+      summary.fields=[['App主动活跃',`${number(v.app)}人`],['内容活跃',`${number(v.content)}人`],['推送点击活跃',`${number(v.pushClicked)}人`]];
+      summary.context='三个来源可重叠，不能相加；七类互斥组合合计为复合活跃人数';
     } else if(id===39) {
       const entries=Object.entries(v).sort((a,b)=>b[1].subscriptionRate-a[1].subscriptionRate);
       const [name,part]=entries[0];
@@ -2926,6 +2969,14 @@ function metricEvidence(id,page) {
         [`连续${threshold}天未使用`,value.numerator,value.denominator,percent(value.value),`${age.asOf} 快照`],
         ['历史入组后7天回流',returning,cohort,returnRate,`${age.returnWindow}；入组日期未提供`]],
       note:'未使用池与历史回流为不同人群，不能直接相减。迁徙季按21天、淡季按30天识别；历史入组日期未提供，不作跨期比较或召回效果归因。数值为合成样例；回流分母少于30人时只保留人数，30人为演示规则。'}));
+  } else if(id===30&&value.kind==='group') {
+    const v=value.value,labels=activityCombinations.map(item=>item.label),counts=activityCombinations.map(item=>v.exclusiveCells[item.key]);
+    const note=`${contract.window}。每人只计入一个组合，七类合计 ${number(v.composite)} 人；标签列出的就是该组全部来源，App＋内容不含推送。App ${number(v.app)}、内容 ${number(v.content)}、推送点击 ${number(v.pushClicked)} 是可重叠来源，不能相加。${effectiveFor(30).length?'当前范围为模拟分片估算。':'数据为合成演示人数。'}`;
+    appendEvidencePair({title:'复合活跃 · 七类互斥构成',unit:'人',labels,series:[{name:'主账号',values:counts}],note},
+      {title:'复合活跃互斥构成 · 人数与占比',columns:['互斥组合','主账号（人）','复合活跃分母（人）','占比'],
+        rows:[...activityCombinations.map((item,index)=>[item.label.replace('\n',''),counts[index],v.composite,
+          v.composite>=30?percent(counts[index]/v.composite):'样本不足（少于30人）']),
+          ['合计',v.composite,v.composite,v.composite>=30?'100.0%':'无可靠比例']],note});
   } else if(id===27&&value.kind==='rate') {
     const options=['Live','Playback','Recognition'];
     panel.append(dataTable({title:'业务功能渗透 · 同一活跃人群',columns:['功能','使用主账号','活跃主账号','使用率'],
