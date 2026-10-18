@@ -576,7 +576,10 @@ function filterBar(page='') {
 const readingViews=new Map();
 let currentReadingEntry;
 let readingRevision=0;
+let pendingReadingRestore=null;
 function selectReadingEntry() {
+  // Restore disclosures and charts before scrolling; native restoration can race that work.
+  if('scrollRestoration' in history)history.scrollRestoration='manual';
   currentReadingEntry=history.state?.parallensReadingEntry;
   if(!currentReadingEntry) {
     currentReadingEntry=crypto.randomUUID();
@@ -596,6 +599,8 @@ function readingControls(selector='details') {
 }
 function rememberReadingView() {
   if(!currentReadingEntry||lastRenderedHash===undefined||!main.querySelector('h1'))return;
+  // A rapid traversal can leave before restoration paints. Preserve the stored destination.
+  if(pendingReadingRestore?.entry===currentReadingEntry&&pendingReadingRestore.revision===readingRevision)return;
   readingViews.set(currentReadingEntry,{hash:lastRenderedHash,left:scrollX,top:scrollY,
     homeSelection:{focus:homeTrendFocus,mode:homeSelectionMode},
     disclosures:readingControls().map(([node,key])=>[key,node.open]),
@@ -608,6 +613,7 @@ function pushRoute(href) {
 }
 function restoreReadingView(view) {
   const revision=++readingRevision,entry=currentReadingEntry;
+  pendingReadingRestore={revision,entry};
   const current=()=>revision===readingRevision&&entry===currentReadingEntry&&view.hash===location.hash;
   const disclosures=new Map(view.disclosures),legends=new Map(view.legends);
   const apply=()=>{
@@ -628,6 +634,7 @@ function restoreReadingView(view) {
     requestAnimationFrame(()=>{
       if(!current())return;apply();
       main.focus({preventScroll:true});scrollTo({left:view.left,top:view.top,behavior:'instant'});
+      pendingReadingRestore=null;
       updateScrollableTables();updateSectionNavigation();
     });
   });

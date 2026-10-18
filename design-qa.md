@@ -1891,3 +1891,17 @@ Chrome／WebKit各通过trial_sample_identity、trial_sample_states、evidence_l
 ![总体留存与月份、原记录对照](output/playwright/v139-audit/regression-v139-audit/chromium-retention-1600-16.png)
 
 ![200%文字下趋势、月份年份与末端标签](output/playwright/v139-audit/regression-v139-audit/webkit-retention-1366-32.png)
+
+
+## v140 · 快速跨页返回不再改写未完成恢复的阅读位置（2026-10-18）
+
+上一轮为进展：已发布#24总体月度留存并验证线上。本轮从上轮已定位的Safari失败继续，工作树起点为干净da44e98；目标是跨专题查看证据后返回原阅读位置，不调整视觉方向、指标或问题单结构。
+
+1. **复现与截图**：原verify_reading_history_flows.js未修改，WebKit在A→C→A的快速后退／前进后，A页从978px偏到707px。output/playwright/v140-audit/01-before-history.png与02-history-shift.png可见当前阅读的耗时区块变成前一段内容；reading-trace.json记录了真实滚动、popstate、应用scrollTo和各历史条目的位置，排除仅以README或测试退出码判断问题。
+2. **根因**：A页尚在两帧的展开项／图例恢复过程中，马上前进到C；rememberReadingView把Safari临时恢复的707写回A原978。旧的延迟回调有防过期判断，但保存端没有区分恢复完成与尚未完成。浏览器原生恢复也会与页面恢复同时改变位置。
+3. **最小修复**：页面选择阅读历史条目时设置标准history.scrollRestoration=manual；只在当前条目与当前修订确实恢复中时，阻止临时位置覆盖原存档；恢复结束后继续正常记住主动阅读的新位置。保留原来的两帧内容恢复和过期回调保护，没有增加定时轮询、持久化字段或跳转流程。接口依据：[MDN scrollRestoration](https://developer.mozilla.org/en-US/docs/Web/API/History/scrollRestoration)。
+4. **验证与限制**：原reading_history在Chrome与WebKit均通过，没有放宽原断言。新增reading_race覆盖1366／1600／1920与1366下200%文字，在0／1／2帧时再次前进共12种情况；A/C草稿、原基线、图例、展开表及新主动滚动位置均保留，私人草稿未进入localStorage或history.state。saved_issues和monthly_retention两内核回归通过；47项数据规则、投影、留存独立核算通过。截图仅证明所拍状态，操作断言补充行为证据，不据此宣称所有无障碍或奖项品质完成。
+
+31个静态文件，缓存20261018-140；本轮指标源、深绿设计、首页四模块、持久化结构与CI均不变，Netlify不更新。此前v139的Safari既有失败在本轮通过原脚本及新竞态检查解决；此前记录作为历史证据保留。
+
+![修复后返回原阅读位置，表格和草稿保留](output/playwright/v140-audit/regression-v140-audit/webkit-restored-reading.png)
