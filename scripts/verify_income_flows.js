@@ -16,7 +16,7 @@ async(page)=>{
         const r=label.getBoundingClientRect();return r.width&&r.right<=box.left+options.grid[0].left-2;
       }).map(label=>{const r=label.getBoundingClientRect();return {text:label.textContent,top:r.top,bottom:r.bottom,left:r.left};});
       return {min:axis.min,max:axis.max,interval:axis.interval,ticks,expected:ticks.map(axis.axisLabel.formatter),labels,
-        values:options.series[0].data,boxLeft:box.left,boxHeight:box.height,chartHeight:chart.getHeight(),grid:options.grid[0],
+        values:options.series[0].data.map(point=>typeof point==='object'?point.value:point),boxLeft:box.left,boxHeight:box.height,chartHeight:chart.getHeight(),grid:options.grid[0],
         visibleTop:document.querySelector('.section-navigation')?.getBoundingClientRect().bottom??0,visibleBottom:innerHeight};
     });
     check(axis.min<=0&&axis.max>=0&&axis.interval>=.01,`${name}: zero baseline or cent precision is lost`);
@@ -124,12 +124,14 @@ async(page)=>{
     await open('E?metric=35');await p.reload();await pair().locator('svg').waitFor();
     const negative=await pair().locator('.detail-chart').evaluate(node=>{
       const options=echarts.getInstanceByDom(node).getOption(),box=node.getBoundingClientRect();
-      return {min:options.yAxis[0].min,values:options.series[0].data,text:node.textContent,
+      return {min:options.yAxis[0].min,values:options.series[0].data.map(point=>typeof point==='object'?point.value:point),
+        colors:options.series[0].data.map(point=>point.itemStyle?.color),text:node.textContent,
         clipped:[...node.querySelectorAll('svg text')].filter(label=>{
           const r=label.getBoundingClientRect();return r.width&&r.height&&(r.left<box.left-2||r.right>box.right+2||r.top<box.top-2||r.bottom>box.bottom+2);
         }).map(label=>label.textContent)};
     });
     check(negative.values[1]===-2000&&negative.min<=-2000,'Negative income contribution clipped to zero');
+    check(negative.colors[0]==='#718078'&&negative.colors[1]==='#bc6a20','Zero or negative income contribution has a misleading semantic color');
     await checkAxis('negative ARPPU contribution');
     await pair().screenshot({path:'output/playwright/v55-income-negative.png'});
     check(!negative.clipped.length&&negative.text.includes('$-2,000'),`Negative contribution label is missing or clipped: ${JSON.stringify(negative)}`);

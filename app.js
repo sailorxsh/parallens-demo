@@ -1241,11 +1241,11 @@ function subscriptionIncomeSpec(change) {
   const low=Math.min(0,...values),high=Math.max(0,...values),span=high-low||1;
   const interval=Math.max(.01,chartNiceStep(span/5)),padding=span*.1;
   const rounded=value=>Number(value.toPrecision(12));
-  return {title:`订阅净收入变化拆分 · ${change.beforeLabel} → ${change.afterLabel}`,unit:'美元',
+  return {title:`订阅净收入变化拆分 · ${change.beforeLabel} → ${change.afterLabel}`,unit:'美元',signedContribution:true,
     labels:['付款人数变化','ARPPU变化'],labelRotation:0,series:[{name:'收入变化的算术贡献',values,color:'#356d51'}],
     minY:low<0?rounded(Math.floor((low-padding)/interval)*interval):0,
     maxY:high>0?rounded(Math.ceil((high+padding)/interval)*interval):high===low?1:0,intervalY:interval,
-    note:`订阅净收入 $${number(change.before.numerator)} → $${number(change.after.numerator)}，净变化 ${change.delta>=0?'+':'−'}$${number(Math.abs(change.delta))}。两项贡献之和等于净变化；采用两期均值拆分，不代表价格或业务原因。${change.source}，与MRR分别计算。`};
+    note:`订阅净收入 $${number(change.before.numerator)} → $${number(change.after.numerator)}，净变化 ${change.delta>=0?'+':'−'}$${number(Math.abs(change.delta))}。正值增加收入，负值抵减收入；两项贡献之和等于净变化。采用两期均值拆分，不代表价格或业务原因。${change.source}，与MRR分别计算。`};
 }
 function subscriptionIncomeCalculationSpec(change) {
   return {title:'订阅净收入变化 · 计算依据',columns:['完整月','付款主账号','订阅净收入','ARPPU'],
@@ -2654,7 +2654,7 @@ function drawDetailChart(box,spec) {
         ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:spec.intervalY?{interval:spec.intervalY}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
         axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
       series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
-        data:spec.unit==='个百分点'?line.values.map(value=>{
+        data:spec.unit==='个百分点'||spec.signedContribution?line.values.map(value=>{
           const adverse=spec.adverseWhenHigh?value>0:value<0;
           return {value,label:{position:value<0?'bottom':'top',color:value===0?'#58695b':adverse?'#97541c':'#315e41'},
             itemStyle:{color:value===0?'#718078':adverse?'#bc6a20':'#356d51'}};
