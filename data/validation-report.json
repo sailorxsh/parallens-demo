@@ -1,6 +1,6 @@
 {
-  "passed": 47,
-  "total": 47,
+  "passed": 48,
+  "total": 48,
   "checks": [
     {
       "rule": "catalog",
@@ -230,12 +230,17 @@
     {
       "rule": "D24-historical-device-boundaries",
       "passed": true,
-      "detail": "历史留存与解绑不按当前状态剔除流失者；未提供的入组状态和批次日期明确待补，已知解绑月份与来源一致"
+      "detail": "新设备留存使用已补齐的激活入组状态；解绑仍缺入组状态，不按当前状态排除历史流失者"
     },
     {
       "rule": "D25-monthly-retention-cohorts",
       "passed": true,
       "detail": "12个完整自然月、96个互斥国家×基期App平台分组、两期人数与相邻月接续闭合；不是逐账号事件链证明"
+    },
+    {
+      "rule": "D26-device-retention-cohorts",
+      "passed": true,
+      "detail": "12个激活周、384个同源互斥分组；UTC日界、成熟性与两项留存计数闭合，后续停用不剔除"
     }
   ]
 }

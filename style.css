@@ -966,3 +966,17 @@ article.trial-sample-item {cursor:auto}
 .onboarding-plot .diagnostic-table{min-width:0}
 .onboarding-plot .diagnostic-table th,.onboarding-plot .diagnostic-table td,.onboarding-group-table .diagnostic-table th{white-space:normal}
 .onboarding-group-table{margin:.8rem 0}
+
+/* Device retention shares the approved evidence workspace and local period control. */
+.device-retention-summary h3 {font-size:.95rem;margin:.75rem 0}
+.device-retention-summary .onboarding-stats dd {font-size:1.5rem;overflow-wrap:anywhere}
+.device-retention-control select {max-width:100%;min-width:0}
+.evidence-plot:has(.device-retention-heatmap) {min-width:0}
+.income-evidence .detail-chart.device-retention-heatmap {height:28rem;min-height:28rem;flex:none}
+.device-retention-list {min-width:0}
+.device-retention-list h3 {scroll-margin-top:6rem}
+.retention-device-select {font:inherit;color:#315f43;background:none;border:0;text-decoration:underline;cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.retention-device-select:focus-visible {outline:2px solid var(--focus);outline-offset:3px}
+.device-retention-list tr[data-selected]>* {background:#e9f1e3}
+.retention-device-detail {padding:.8rem}
+.retention-device-detail h3 {overflow-wrap:anywhere;font-size:.95rem;margin:.75rem 0}

@@ -1,0 +1,2 @@
+{"sourceCommit":"30382776a7135097773cafca4dbdd28119cf9ce3","classification":"Isolated synthetic legacy record; no user browser storage accessed","records":{"record:C:默认演示范围:43":{"issueId":"DEMO-C-43-MW45DP","owner":"设备留存兼容验收","status":"pending","note":"总体批次方案前的当前版本合成登记","due":"","target":"","linkedSample":"","reviewValue":"","reviewedAt":"","updatedAt":"2026/10/18 21:54:15","page":"C","evidenceId":43,"scope":"默认演示范围","filters":{},"baseline":"D7 80.0%","baselineAt":"新设备留存批次日期待补","reviewMetric":43}}}
+

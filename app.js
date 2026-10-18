@@ -24,6 +24,7 @@ let sourceData;
 let trialFactIndex;
 let filterState={};
 let retentionMonthRequest=[];
+let deviceRetentionCohortRequest=[];
 let filterErrors=[];
 const filterDisclosure=new Map();
 let startupInProgress=false;
@@ -136,7 +137,7 @@ function savedIssueTarget(key,record) {
   if(typeof page!=='string'||!Object.hasOwn(pages,page)||!Number.isInteger(id)||!supportsPageMetric(page,id))
     return {reason:'记录中的专题或指标当前不可用。'};
   if(!filters||typeof filters!=='object'||Array.isArray(filters))return {reason:'旧记录未保存筛选快照，无法可靠恢复原范围。'};
-  const allowed=[...relevantFilters(page),...(page==='B'&&id===24?['retentionMonth']:[])];
+  const allowed=[...relevantFilters(page),...(page==='B'&&id===24?['retentionMonth']:[]),...(page==='C'&&id===43?['activationCohort']:[])];
   if(Object.entries(filters).some(([name,value])=>!allowed.includes(name)||typeof value!=='string'||
     value!=='All'&&!availableOptions(page,name,filters).includes(value)))
     return {reason:'记录包含当前不支持的筛选值；保留原范围，不替换为总体。'};
@@ -221,7 +222,7 @@ function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
   if(id===24)return `完整月 ${retentionSelection().month}`;
-  if(id===43)return '新设备留存批次日期待补';
+  if(id===43)return deviceRetentionWindow();
   if(id===51) {
     const cohort=sourceData.metrics.m51?.value?.cohort;
     return typeof cohort==='string'&&/^\d{4}-(?:0[1-9]|1[0-2])$/.test(cohort)?`完整月 ${cohort}`:'解绑批次日期待补';
@@ -242,7 +243,13 @@ function baselineWindowEnd(window) {
   // metric window for an unknown historical baseline.
   const dated=/^(?:完整周 W[1-9]\d* · |快照 )(\d{4}-\d{2}-\d{2})(?: · 设备行为口径v1 · (?:近30天活跃|(?:21|30)天未使用))?$/.exec(window);
   const month=/^完整月 (\d{4}-(?:0[1-9]|1[0-2]))$/.exec(window);
-  const text=dated?.[1]??(month?`${month[1]}-01`:null);
+  const device=/^设备留存(D7|D30)观察期末 (\d{4}-\d{2}-\d{2}) · 激活批次 (\d{4}-\d{2}-\d{2})—(\d{4}-\d{2}-\d{2})$/.exec(window);
+  if(device){
+    const dates=device.slice(2).map(text=>new Date(`${text}T00:00:00Z`));
+    if(dates.some((date,i)=>!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==device[i+2])||dates[1].getUTCDay()!==1||
+      dates[2]-dates[1]!==6*86400000||dates[0]-dates[2]!==Number(device[1].slice(1))*86400000)return null;
+  }
+  const text=dated?.[1]??device?.[2]??(month?`${month[1]}-01`:null);
   if(!text)return null;
   const date=new Date(`${text}T00:00:00Z`);
   if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==text)return null;
@@ -447,6 +454,7 @@ const relevantFilters=page=>page?Object.entries(sourceData?.filterPolicy?.contro
 const selectedFilters=()=>Object.entries(filterState).filter(([,value])=>value&&value!=='All');
 function availableOptions(page,key,state=filterState) {
   if(key==='retentionMonth')return retentionIndex().rows?.map(row=>row.observedMonth)??[];
+  if(key==='activationCohort')return deviceRetentionIndex().rows?.map(row=>row.id)??[];
   const config=sourceData.filterPolicy.controls[key];
   const productLine=sourceData.filterPolicy.controls.productLine.options.includes(state.productLine)?state.productLine:undefined;
   if(key==='week')return sourceData.weekly.map(w=>String(w.week));
@@ -469,6 +477,7 @@ function routeHref(page='',metricId,evidencePanel) {
   }
   if (metricId) params.set('metric',String(metricId));
   if(page==='B')retentionMonthRequest.forEach(value=>params.append('retentionMonth',value));
+  if(page==='C')deviceRetentionCohortRequest.forEach(value=>params.append('activationCohort',value));
   const issue=activeIssueMetrics.get(issueScopeKey(page));
   if(issue)params.set('issue',String(issue));
   const currentPage=location.hash.replace(/^#\/?/,'').split(/[/?]/)[0].toUpperCase();
@@ -493,6 +502,7 @@ function readRoute() {
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
   retentionMonthRequest=page==='B'?params.getAll('retentionMonth'):[];
+  deviceRetentionCohortRequest=page==='C'?params.getAll('activationCohort'):[];
   diagnosticWorkspaceView=['change','groups','data'].includes(params.get('panel'))?params.get('panel'):'change';
   readFilters(pages[page]?page:'',params);
   const issue=Number(params.get('issue'));
@@ -506,13 +516,15 @@ function activeFilterDescription() {
   return selectedFilters().map(([key,value])=>`${filterLabels[key]}：${key==='week'?`W${value}`:optionLabel(key,value)}`).join(' · ');
 }
 function formatIssueScope(entries) {
-  return entries.map(([key,value])=>`${key==='retentionMonth'?'留存观察月':filterLabels[key]}：${key==='week'?`W${value}`:key==='retentionMonth'?value:optionLabel(key,value)}`).join(' · ')||'默认演示范围';
+  return entries.map(([key,value])=>`${key==='retentionMonth'?'留存观察月':key==='activationCohort'?'激活批次':filterLabels[key]}：${key==='week'?`W${value}`:['retentionMonth','activationCohort'].includes(key)?value:optionLabel(key,value)}`).join(' · ')||'默认演示范围';
 }
 function issueFilters(page,id) {
   const result={...filterState};
   if(page==='B'&&id===24&&retentionMonthRequest.length&&
     !(retentionMonthRequest.length===1&&retentionMonthRequest[0]===currentPaymentMonth()))
     result.retentionMonth=retentionMonthRequest.join(' / ');
+  if(page==='C'&&id===43&&deviceRetentionCohortRequest.length&&!(deviceRetentionCohortRequest.length===1&&deviceRetentionCohortRequest[0]===deviceRetentionIndex().defaultCohort))
+    result.activationCohort=deviceRetentionCohortRequest.join(' / ');
   return result;
 }
 const recordScope=(page,id)=>formatIssueScope(Object.entries(issueFilters(page,id)));
@@ -645,7 +657,7 @@ function changeFilter(page,key,value) {
   const currentMetric=Number(new URLSearchParams(location.hash.split('?')[1]??'').get('metric'))||null;
   const params=new URLSearchParams(location.hash.split('?')[1]??'');
   const previousErrors=new Set(filterErrors.map(error=>error.key));
-  if(!key){for(const field of relevantFilters(page))params.delete(field);params.delete('retentionMonth');retentionMonthRequest=[];}
+  if(!key){for(const field of relevantFilters(page))params.delete(field);params.delete('retentionMonth');retentionMonthRequest=[];params.delete('activationCohort');deviceRetentionCohortRequest=[];}
   else if(value==='All')params.delete(key);
   else params.set(key,value);
   readFilters(page,params);
@@ -1128,13 +1140,14 @@ function projectMetric(id,state=filterState) {
   const filters=effectiveFor(id,state);
   for(const [key,value] of filters) {
     if(key==='week'&&!contract.dimensions.includes(key))continue;
-    if(!policy.demonstrableDimensions.includes(key))return pending(key==='deviceStatus'&&[43,51].includes(id)?
+    if(!policy.demonstrableDimensions.includes(key))return pending(key==='deviceStatus'&&id===51?
       '设备状态适用，但缺少入组时设备状态明细；不能用当前状态排除未留存或已解绑设备':
       `${filterLabels[key]}适用，但演示数据缺少同范围明细`);
     if(!['week','functionType'].includes(key)&&!sourceData.slices[key]?.[value]) return na('未定义的筛选值');
   }
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
   if(id===24)return retentionMetric(state);
+  if(id===43)return deviceRetentionMetric(state);
   if(scoped.deviceStatus==='Inactive'&&[8,11,15,16,27,41,42,44,45,46,47].includes(id))
     return na('该指标以有效设备为统计对象，非有效设备不属于分母');
   if(product&&model&&product!=='All'&&model!=='All'&&((product==='Hunting')!==(model==='Hunt Pro')))
@@ -1444,6 +1457,204 @@ function monthOrdinal(value) {
   return match?Number(match[1])*12+Number(match[2])-1:null;
 }
 function ordinalMonth(value) {return `${Math.floor(value/12)}-${String(value%12+1).padStart(2,'0')}`;}
+// Approved activation-week cohorts, kept separate from trigger weeks and current device pools.
+function deviceRetentionIndex() {
+  const source=sourceData.deviceRetentionFacts,raw=sourceData.metrics.m43;
+  const invalid=()=>({reason:'设备留存批次、观察期或同源设备计数待核验；不回退原独立分片。'});
+  const date=text=>{if(typeof text!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(text))return NaN;const n=Date.parse(`${text}T00:00:00Z`);return Number.isFinite(n)&&new Date(n).toISOString().slice(0,10)===text?n:NaN;};
+  const asOf=date(source?.asOf),day=86400000,whole=n=>Number.isSafeInteger(n)&&n>=0;
+  if(!source||source.version!=='synthetic-device-retention-v1'||source.status!=='approved-synthetic'||source.classification!=='entirely_synthetic'||
+    source.timezone!=='UTC'||source.asOf!==sourceData.snapshot.asOf||!Number.isFinite(asOf)||!Array.isArray(source.cohorts)||source.cohorts.length!==12)return invalid();
+  const latestEnd=asOf-((new Date(asOf).getUTCDay()+6)%7+1)*day;
+  const cells=['US','UK','DE','Other'].flatMap(country=>['K6','Bird Lite','Bird Pro','Hunt Pro'].flatMap(model=>['Amazon','Shopify'].map(channel=>`${country}:${model}:${channel}`)));
+  for(const [i,c] of source.cohorts.entries()) {
+    const end=latestEnd-(11-i)*7*day,start=end-6*day;
+    if(!c||date(c.start)!==start||date(c.end)!==end||c.id!==c.start||!whole(c.activated)||!c.activated||!Array.isArray(c.records)||c.records.length!==32||!c.mature||!c.observationEndExclusive)return invalid();
+    for(const horizon of [7,30]) {
+      const key=`D${horizon}`,cutoff=end+(horizon+1)*day;
+      if(date(c.observationEndExclusive[key])!==cutoff||c.mature[key]!==Boolean(asOf>=cutoff))return invalid();
+    }
+    for(const [j,r] of c.records.entries()) {
+      if(!r||`${r.country}:${r.deviceModel}:${r.salesChannel}`!==cells[j]||r.productLine!==(r.deviceModel==='Hunt Pro'?'Hunting':'Bird')||r.entryDeviceStatus!=='Effective'||
+        !whole(r.activated)||!Array.isArray(r.outcomeCounts)||r.outcomeCounts.length<1||r.outcomeCounts.length>4)return invalid();
+      const seen=new Set();let previous='';
+      for(const outcome of r.outcomeCounts) {
+        if(!outcome||!whole(outcome.count)||outcome.count===0||['D7','D30'].some(key=>c.mature[key]?typeof outcome[key]!=='boolean':outcome[key]!==null))return invalid();
+        const key=['D7','D30'].map(k=>outcome[k]===null?'u':outcome[k]?'1':'0').join('');
+        if(seen.has(key)||previous&&key<previous)return invalid();seen.add(key);previous=key;
+      }
+      if(r.outcomeCounts.reduce((n,o)=>n+o.count,0)!==r.activated)return invalid();
+    }
+    if(c.records.reduce((n,r)=>n+r.activated,0)!==c.activated)return invalid();
+  }
+  const anchor=source.cohorts.filter(c=>c.mature.D30).at(-1);
+  if(!anchor||source.defaultCohort!==anchor.id||raw?.kind!=='group')return invalid();
+  for(const key of ['D7','D30']) {
+    const n=anchor.records.reduce((n,r)=>n+r.outcomeCounts.reduce((sum,o)=>sum+(o[key]?o.count:0),0),0),part=raw.value?.[key];
+    if(part?.kind!=='rate'||!Number.isFinite(part.value)||part.numerator!==n||part.denominator!==anchor.activated||Math.abs(part.value-n/anchor.activated)>1e-12)return invalid();
+  }
+  return {rows:source.cohorts,defaultCohort:source.defaultCohort,asOf:source.asOf};
+}
+function deviceRetentionSelection() {
+  const index=deviceRetentionIndex(),id=deviceRetentionCohortRequest.length?deviceRetentionCohortRequest[0]:index.defaultCohort;
+  if(index.reason)return {...index,id};
+  if(deviceRetentionCohortRequest.length>1||!index.rows.some(c=>c.id===id))return {id,reason:'激活批次无效或包含多个值；请重新选择一个完整激活周。'};
+  return {...index,id};
+}
+function deviceRetentionProjection(state=filterState) {
+  const selected=deviceRetentionSelection();if(selected.reason)return selected;
+  const filters=effectiveFor(43,state);
+  if(filters.some(([key])=>!['country','deviceModel','productLine','salesChannel','deviceStatus'].includes(key)))return {reason:'当前范围缺少同源激活批次明细。'};
+  return {...selected,rows:selected.rows.map(c=>{
+    const records=c.records.filter(r=>filters.every(([key,value])=>r[key==='deviceStatus'?'entryDeviceStatus':key]===value)),denominator=records.reduce((n,r)=>n+r.activated,0);
+    const measures=Object.fromEntries(['D7','D30'].map(key=>{
+      const numerator=c.mature[key]?records.reduce((n,r)=>n+r.outcomeCounts.reduce((a,o)=>a+(o[key]?o.count:0),0),0):null;
+      if(denominator<30)return [key,{...na(`${denominator?'样本不足30台':'无合格样本'}；本批次入组 ${denominator} 台${numerator===null?'':`，${key}留存 ${numerator} 台`}`),numerator,denominator}];
+      if(numerator===null)return [key,{...pending(`本批次${key}观察未结束；最晚观察日至${new Date(Date.parse(c.observationEndExclusive[key])-86400000).toISOString().slice(0,10)}`),numerator:null,denominator}];
+      return [key,{kind:'rate',numerator,denominator,value:numerator/denominator,numeratorUnit:'台',denominatorUnit:'台',basisLabel:`${c.start}—${c.end} ${key}留存 / 激活入组`}];
+    }));
+    return {...c,records,denominator,measures};
+  })};
+}
+function deviceRetentionCurrent(state=filterState) {
+  const part=deviceRetentionProjection(state);return part.reason?part:part.rows.find(c=>c.id===part.id);
+}
+function deviceRetentionMetric(state=filterState) {
+  const current=deviceRetentionCurrent(state);return current.reason?pending(current.reason):{kind:'group',value:current.measures};
+}
+const deviceRetentionText=part=>part.kind==='rate'?percent(part.value):part.denominator<30?(part.denominator?'样本不足30台':'无合格样本'):'观察未结束';
+function hasRegistrationBaseline(id) {
+  const value=metric(id);return value.kind!=='na'&&(id!==43||Object.values(value.value).some(part=>part.kind==='rate'));
+}
+function deviceRetentionWindow() {
+  const c=deviceRetentionCurrent();if(c.reason)return '当前范围暂无可用基线周期';
+  const key=c.measures.D30.kind==='rate'?'D30':c.measures.D7.kind==='rate'?'D7':null;
+  return key?`设备留存${key}观察期末 ${new Date(Date.parse(c.observationEndExclusive[key])-86400000).toISOString().slice(0,10)} · 激活批次 ${c.start}—${c.end}`:'所选激活批次尚无可用完整观察基线';
+}
+function selectDeviceRetentionCohort(id,{fromChart=false}={}) {
+  const params=new URLSearchParams(location.hash.split('?')[1]??'');params.delete('activationCohort');
+  if(id!==deviceRetentionIndex().defaultCohort)params.set('activationCohort',id);
+  pushRoute(`#/C?${params}`);renderRoute({preserveScroll:true});
+  document.querySelector('[name="activationCohort"]')?.focus({preventScroll:true});
+  document.querySelector('#announcement').textContent=`已选择激活批次${id}；仅更新#43及其登记范围${fromChart?'，当前问题单指标保持不变':''}。`;
+}
+function deviceRetentionControl() {
+  const wrap=element('div','retention-month-control device-retention-control'),label=element('label','','激活批次（仅#43）'),select=element('select','');
+  select.name='activationCohort';select.setAttribute('aria-label','激活批次（仅#43）');
+  const selected=deviceRetentionSelection(),index=deviceRetentionIndex();
+  if(selected.reason){const option=element('option','',`待修正：${deviceRetentionCohortRequest.join(' / ')||'批次来源待核验'}`);option.value='invalid';option.disabled=true;select.append(option);}
+  for(const c of index.rows??[]){const option=element('option','',`${c.start}—${c.end}${c.id===index.defaultCohort?' · 默认完整D30':''}`);option.value=c.id;select.append(option);}
+  select.value=selected.reason?'invalid':selected.id;select.addEventListener('change',()=>selectDeviceRetentionCohort(select.value));
+  label.append(select);wrap.append(label,element('p','table-note','首图激活周，UTC；默认最新D30完整批次，两项留存使用同一群设备。'));return wrap;
+}
+function deviceRetentionTable(projection=deviceRetentionProjection()) {
+  if(projection.reason)return {title:'设备留存 · 待核验',columns:['状态'],rows:[[projection.reason]]};
+  return {title:'12个激活批次 · 留存设备验算',selectedPeriod:projection.id,columns:['激活周起日','激活周止日','入组设备（台）','D7留存（台）','D7留存率','D7最晚观察日','D30留存（台）','D30留存率','D30最晚观察日'],
+    rows:projection.rows.map(c=>[c.start,c.end,c.denominator,...['D7','D30'].flatMap(key=>[c.measures[key].numerator??'—',deviceRetentionText(c.measures[key]),new Date(Date.parse(c.observationEndExclusive[key])-86400000).toISOString().slice(0,10)])]),
+    note:'首图／首视频为D0；D7、D30分别是第7／30个UTC自然日的有效设备行为，心跳不计入。入组时归属固定，后续停用仍在分母；D30不是D7子集，不是连续存活率。全部是合成频数，非真实设备日志。'};
+}
+function deviceRetentionEvidence(appendPair,panel) {
+  const part=deviceRetentionProjection(),c=part.rows.find(row=>row.id===part.id),table=deviceRetentionTable(part),stats=element('section','device-retention-summary');stats.dataset.evidenceKind='change';
+  stats.append(element('h3','',`${c.start}—${c.end} · 同批次留存`));
+  const cards=element('dl','onboarding-stats');
+  for(const [title,text,basis] of ['D7','D30'].map(key=>[`${key}留存`,deviceRetentionText(c.measures[key]),c.measures[key].numerator===null?'完整观察期尚未结束':`${number(c.measures[key].numerator)} / ${number(c.denominator)} 台`]).concat([['首图激活入组',`${number(c.denominator)} 台`,'按入组时状态与归属']])) {
+    const cell=element('div','');cell.append(element('dt','',title),element('dd','',text),element('p','table-note',basis));cards.append(cell);
+  }
+  stats.append(cards);panel.append(stats);
+  const note=table.note;
+  const heat={kind:'deviceRetentionHeatmap',title:'近12个激活批次 · D7／D30留存',unit:'%',labels:part.rows.map(r=>r.start),selectedPeriod:part.id,cohorts:part.rows,series:[],note:`统一0–100%色阶；观察未结束或不足30台单独标记，不作为0%。点击单元选择批次，键盘可用上方批次选择。${note}`};
+  appendPair(heat,table,'change');
+  const series=['D7','D30'].map(key=>({name:`${key}留存`,values:part.rows.map(r=>r.measures[key].kind==='rate'?r.measures[key].value*100:null),details:part.rows.map(r=>r.measures[key])}));
+  if(series.some(line=>line.values.some(Number.isFinite)))appendPair({title:'分批设备留存趋势 · 同一观察日比较',endLastValid:true,unit:'%',labels:part.rows.map(r=>r.start),selectedPeriod:part.id,series,note:'横轴为激活周起日；两条线分别比较各批次D7／D30，不把未完整观察或小样本补0，不把跨批次变化视作型号或渠道因果。'},table,'change');
+  for(const dimension of ['deviceModel','salesChannel']) {
+    const options=availableOptions('C',dimension),parts=options.map(option=>({option,current:deviceRetentionCurrent({...filterState,[dimension]:option})}));
+    const labels=options.map(option=>optionLabel(dimension,option)),spec={title:`${filterLabels[dimension]} · 所选激活批次留存`,unit:'%',labels,
+      series:['D7','D30'].map(key=>({name:`${key}留存`,values:parts.map(p=>p.current.measures[key].kind==='rate'?p.current.measures[key].value*100:null),details:parts.map(p=>p.current.measures[key])})),
+      note:`${c.start}—${c.end}；保留其他筛选，仅替换${filterLabels[dimension]}。两项分母均为该组入组设备；型号与渠道两套分组不相加。少于30台不画可靠率；自报渠道不证明真实订单归因。`};
+    appendPair(spec,{title:`${filterLabels[dimension]} · 设备数验算`,columns:['分组','入组（台）','D7留存（台）','D7率','D30留存（台）','D30率'],
+      rows:parts.map((p,i)=>[labels[i],p.current.denominator,p.current.measures.D7.numerator??'—',deviceRetentionText(p.current.measures.D7),p.current.measures.D30.numerator??'—',deviceRetentionText(p.current.measures.D30)]),note:spec.note});
+    const pair=panel.lastElementChild,body=pair.querySelector('tbody');
+    [...body.rows].forEach((tr,i)=>{const td=element('td',''),button=element('button','filter-reset','查看设备');button.type='button';button.setAttribute('aria-label',`查看${labels[i]}的批次设备`);
+      button.addEventListener('click',()=>{const params=new URLSearchParams(location.hash.split('?')[1]??'');params.set(dimension,options[i]);params.set('panel','data');pushRoute(`#/C?${params}`);renderRoute({preserveScroll:true});document.querySelector('.device-retention-list h3')?.focus({preventScroll:true});});td.append(button);tr.append(td);});
+    pair.querySelector('thead tr').append(element('th','','下钻'));
+  }
+  const full=dataTable(table,'device-retention-calculation');full.dataset.evidenceKind='data';panel.append(full,deviceRetentionList(c));
+}
+const deviceRetentionPalette=['#f4f7ee','#b6ceaa','#173e2b'];
+function deviceRetentionLabelColor(value) {
+  const part=Math.min(1,Math.floor(value/50)),fraction=value/50-part;
+  const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
+  const a=rgb(deviceRetentionPalette[part]),b=rgb(deviceRetentionPalette[part+1]);
+  const luminance=a.map((v,i)=>(v+(b[i]-v)*fraction)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+  return luminance>=.18?'#000000':'#ffffff';
+}
+function drawDeviceRetentionHeatmap(instance,box,spec) {
+  const valid=[],missing=[];
+  spec.cohorts.forEach((c,y)=>['D7','D30'].forEach((key,x)=>{const part=c.measures[key];
+    if(part.kind==='rate'){const value=part.value*100;valid.push({value:[x,y,value],label:{color:deviceRetentionLabelColor(value)}});}
+    else missing.push({value:[x,y],label:{formatter:deviceRetentionText(part)}});
+  }));
+  setChartOption(instance,()=>{
+    const left=148,right=18,top=30,bottom=48;
+    return {animationDuration:0,grid:{left,right,top,bottom},
+      tooltip:{...chartTooltipStyle(),trigger:'item',formatter:params=>{const [x,y]=params.value,c=spec.cohorts[y],key=x?'D30':'D7',part=c.measures[key];
+        return `${c.start}—${c.end}<br>${key}：${deviceRetentionText(part)}<br>${part.numerator===null?'完整观察期尚未结束':`${number(part.numerator)} / ${number(part.denominator)} 台`}<br>最晚观察日至 ${new Date(Date.parse(c.observationEndExclusive[key])-86400000).toISOString().slice(0,10)}`;}},
+      xAxis:{type:'category',position:'top',data:['D7','D30'],axisTick:{show:false},axisLine:{show:false},axisLabel:{fontSize:chartText(12),color:'#355b43',fontWeight:600}},
+      yAxis:{type:'category',inverse:true,data:spec.cohorts.map(c=>`${c.start.slice(5)}—${c.end.slice(5)}`),axisTick:{show:false},axisLine:{show:false},
+        axisLabel:{interval:0,fontSize:chartText(11),color:'#405e49',formatter:(label,i)=>spec.cohorts[i].id===spec.selectedPeriod?`▶ ${label}`:label}},
+      visualMap:{min:0,max:100,dimension:2,seriesIndex:[0],orient:'horizontal',left:'center',bottom:0,itemWidth:chartText(10),itemHeight:chartText(140),text:['100%','0%'],calculable:false,inRange:{color:deviceRetentionPalette}},
+      series:[{name:'完整观察留存率',type:'heatmap',data:valid,label:{show:true,fontSize:chartText(12),formatter:p=>`${p.value[2].toFixed(1)}%`},itemStyle:{borderWidth:3,borderColor:'#fffefa'}},
+        {name:'观察或样本状态',type:'scatter',data:missing,encode:{x:0,y:1},symbol:'rect',symbolSize:[Math.max(0,(box.clientWidth-chartText(left+right))/2-4),Math.max(0,(box.clientHeight-chartText(top+bottom))/12-3)],
+          itemStyle:{color:'#edf1e9',opacity:1},label:{show:true,position:'inside',fontSize:chartText(11),color:'#526b55'}}]};
+  },{responsive:true});
+  instance.on('click',params=>{const index=params.value?.[1];if(Number.isInteger(index)&&spec.cohorts[index])selectDeviceRetentionCohort(spec.cohorts[index].id,{fromChart:true});});
+}
+const deviceRetentionQueues=new Map();
+function deviceRetentionDevices(c) {
+  const index=deviceRetentionIndex();if(index.reason)return [];
+  const original=index.rows.find(row=>row.id===c.id),devices=[];
+  for(const r of c.records){const cell=original.records.indexOf(r);let position=0;
+    for(const outcome of r.outcomeCounts)for(let i=0;i<outcome.count;i++) {
+      position++;const activatedAt=new Date(Date.parse(`${c.start}T12:00:00Z`)+(position-1)%7*86400000).toISOString();
+      devices.push({id:`SIM43-${c.id.replaceAll('-','')}-${String(cell+1).padStart(2,'0')}-${String(position).padStart(4,'0')}`,cohort:c.id,start:c.start,end:c.end,activatedAt,
+        country:r.country,productLine:r.productLine,deviceModel:r.deviceModel,salesChannel:r.salesChannel,entryDeviceStatus:r.entryDeviceStatus,D7:outcome.D7,D30:outcome.D30});
+    }
+  }return devices;
+}
+function deviceRetentionList(c) {
+  const node=element('section','device-retention-list');node.dataset.evidenceKind='data';
+  const title=element('h3','','所选激活批次 · 合成设备清单');title.tabIndex=-1;node.append(title);
+  const key=recordScope('C',43),state=deviceRetentionQueues.get(key)??{query:'',page:0,selected:null};deviceRetentionQueues.set(key,state);
+  const devices=deviceRetentionDevices(c),controls=element('div','binding-list-controls'),label=element('label','','查找设备'),input=element('input','');input.type='search';input.value=state.query;input.setAttribute('aria-label','搜索留存批次设备');label.append(input);controls.append(label);node.append(controls);
+  const result=element('p','table-note'),content=element('div',''),paging=element('div','binding-list-pagination');node.append(result,content,paging);
+  const select=(record,trigger,announce=true)=>{state.selected=record.id;node.dispatchEvent(new CustomEvent('device-retention-select',{bubbles:true,detail:{record,trigger}}));
+    node.querySelectorAll('tbody tr').forEach(tr=>{const selected=tr.dataset.deviceId===record.id;tr.toggleAttribute('data-selected',selected);tr.querySelector('button')?.setAttribute('aria-pressed',String(selected));});
+    if(announce)document.querySelector('#announcement').textContent=`已选择 ${record.id}，右侧显示同批次设备详情；问题单未改变。`;
+  };
+  const draw=()=>{
+    const query=state.query.trim().toLowerCase(),rows=devices.filter(r=>[r.id,optionLabel('country',r.country),r.deviceModel,r.salesChannel].join(' ').toLowerCase().includes(query));
+    state.page=Math.min(state.page,Math.max(0,Math.ceil(rows.length/20)-1));const pageRows=rows.slice(state.page*20,state.page*20+20);
+    result.textContent=`本批次 ${number(c.denominator)} 台；匹配 ${number(rows.length)} 台。合成频数按固定顺序枚举；不是生产设备日志。`;
+    const wrap=dataTable({title:'留存批次设备 · 每页20台',columns:['合成设备编号','国家/市场','型号','自报渠道','D7有效行为','D30有效行为'],
+      rows:pageRows.map(r=>[r.id,optionLabel('country',r.country),r.deviceModel,r.salesChannel,...['D7','D30'].map(k=>r[k]===null?'批次待观察':r[k]?'有':'无')]),note:'入组时状态为有效；首图日期为合成分配。后续未使用设备仍在分母。D7／D30未知不解释为无行为。'});
+    const body=wrap.querySelector('tbody');[...body.rows].forEach((tr,i)=>{const record=pageRows[i],button=element('button','retention-device-select',record.id);button.type='button';button.setAttribute('aria-label',`查看${record.id}设备留存`);tr.dataset.deviceId=record.id;tr.toggleAttribute('data-selected',state.selected===record.id);button.setAttribute('aria-pressed',String(state.selected===record.id));tr.firstChild.replaceChildren(button);button.addEventListener('click',()=>select(record,button));});
+    content.replaceChildren(wrap);paging.replaceChildren();
+    const previous=element('button','filter-reset','上一页'),next=element('button','filter-reset','下一页');previous.type=next.type='button';previous.disabled=state.page===0;next.disabled=(state.page+1)*20>=rows.length;
+    for(const [button,delta] of [[previous,-1],[next,1]])button.addEventListener('click',()=>{state.page+=delta;draw();paging.querySelector(delta<0?'button:first-child':'button:last-child')?.focus({preventScroll:true});});
+    paging.append(previous,element('span','table-note',`第 ${state.page+1} / ${Math.max(1,Math.ceil(rows.length/20))} 页`),next);updateScrollableTables();
+  };
+  input.addEventListener('input',()=>{state.query=input.value;state.page=0;draw();});draw();
+  if(state.selected){const row=devices.find(r=>r.id===state.selected);if(row)requestAnimationFrame(()=>{if(node.isConnected&&!node.closest('[hidden]')&&!new URLSearchParams(location.hash.split('?')[1]??'').has('issue'))select(row,node.querySelector(`[data-device-id="${row.id}"] button`),false);});}
+  return node;
+}
+function deviceRetentionDetail(row,onBack) {
+  const box=element('section','retention-device-detail'),back=element('button','binding-device-back','返回设备清单');back.type='button';back.addEventListener('click',onBack);box.append(back,element('h3','',row.id));
+  const facts=element('dl','inspector-facts');
+  const entries=[['激活批次',`${row.start}—${row.end}`],['首图时间（合成分配）',row.activatedAt.replace('T',' ').replace('.000Z',' UTC')],['入组时归属',`${optionLabel('country',row.country)} · ${row.deviceModel} · ${row.salesChannel}`],['入组时设备状态','有效；不使用当前状态筛掉历史停用设备']];
+  for(const key of ['D7','D30'])entries.push([`${key}有效行为`,row[key]===null?'所属批次尚未完整观察，不展示部分结果':row[key]?`该UTC自然日有有效行为（合成）`:'该完整UTC自然日无有效行为（合成）']);
+  for(const [name,value] of entries){const part=element('div','');part.append(element('dt','',name),element('dd','',value));facts.append(part);}box.append(facts,element('p','table-note','由同一固定版本合成频数枚举，编号不连接现有绑定／活跃池。查看设备不会关联或保存问题单。'));return box;
+}
+
 function currentPaymentMonth() {
   const asOf=sourceData.snapshot.asOf,ordinal=monthOrdinal(asOf?.slice(0,7));
   return baselineWindowEnd(`快照 ${asOf}`)&&ordinal!==null?ordinalMonth(ordinal-1):null;
@@ -2366,7 +2577,7 @@ function createTrendTable() {
   table.append(body); wrap.append(table); return wrap;
 }
 function isTimelineSpec(spec) {
-  return spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label)||monthOrdinal(label)!==null);
+  return spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label)||/^\d{4}-\d{2}-\d{2}$/.test(label)||monthOrdinal(label)!==null);
 }
 function chartNiceStep(roughStep) {
   const magnitude=10**Math.floor(Math.log10(roughStep)),relative=roughStep/magnitude;
@@ -2558,6 +2769,7 @@ const groupSummary={
 function displayValue(id) {
   const value=metric(id);
   if(value.kind==='na') return value.availability==='pending'?'待补数据':'不适用';
+  if(id===43)return ['D7','D30'].map(key=>`${key} ${deviceRetentionText(value.value[key])}`).join(' · ');
   if(value.kind==='group'&&JSON.stringify(value).includes('"kind":"na"')) return '不适用';
   return value.kind==='group' ? (groupSummary[id]?.(value.value) ?? '查看分组值') : formatMetric(id);
 }
@@ -2592,6 +2804,7 @@ function metricSearchMatches(query) {
 function metricCardSummary(id) {
   const value=metric(id),item=catalogItem(id);
   const summary={label:metricCardLabels[id]??item.name,text:displayValue(id),unit:'',context:'',fields:[]};
+  if(id===43&&value.kind==='group'){const c=deviceRetentionCurrent();summary.context=`激活批次 ${c.start}—${c.end} · 同批次D7／D30`;return summary;}
   if(value.kind==='na'||value.kind==='group'&&JSON.stringify(value).includes('"kind":"na"'))return summary;
   if(value.kind==='count')summary.unit=metricCountUnits[id]??'';
   const contexts={3:'月化经常性收入，非本月实际收款',4:'最近30天复合活跃主账号去重',
@@ -2658,6 +2871,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===43&&metric(43).kind==='group'){const c=deviceRetentionCurrent();return ['D7','D30'].map(key=>`${key} ${deviceRetentionText(c.measures[key])}${c.measures[key].numerator===null?'':`（${number(c.measures[key].numerator)} / ${number(c.denominator)}台）`}`).join('；')+`；激活批次 ${c.start}—${c.end}`;}
   if(id===24&&metric(24).kind==='rate') {const part=retentionProjection(),row=part.rows.find(r=>r.observedMonth===part.month);
     return `${percent(row.value)}（${number(row.numerator)} / ${number(row.denominator)}人；${row.baseMonth} → ${row.observedMonth}）`;}
   const summary=metricCardSummary(id);
@@ -2888,7 +3102,7 @@ function drawEvidenceChart(box,spec,legendSelection) {
     if(instance&&legendSelection)for(const [name,selected] of Object.entries(legendSelection))
       if((instance.getOption().legend?.[0]?.selected?.[name]!==false)!==selected)
         instance.dispatchAction({type:'legendToggleSelect',name});
-    if(!instance||!details)return;
+    if(!instance||!details||spec.kind==='deviceRetentionHeatmap')return;
     const indexFor=params=>spec.kind==='heatmap'?params.value?.[1]:params.dataIndex;
     bindChartTableSelection(instance,details.querySelector('table'),params=>{
       const index=indexFor(params);
@@ -3001,6 +3215,7 @@ function drawDetailChart(box,spec) {
   detailCharts.push(instance);
   if(box.parentElement?.classList.contains('chart-legend-frame'))box.parentElement.querySelector('.chart-legend')?.remove();
   const isTimeline=isTimelineSpec(spec);
+  if(spec.kind==='deviceRetentionHeatmap'){drawDeviceRetentionHeatmap(instance,box,spec);return instance;}
   const colors=['#bf762b','#356d51','#7593a0'];
   if(spec.kind==='groupContribution') {
     setChartOption(instance,()=>{
@@ -3211,7 +3426,7 @@ function drawDetailChart(box,spec) {
         markLine:index===0&&spec.selectedPeriod?{silent:true,symbol:'none',label:{show:false},lineStyle:{type:'dashed',color:'#718777'},data:[{xAxis:spec.selectedPeriod}]}:undefined,
         barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
         lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
-        endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
+        endLabel:{show:isTimeline&&(Number.isFinite(line.values.at(-1))||spec.endLastValid&&line.values.some(Number.isFinite)),formatter:params=>endText(line,params.value),
           color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:chartText(12),fontWeight:600,width:chartText(rightReserve-12),overflow:'truncate'},
         label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
           fontSize:chartText(12),fontWeight:600,color:'#365a43'},
@@ -3382,12 +3597,13 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
   if(id===24)panel.append(retentionControl());
+  if(id===43)panel.append(deviceRetentionControl());
   const filterContext=metricFilterContext(id);
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
     `${filterContext.applied.length?`本项应用：${filterContext.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、')}`:'本项仍为总体范围'}${filterContext.ignored.length?`；未应用：${filterContext.ignoredText}（不适用于本项）`:''}。`));
@@ -3407,12 +3623,14 @@ function metricEvidence(id,page) {
     box.setAttribute('aria-label',`${spec.title}；${chartNote(spec)}`);
     plot.append(element('h3','evidence-plot-title',spec.title));
     if(spec.scopeNote)plot.append(element('p','table-note group-evidence-context',spec.scopeNote));
+    if(spec.kind==='deviceRetentionHeatmap')box.classList.add('device-retention-heatmap');
     plot.append(box);
     const scaleNote=chartScaleNote(spec);
     if(scaleNote)plot.append(element('p','chart-scale-note',scaleNote));
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===43){deviceRetentionEvidence(appendEvidencePair,panel);return {node:panel,specs};}
   if((id===41||id===44)&&value.kind==='rate') {
     const part=deviceActivitySummary(id),date=part.at.slice(0,10);
     const sourceNote='合成行为间隔聚合；相同完整30天可观察有效已激活设备池，纯心跳不算有效行为。不同窗口是嵌套集合，人数不可相加。UTC左闭右开窗口，截至时点不计入前一窗口。';
@@ -3778,6 +3996,7 @@ function registerIssue(page,id,{preserveEvidence=false}={}) {
 function registerIssueButton(page,id,{compact=false}={}) {
   const button=element('button','issue-register',compact?`登记 #${id} 问题`:`登记 #${id} ${catalogItem(id).name}问题`);button.type='button';
   button.dataset.metricId=String(id);
+  if(!hasRegistrationBaseline(id)){button.disabled=true;button.title='当前批次没有可用完整观察基线';}
   button.setAttribute('aria-label',`登记 #${id} ${catalogItem(id).name} 的当前范围问题`);
   button.addEventListener('click',()=>registerIssue(page,id));
   return button;
@@ -3893,6 +4112,7 @@ function actionRecord(page,evidenceId) {
   const filterContext=metricFilterContext(evidenceId),scopeDetails=element('dl','action-scope');
   const calculationScope=filterContext.applied.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'总体 · 默认业务对象';
   const calculationDescription=element('dd','',calculationScope);
+  if(evidenceId===43){const c=deviceRetentionCurrent();calculationDescription.append(element('p','table-note',c.reason?c.reason:`激活批次：${c.start}—${c.end}；D7／D30分别完整观察，设备状态按激活入组时冻结。`));}
   if(evidenceId===24)calculationDescription.append(element('p','table-note',`留存观察月：${retentionSelection().month}；完整月，分母为上一基期月的复合活跃主账号。`));
   if(filterContext.ignored.length)calculationDescription.append(element('span','action-scope-ignored',
     `未参与计算：${filterContext.ignoredText}（不适用于本指标）。`));
@@ -3919,6 +4139,7 @@ function actionRecord(page,evidenceId) {
     `当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
   if(evidenceId===24&&current.baseline&&!current.baseline.includes('→'))form.append(element('p','action-baseline-note',
     '原登记未保存留存人数与基期月份；保留原文字基线，不补写或反推历史人数。'));
+  if(evidenceId===43&&current.baseline&&!current.baseline.includes('激活批次'))form.append(element('p','action-baseline-note','原登记未保存完整激活批次与D7／D30计数；旧编号、基线、日期和草稿保留，不反推或补写历史。'));
   if([41,44].includes(evidenceId)&&!baselineAt.includes('设备行为口径v1'))form.append(element('p','action-baseline-note device-definition-warning',
     '原登记未记录设备行为口径v1；旧观察窗口或来源不同，不能自动作同口径比较。即使百分比相同也不表示未变化。原编号、范围、基线和草稿保留，更新进度不改写原口径。'));
   const stages=element('ol','action-stages');stages.setAttribute('aria-label','问题单处理进度');
@@ -4021,7 +4242,7 @@ function actionRecord(page,evidenceId) {
   form.addEventListener('submit',event=>{
     event.preventDefault();
     updateStage();
-    if(!simulatedActionState[key]&&metric(evidenceId).kind==='na') {
+    if(!simulatedActionState[key]&&!hasRegistrationBaseline(evidenceId)) {
       showReceipt('当前指标没有可用登记基线，暂不能新建问题单；请先核对样本与适用范围。填写内容仍暂存在本次页面会话。','error');
       return;
     }
@@ -4292,6 +4513,7 @@ function metricInspector(id,page) {
   fact('统计对象',metricEntityLabel(contract.entity));
   fact('时间窗口',contract.window);
   if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)fact('基期 → 观察期',`${row.baseMonth} → ${row.observedMonth}`);}
+  if(id===43&&value.kind==='group'){const c=deviceRetentionCurrent();fact('激活批次',`${c.start}—${c.end}`);fact('观察截至',`${sourceData.deviceRetentionFacts.asOf} UTC`);for(const key of ['D7','D30'])fact(`${key}留存设备`,`${deviceRetentionText(c.measures[key])} · ${c.measures[key].numerator===null?'批次观察未结束':`${number(c.measures[key].numerator)} / ${number(c.denominator)} 台`}`);}
   if(id===54&&value.kind==='group') {
     const quality=dataQualityState(value);fact('演示判定',quality.label);fact('判定依据',quality.reason);
   }
@@ -4323,6 +4545,7 @@ function metricInspector(id,page) {
   if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
+    id===43?'按首图激活周、国家、型号与自报渠道合成频数重算；状态按入组时冻结，后续停用不剔除。D30不是D7子集，不能解释为连续使用率。':
     id===24?'按所选完整自然月、国家与基期App平台汇总同一合成分组；人数重算留存率，不平均分组率。不是逐账号事件日志或真实经营历史。':
     [11,13].includes(id)?'按当前批次与筛选交集汇总同一合成频数；成功率与耗时同源，不是独立分片估算，仍非真实经营日志。':
     id===15?'按同一合成设备台账逐台筛选和回算历史；不是独立分片估算，仍不代表真实运营数据。':
@@ -4622,7 +4845,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const record=element('div','income-record');record.id=`${page}-workspace-record`;
   record.append(element('p','workspace-record-hint','本地问题单 · 保存仅保留在此浏览器'),form);
   right.append(rightControls,finding,record);
-  const device=selectedMetric===15?element('div','binding-device-detail'):null;
+  const device=[15,43].includes(selectedMetric)?element('div',selectedMetric===15?'binding-device-detail':'retention-device-rail'):null;
   const deviceButton=device?element('button','','当前设备'):null;
   let currentRightMode='observation';
   if(device){device.id=`${page}-workspace-device`;deviceButton.type='button';deviceButton.disabled=true;deviceButton.setAttribute('aria-controls',device.id);rightControls.append(deviceButton);right.append(device);}
@@ -4634,6 +4857,11 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   };
   if(device) {
     deviceButton.addEventListener('click',()=>showRight('device'));
+    if(selectedMetric===43)workspace.addEventListener('device-retention-select',event=>{
+      const {record:row,trigger}=event.detail,viewport={left:scrollX,top:scrollY,behavior:'instant'};deviceButton.disabled=false;
+      device.replaceChildren(deviceRetentionDetail(row,()=>{const target=trigger?.isConnected?trigger:left.querySelector('.device-retention-list input');target?.focus({preventScroll:true});scrollTo(viewport);}));showRight('device');
+      requestAnimationFrame(()=>{if(!workspace.isConnected||currentRightMode!=='device')return;const bounds=device.getBoundingClientRect();if(bounds.top>=innerHeight-80||bounds.bottom<=0){right.scrollIntoView({block:'start',behavior:'instant'});device.querySelector('.binding-device-back').focus({preventScroll:true});}});
+    });
     workspace.addEventListener('binding-device-select',event=>{
       const row=event.detail?.record,trigger=event.detail?.trigger,viewport={left:scrollX,top:scrollY,behavior:'instant'};deviceButton.disabled=!row;
       if(!row){device.replaceChildren();if(currentRightMode==='device')showRight('observation');return;}
@@ -4654,7 +4882,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     });
   }
   observationButton.addEventListener('click',()=>showRight('observation'));
-  recordButton.disabled=metric(selectedMetric).kind==='na'&&!activeIssueMetrics.get(issueScopeKey(page));
+  recordButton.disabled=!hasRegistrationBaseline(selectedMetric)&&!activeIssueMetrics.get(issueScopeKey(page));
   recordButton.addEventListener('click',()=>{
     const id=Number(form.querySelector('[name="issueMetric"]').value);
     activeIssueMetrics.set(issueScopeKey(page),id);
@@ -5057,7 +5285,7 @@ function handleRouteChange(event) {
   if(changed)renderRoute({preserveScroll:Boolean(restore)});
   if(restore)restoreReadingView(restore);
 }
-const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow','binding-device-facts','device-activity-facts','onboarding-duration-facts'];
+const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow','binding-device-facts','device-activity-facts','onboarding-duration-facts','device-retention-facts'];
 const dataBatchSize=6;
 let chartLibraryReady;
 function waitForChartLibrary() {
@@ -5214,7 +5442,7 @@ async function start() {
       document.querySelector('#load-meter').value=ready;
       document.querySelector('#load-status').textContent=`已准备 ${ready} / ${dataParts.length} 组数据`;
     });
-    sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name==='binding-device-facts'?'bindingDeviceFacts':name==='device-activity-facts'?'deviceActivityFacts':name==='onboarding-duration-facts'?'onboardingDurationFacts':name,parts[index]]));
+    sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name==='binding-device-facts'?'bindingDeviceFacts':name==='device-activity-facts'?'deviceActivityFacts':name==='onboarding-duration-facts'?'onboardingDurationFacts':name==='device-retention-facts'?'deviceRetentionFacts':name,parts[index]]));
     dataLoaded=true;
     if(!window.echarts) {
       document.querySelector('#load-title').textContent='经营数据已准备好';

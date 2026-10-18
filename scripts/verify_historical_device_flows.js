@@ -18,10 +18,17 @@ async(parent)=>{
    for(const id of [43,51])for(const query of ['', 'deviceStatus=Effective','deviceStatus=Inactive','country=US&deviceStatus=Effective']){
     await open(id,query);await p.evaluate(font=>document.documentElement.style.fontSize=`${font}px`,font);
     const state=await p.evaluate(id=>({value:metric(id),window:actionBaselineWindow(id),history:metricHistory(id),policy:policyFor(id)}),id);
-    check(state.policy.businessDimensions.includes('deviceStatus')&&!state.policy.demonstrableDimensions.includes('deviceStatus'),'Historical status removed from business applicability or still calculable without entry status');
+    check(state.policy.businessDimensions.includes('deviceStatus')&&state.policy.demonstrableDimensions.includes('deviceStatus')===(id===43),'Historical entry-state policy does not match source availability');
     const evidence=p.locator(`#metric-evidence-${id}`),text=await evidence.innerText();
-    check(!/本指标可演示筛选：[^。]*设备状态/.test(text),'Evidence advertises current status as a historical slice');
-    if(query){
+    if(id===51)check(!/本指标可演示筛选：[^。]*设备状态/.test(text),'Unbinding evidence advertises missing entry status');
+    if(id===43){
+     const v=state.value.value;check(state.value.kind==='group','Cohort retention unavailable despite approved source');
+     if(query.includes('Inactive'))check(v.D7.denominator===0&&v.D7.kind==='na'&&v.D30.kind==='na','Ineligible entry population invented retention');
+     else if(query.includes('country=US'))check(v.D7.denominator>0&&v.D7.denominator<2000&&v.D7.kind==='rate','Entry-state and country intersection missing');
+     else check(v.D7.numerator===1600&&v.D30.numerator===1450&&v.D30.denominator===2000,'Approved cohort anchors changed');
+     check(text.includes('2026-08-17')&&text.includes('入组时'),'Historical cohort or frozen entry boundary hidden');
+     check(state.window===(query.includes('Inactive')?'所选激活批次尚无可用完整观察基线':'设备留存D30观察期末 2026-09-22 · 激活批次 2026-08-17—2026-08-23'),'Retention registration lost its cohort boundary');
+    }else if(query){
      check(state.value.availability==='pending'&&state.value.reason.includes('入组时设备状态'),'Historical flow is filtered by current status, zeroed, or declared inapplicable');
      check(text.includes('不能用当前状态排除未留存或已解绑设备'),'Missing entry-state explanation is not visible');
     }else{
@@ -52,9 +59,9 @@ async(parent)=>{
   await form().scrollIntoViewIfNeeded();await p.screenshot({path:'output/playwright/v137-historical-new-record.png'});
   await open(43,'',true);
   await form().locator('.action-review summary').click();
-  check(await field('reviewedAt').getAttribute('min')===null&&(await form().innerText()).includes('统计期末无法核实'),'Undated retention acquires an invented date floor');
+  check(await field('reviewedAt').getAttribute('min')==='2026-09-22','New retention review does not use approved cohort observation end');
   await field('owner').fill('合成留存核查');await save();
-  check((await record(43)).baselineAt==='新设备留存批次日期待补','Unknown cohort was stored as a snapshot');
+  check((await record(43)).baselineAt==='设备留存D30观察期末 2026-09-22 · 激活批次 2026-08-17—2026-08-23','New cohort was stored as a snapshot');
   // Open and update real records captured from the previous app, including a now-pending scope.
   await p.evaluate(records=>localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(records)),legacy.records);
   await p.reload();await ready();

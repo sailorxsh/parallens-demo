@@ -1013,7 +1013,7 @@
       "id": 43,
       "page": "C",
       "entity": "设备Cohort",
-      "window": "新设备D7/D30汇总样例；入组日期与观察截止待补",
+      "window": "首图激活周入组；D7／D30自然日完整观察，观察截至2026-09-24 UTC",
       "businessDimensions": [
         "country",
         "deviceModel",
@@ -1024,12 +1024,11 @@
       "demonstrableDimensions": [
         "country",
         "deviceModel",
+        "deviceStatus",
         "productLine",
         "salesChannel"
       ],
-      "unavailableDimensions": [
-        "deviceStatus"
-      ]
+      "unavailableDimensions": []
     },
     {
       "id": 44,

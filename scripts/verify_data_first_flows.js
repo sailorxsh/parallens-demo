@@ -17,16 +17,16 @@ async(parent)=>{
    await p.route('**/vendor/echarts.min.js*',async route=>{await gate;await route.continue();});
    await p.goto(`${base}#/D?country=US&metric=18&issue=18`,{waitUntil:'commit'});
    await p.getByRole('button',{name:'先查看数据表',exact:true}).waitFor();
-   const status=await p.evaluate(()=>({progress:document.querySelector('#load-meter').value,busy:document.querySelector('#main').getAttribute('aria-busy'),
+   const status=await p.evaluate(()=>({progress:document.querySelector('#load-meter').value,total:document.querySelector('#load-meter').max,busy:document.querySelector('#main').getAttribute('aria-busy'),
     data:document.querySelector('#load-title').textContent,partial:!!document.querySelector('.detail-kpi'),charts:typeof window.echarts}));
-   check(status.progress===17&&status.busy==='true'&&!status.partial&&status.charts==='undefined','Data-first choice appears before complete data or replaces normal waiting');
+   check(status.progress===status.total&&status.busy==='true'&&!status.partial&&status.charts==='undefined','Data-first choice appears before complete data or replaces normal waiting');
    await capture('library-choice');
    const choice=p.getByRole('button',{name:'先查看数据表',exact:true});await choice.focus();await p.keyboard.press('Enter');await ready();
    check(await p.locator('.load-panel').count()===0&&await p.locator('.action-record').count()===1,'Data-first mode stays busy or loses its deep-linked issue');
    check(p.url().includes('country=US')&&p.url().includes('metric=18')&&p.url().includes('issue=18'),'Data-first mode changes the requested scope');
    check(await p.locator('#open-metric-search').isEnabled()&&await p.getByRole('tab',{name:'完整数据',exact:true}).getAttribute('aria-selected')==='true',
     'Data-first choice does not open the complete-data view or enable navigation/search');
-   check(await p.locator('.income-panel:not([hidden]) table').first().isVisible(),'Complete calculation table is not readable without charts');
+   check(await p.locator('.income-panel:not([hidden]) table:visible').first().isVisible(),'Complete calculation table is not readable without charts');
    const owner=p.locator('.action-record [name="owner"]');await owner.fill('Data-first QA');
    await p.locator('.action-record').getByRole('button',{name:'保存本地记录',exact:true}).click();
    check(await p.locator('.action-receipt').getAttribute('data-state')==='saved','Data-first issue cannot be saved while charts are pending');
@@ -34,7 +34,7 @@ async(parent)=>{
    for(const page of ['A','B','C','D','E','F','G']){
     await p.locator(`.nav-link[data-page="${page}"]`).click();await ready();
     await p.getByRole('tab',{name:'完整数据',exact:true}).click();await ready();
-    check(await p.locator('.income-panel:not([hidden]) table').first().isVisible()&&await p.evaluate(()=>typeof window.echarts)==='undefined',
+    check(await p.locator('.income-panel:not([hidden]) table:visible').first().isVisible()&&await p.evaluate(()=>typeof window.echarts)==='undefined',
      'Data-first navigation loses complete data while charts are pending: '+page);
    }
    await p.goto(`${base}#/D?country=US&metric=18&issue=18&panel=data`,{waitUntil:'commit'});await ready();
@@ -70,7 +70,7 @@ async(parent)=>{
   await p.route('**/vendor/echarts.min.js*',async route=>{await libraryGate;await route[libraryOutcome]();});
   await p.route('**/data/weekly.json',async route=>{await dataGate;await route.abort();});
   await p.goto(base,{waitUntil:'commit'});
-  await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===16);
+  await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===document.querySelector('#load-meter')?.max-1,{},{polling:50});
   check(await p.getByRole('button',{name:'先查看数据表',exact:true}).count()===0&&
    await p.locator('#main').getAttribute('aria-busy')==='true','Incomplete data falsely enables the data-first choice');
   releaseData();await p.getByRole('button',{name:'重新加载',exact:true}).waitFor();

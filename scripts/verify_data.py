@@ -509,12 +509,11 @@ for label,mid in [('binding',11),('activation',13)]:
 check('D23-onboarding-frequency-source',duration_ok,'576个互斥合成分组；成功频数与失败/未达成闭合、24个原周度总计和完整观察窗保留')
 historical_contracts={item['id']:item for item in contract if item['id'] in (43,51)}
 check('D24-historical-device-boundaries',
-      all('deviceStatus' in policy_metrics[mid]['businessDimensions'] and
-          'deviceStatus' not in policy_metrics[mid]['demonstrableDimensions'] and
-          'deviceStatus' in policy_metrics[mid]['unavailableDimensions'] for mid in (43,51)) and
-      '入组日期与观察截止待补' in historical_contracts[43]['window'] and
+      'deviceStatus' in policy_metrics[43]['businessDimensions'] and 'deviceStatus' in policy_metrics[43]['demonstrableDimensions'] and
+      'deviceStatus' in policy_metrics[51]['businessDimensions'] and 'deviceStatus' in policy_metrics[51]['unavailableDimensions'] and
+      '自然日完整观察' in historical_contracts[43]['window'] and
       historical_contracts[51]['window'].startswith(metrics['m51']['value']['cohort']+'解绑批次'),
-      '历史留存与解绑不按当前状态剔除流失者；未提供的入组状态和批次日期明确待补，已知解绑月份与来源一致')
+      '新设备留存使用已补齐的激活入组状态；解绑仍缺入组状态，不按当前状态排除历史流失者')
 
 retention = metric_trends['m24']
 retention_ok = (retention['status']=='approved-synthetic' and retention['classification']=='entirely_synthetic' and
@@ -544,6 +543,29 @@ retention_ok &= ([(r['numerator'],r['denominator']) for r in retention['points']
                  metrics['m24']['value']==54000/70000)
 check('D25-monthly-retention-cohorts',retention_ok,
       '12个完整自然月、96个互斥国家×基期App平台分组、两期人数与相邻月接续闭合；不是逐账号事件链证明')
+
+device_retention=load('device-retention-facts.json')
+cohorts=device_retention['cohorts']
+as_of=date.fromisoformat(snapshot['asOf'])
+last_end=as_of-timedelta(days=as_of.weekday()+1)
+cohort_ok=device_retention['status']=='approved-synthetic' and device_retention['classification']=='entirely_synthetic' and device_retention['asOf']==snapshot['asOf'] and len(cohorts)==12
+for i,c in enumerate(cohorts):
+    end=last_end-timedelta(weeks=11-i)
+    cohort_ok &= (c['end']==end.isoformat() and c['start']==c['id']==(end-timedelta(days=6)).isoformat() and len(c['records'])==32 and
+                  sum(r['activated'] for r in c['records'])==c['activated'] and
+                  len({(r['country'],r['deviceModel'],r['salesChannel']) for r in c['records']})==32)
+    for key,days in [('D7',7),('D30',30)]:
+        cutoff=end+timedelta(days=days+1)
+        cohort_ok &= c['observationEndExclusive'][key]==cutoff.isoformat() and c['mature'][key]==(as_of>=cutoff)
+        for r in c['records']:
+            cohort_ok &= (r['entryDeviceStatus']=='Effective' and r['productLine']==('Hunting' if r['deviceModel']=='Hunt Pro' else 'Bird') and
+                          sum(o['count'] for o in r['outcomeCounts'])==r['activated'] and
+                          all(type(o['count']) is int and o['count']>0 and (type(o[key]) is bool if c['mature'][key] else o[key] is None) for o in r['outcomeCounts']))
+anchor_cohort=next(c for c in cohorts if c['id']==device_retention['defaultCohort'])
+cohort_ok &= anchor_cohort['id']=='2026-08-17' and all(
+    metrics['m43']['value'][key]['numerator']==sum(o['count'] for r in anchor_cohort['records'] for o in r['outcomeCounts'] if o[key]) and
+    metrics['m43']['value'][key]['denominator']==anchor_cohort['activated'] for key in ['D7','D30'])
+check('D26-device-retention-cohorts',cohort_ok,'12个激活周、384个同源互斥分组；UTC日界、成熟性与两项留存计数闭合，后续停用不剔除')
 
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
