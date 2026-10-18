@@ -43,7 +43,8 @@ async(parent)=>{
         const original=await pair.locator('.detail-chart').evaluate(n=>{
           const o=echarts.getInstanceByDom(n).getOption();return {min:o.yAxis[0].min,max:o.yAxis[0].max,values:o.series[0].data.map(v=>typeof v==='number'?v:v.value)};
         });
-        check(original.min<0&&original.max>0&&original.values.every((value,index)=>Math.abs(value-source.summaries[index].total)<1e-9),'Original contribution/zero baseline changed');
+        check(original.min<=Math.min(0,...original.values)&&original.max>=Math.max(0,...original.values)&&
+          original.values.every((value,index)=>Math.abs(value-source.summaries[index].total)<1e-9),'Original contribution changed or zero/data is clipped');
         await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
         const form=p.locator('.action-record');await form.locator('[name="note"]').fill('拆分核验保留的草稿');
         const baseline=await form.locator('> .table-note').first().innerText();

@@ -18,7 +18,7 @@ async(page)=>{
    const drawn=[...node.querySelectorAll('svg text')];
    return {values:option.series[0].data.map(item=>typeof item==='number'?item:item.value),expected,
     overall:(converted(current)/current.length-converted(previous)/previous.length)*100,
-    min:option.yAxis[0].min,max:option.yAxis[0].max,labels:option.xAxis[0].data,
+    min:option.yAxis[0].min,max:option.yAxis[0].max,interval:option.yAxis[0].interval,labels:option.xAxis[0].data,
     text:node.getAttribute('aria-label'),rect:node.getBoundingClientRect().toJSON(),
     readable:drawn.length>0&&option.xAxis[0].data.every(label=>drawn.some(text=>text.textContent===label))&&drawn.every(text=>{
       const r=text.getBoundingClientRect(),box=node.getBoundingClientRect();
@@ -27,7 +27,9 @@ async(page)=>{
   });
   check(actual.values.length===actual.expected.length&&actual.values.every((value,i)=>Math.abs(value-actual.expected[i])<1e-9),'Chart contribution disagrees with raw trial records');
   check(Math.abs(actual.values.reduce((sum,value)=>sum+value,0)-actual.overall)<1e-9,'Disjoint groups do not reconcile to the overall rate change');
-  check(actual.min<0&&actual.max===-actual.min,'Contribution axis excludes zero or uses unequal positive/negative scales');
+  check(actual.min<=Math.min(0,...actual.expected)&&actual.max>=Math.max(0,...actual.expected)&&actual.interval>0,'Contribution axis clips data or excludes zero');
+  if(actual.expected.every(value=>value<=0))check(actual.max===0,'All-negative contributions reserve an unused positive half');
+  if(actual.expected.every(value=>value>=0)&&actual.expected.some(value=>value>0))check(actual.min===0,'All-positive contributions reserve an unused negative half');
   check(actual.text.includes('个百分点')&&actual.text.includes('pp＝百分点'),'Chart omits contribution units');
   return actual;
  };

@@ -2698,7 +2698,7 @@ function drawDetailChart(box,spec) {
       const precision=Math.max(span<5?1:0,chartStepPrecision(step));
       return `${Number(value).toFixed(precision)}%`;
     }
-    if(spec.unit==='个百分点')return `${Number(value).toFixed(1)}pp`;
+    if(spec.unit==='个百分点')return `${Number(value).toFixed(Math.max(1,chartStepPrecision(spec.intervalY)))}pp`;
     if(spec.unit==='美元/人')return `$${Number(value).toFixed(span<1?2:1)}`;
     if(spec.unit==='美元')return spec.intervalY?`$${number(value)}`:
       value>=1000?`$${(value/1000).toFixed(span<1000?2:1)}k`:`$${number(Math.round(value))}`;
@@ -2860,10 +2860,14 @@ function metricEvidence(id,page) {
       const contribution=trialGroupContributions(periods.map(([,result])=>result.rows));
       if(contribution) {
         const {groups,overall,changes,effects}=contribution;
-        const bound=Math.max(.5,Math.ceil(Math.max(...changes.map(Math.abs))*1.15*2)/2);
+        const plottedChanges=changes.map(value=>Math.abs(value)<1e-10?0:value);
+        const low=Math.min(0,...plottedChanges),high=Math.max(0,...plottedChanges),span=high-low||1;
+        const interval=chartNiceStep(span/4),rounded=value=>Number(value.toPrecision(12));
         const signed=value=>`${Math.abs(value)<.005?'':value>0?'+':'−'}${Math.abs(value).toFixed(2)}`;
         const changeSpec={title:'转正率变化 · 互斥分组贡献',comparisonGroup:'trial-periods',unit:'个百分点',labels:groups.map(group=>group.name),
-          minY:-bound,maxY:bound,labelRotation:0,series:[{name:'对总体变化的贡献',values:changes,color:'#bc6a20'}],
+          minY:low<0?rounded(Math.floor((low-span*.1)/interval)*interval):0,
+          maxY:high>0?rounded(Math.ceil((high+span*.1)/interval)*interval):high===low?1:0,intervalY:interval,
+          labelRotation:0,series:[{name:'对总体变化的贡献',values:plottedChanges,color:'#bc6a20'}],
           note:`前9周→近3周：组内表现 ${signed(effects.reduce((sum,item)=>sum+item.within,0))}、人群构成 ${signed(effects.reduce((sum,item)=>sum+item.composition,0))}，合计 ${signed((overall[1].value-overall[0].value)*100)} 个百分点。算术拆分不证明原因；纵轴含0，pp＝百分点。`};
         appendEvidencePair(changeSpec,{title:'分组贡献 · 可验算依据',
           columns:['互斥分组','前9周转正 / 总体成熟','近3周转正 / 总体成熟','变化贡献（百分点）'],
