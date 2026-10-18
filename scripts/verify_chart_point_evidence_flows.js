@@ -3,6 +3,7 @@ async(parent)=>{
  const base=new URL('.',parent.url()).href,c=await parent.context().browser().newContext({viewport:{width:1366,height:1000},reducedMotion:'reduce'}),p=await c.newPage(),results=[],errors=[];
  const catalog=JSON.parse(fs.readFileSync('data/metric-catalog.json','utf8'));
  const records=JSON.parse(fs.readFileSync('data/model-market.json','utf8')).records;
+ const structureViews=JSON.parse(fs.readFileSync('data/diagnostics.json','utf8')).E.structureViews;
  const check=(ok,message)=>{if(!ok)throw new Error(message);};
  p.on('pageerror',e=>errors.push(e.message));
  const settle=()=>p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r)))));
@@ -84,8 +85,59 @@ async(parent)=>{
     await p.keyboard.press('Enter');check(await details.evaluate(n=>n.open),'Keyboard cannot reopen the point evidence');
    }
   }
+  for(const width of [1366,1600,1920])for(const font of [16,32]){
+   await p.goto('about:blank');await p.setViewportSize({width,height:1000});
+   await open('E',35,'issue=35');
+   const form=p.locator('.action-record');
+   await form.locator('[name=owner]').fill('结构核对验收');
+   await form.locator('[name=note]').fill('结构图登记原基线');
+   await form.getByRole('button',{name:'保存本地记录',exact:true}).click();
+   await form.locator('[name=note]').fill('结构核对未保存草稿');
+   const stored=await p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'));
+   const baseline=await form.locator('>p').first().innerText();
+   if(font!==16)await p.evaluate(font=>document.documentElement.style.fontSize=`${font}px`,font);
+   await p.locator('#E-tab-groups').click();
+   const context=p.locator('details.workspace-context').filter({has:p.getByText('其他付费结构与型号对照',{exact:true})});
+   await context.locator(':scope > summary').click();await settle();
+   const explorer=p.locator('.structure-explorer'),panel=explorer.getByRole('tabpanel');
+   const url=p.url(),contextCount=await context.locator('details[open]').count();
+   for(const [index,view] of structureViews.entries()){
+    const tab=explorer.getByRole('tab').nth(index);await tab.click();await panel.locator('svg').waitFor();await settle();
+    check(await tab.getAttribute('aria-selected')==='true'&&await panel.getAttribute('aria-labelledby')===await tab.getAttribute('id'),
+      'Structure tab and panel identity disagree');
+    check(await panel.locator('tr.chart-selected').count()===0&&await panel.locator('.chart-selection').innerText()==='',
+      'Changing the statistical object retains an old selected row');
+    const table=panel.locator('table'),plot=panel.locator('.detail-chart');
+    check(await table.isVisible(),'Structure table is hidden before a pointer selection');
+    check((await panel.locator(':scope > .table-note').innerText()).includes(`${view.denominator.toLocaleString('zh-CN')}${view.unit}`),
+      'Structure denominator or unit changed');
+    const values=await plot.evaluate(n=>echarts.getInstanceByDom(n).getOption().series[0].data);
+    check(JSON.stringify(values)===JSON.stringify(view.rows.map(row=>row[1])),'Structure graph differs from its source rows');
+    const point=await clickPoint(plot),row=table.locator('tr.chart-selected');
+    const expected=view.rows[point.index],cells=await row.locator('th,td').allTextContents();
+    check(await row.count()===1&&cells[0]===expected[0]&&cells[1]===expected[1].toLocaleString('zh-CN')&&
+      cells[2]===`${(expected[1]/view.denominator*100).toFixed(1)}%`,'Structure point highlights the wrong row, count or share');
+    const feedback=panel.locator('.chart-selection');
+    check(await feedback.count()===1&&await feedback.getAttribute('aria-live')==='polite'&&
+      (await feedback.innerText()).includes(`图中临时选中：${expected[0]}`),'Structure selection lacks adjacent accessible feedback');
+    check(await context.locator('details[open]').count()===contextCount&&await context.evaluate(n=>n.open)&&p.url()===url,
+      'Structure selection changes surrounding disclosures or business scope');
+    const bounds=await row.boundingBox(),nav=await p.locator('.section-navigation').boundingBox();
+    check(bounds&&bounds.y>=nav.y+nav.height-1&&bounds.y+bounds.height<=1001,'Selected structure row is hidden behind navigation or below the viewport');
+    check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Structure selection causes page overflow');
+    if(width===1366&&index===0)await p.screenshot({path:`output/playwright/v112-audit/07-${parent.context().browser().browserType().name()}-structure-${font}.png`});
+    results.push({structure:view.label,width,font,row:point.index,values,cells});
+   }
+   const tabs=explorer.getByRole('tab');await tabs.last().focus();await p.keyboard.press('ArrowRight');await settle();
+   check(await tabs.first().getAttribute('aria-selected')==='true'&&await tabs.first().evaluate(n=>n===document.activeElement)&&
+    await panel.locator('tr.chart-selected').count()===0,'Keyboard tab wrap leaves stale selection or loses focus');
+   check(await p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'))===stored&&
+    await form.locator('[name=note]').inputValue()==='结构核对未保存草稿'&&await form.locator('>p').first().innerText()===baseline,
+    'Structure selections modify saved records, drafts or historical baselines');
+  }
   check(errors.length===0,errors.join('; '));
   check(['bar','boxplot','heatmap','line','scatter'].every(type=>results.some(row=>row.type===type)),'A required rendered chart family was not exercised');
-  return {status:'PASS',visitedMetrics:53,checks:['actual pointer clicks for all available selected metric charts','correct row and scope','source model counts and rates','both heatmap dimensions','two desktop widths','keyboard disclosure','no runtime errors'],results};
+  return {status:'PASS',visitedMetrics:53,checks:['actual pointer clicks for all available selected metric charts','correct row and scope','source model counts and rates','both heatmap dimensions','two desktop widths','keyboard disclosure',
+    'three supplemental statistical objects at three widths and 200% text','adjacent live selection and visible source table','keyboard object switching clears old selection','unchanged saved records, draft and baseline','no runtime errors'],results};
  }finally{await c.close();}
 }

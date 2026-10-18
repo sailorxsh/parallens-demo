@@ -2205,9 +2205,10 @@ function stackedChartPoint(instance,spec,params) {
   });
   return seriesIndex<0?null:{...params,dataIndex:index,seriesIndex,value:spec.series[seriesIndex].values[index]};
 }
-function bindChartTableSelection(instance,table,describe,{indexFor=params=>params.dataIndex,columnFor,resolvePoint=params=>params}={}) {
+function bindChartTableSelection(instance,table,describe,{indexFor=params=>params.dataIndex,columnFor,resolvePoint=params=>params,
+  disclosure=table?.closest('details')}={}) {
   if(!instance||!table)return;
-  const details=table.closest('details'),anchor=details??table.closest('.data-table-scroll')??table;
+  const details=disclosure,anchor=details??table.closest('.data-table-scroll')??table;
   const previous=anchor.previousElementSibling;
   const feedback=previous?.matches('.chart-selection')?previous:element('p','chart-selection');
   feedback.setAttribute('aria-live','polite');if(feedback!==previous)anchor.before(feedback);
@@ -2323,6 +2324,8 @@ function structureExplorer(views) {
     panel.replaceChildren(element('p','table-note',`${view.label} · 分母 ${number(view.denominator)}${view.unit}。${view.note}`),
       box,dataTable({title:view.label,columns:['分组',`数量（${view.unit}）`,'占比'],rows}));
     currentChart=drawDetailChart(box,spec);
+    // This table stays visible; the enclosing disclosure contains the whole explorer.
+    bindChartTableSelection(currentChart,panel.querySelector('table'),params=>view.rows[params.dataIndex][0],{disclosure:null});
   }
   buttons.forEach((button,index)=>{
     button.addEventListener('click',()=>select(index));
