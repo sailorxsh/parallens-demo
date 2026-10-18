@@ -246,8 +246,47 @@ function renderSavedIssues() {
   table.append(body);wrap.append(table);content.append(wrap);savedIssueTableObserver?.observe(table);
   requestAnimationFrame(updateScrollableTables);
 }
+function cohortObservation(id,state=filterState,trialRecords) {
+  const missing=()=>({reason:'批次或结果观察截止待核验；不能用批次周末代替观察完成日。'});
+  if(id===11||id===13) {
+    const part=onboardingRows(id,state);if(part.reason)return part;
+    return {week:part.cohort.week,start:part.cohort.cohortStart,end:part.cohort.cohortEnd,observedThrough:part.cohort.observedThrough};
+  }
+  if(id!==18)return missing();
+  const scoped=Object.fromEntries(effectiveFor(18,state));
+  const week=sourceData.weekly.find(w=>String(w.week)===String(scoped.week??sourceData.weekly.at(-1).week));
+  if(!week)return missing();
+  const result=trialRecords?{rows:trialRecords}:trialRows({...scoped,week:String(week.week)});
+  if(!result.rows?.length)return missing();
+  const dates=new Map(),day=value=>{
+    if(!dates.has(value))dates.set(value,typeof value==='string'&&baselineWindowEnd(`快照 ${value}`)?Date.parse(value+'T00:00:00Z'):NaN);
+    return dates.get(value);
+  };
+  const end=day(week.weekEnd),asOf=day(sourceData.snapshot.asOf);let observed=-Infinity;
+  if(!Number.isFinite(end)||!Number.isFinite(asOf)||sourceData.trialFacts.timezone!=='UTC')return missing();
+  for(const row of result.rows) {
+    const start=day(row.trial_started_at),ended=day(row.trial_ended_at),through=day(row.outcome_observed_through);
+    if(row.cohort_mature!==true||row.maturity_week_end!==week.weekEnd||
+      !Number.isFinite(start)||!Number.isFinite(ended)||!Number.isFinite(through)||
+      start>ended||ended<end-6*86400000||ended>end||through<ended||through>asOf)return missing();
+    observed=Math.max(observed,through);
+  }
+  if(observed<end)return missing();
+  return {week:week.week,start:new Date(end-6*86400000).toISOString().slice(0,10),end:week.weekEnd,
+    observedThrough:new Date(observed).toISOString().slice(0,10)};
+}
+function observedBaselineEnd(window) {
+  if(typeof window!=='string')return null;
+  const match=/^完整周 W[1-9]\d* · (\d{4}-\d{2}-\d{2})—(\d{4}-\d{2}-\d{2}) · 观察截至 (\d{4}-\d{2}-\d{2})（UTC）$/.exec(window);
+  if(!match)return null;
+  const dates=match.slice(1).map(value=>new Date(value+'T00:00:00Z'));
+  if(dates.some((date,i)=>!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==match[i+1])||
+    dates[0].getUTCDay()!==1||dates[1]-dates[0]!==6*86400000||dates[2]<dates[1])return null;
+  return match[3];
+}
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
+  if([11,13,18].includes(id)){const c=cohortObservation(id);return c.reason?'当前批次观察截止待核验':`完整周 W${c.week} · ${c.start}—${c.end} · 观察截至 ${c.observedThrough}（UTC）`;}
   if([4,25,30].includes(id))return `快照 ${sourceData.snapshot.asOf} · 活跃窗口v1 · UTC零时截止`;
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
   if(id===23){const part=renewalProjection();return part.reason?'月度续订观察期待核验':`月度续订观察期末 ${new Date(Date.parse(part.current.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)} · 到期月 ${part.month}`;}
@@ -269,6 +308,7 @@ function actionBaselineWindow(id) {
 }
 function baselineWindowEnd(window) {
   if(typeof window!=='string')return null;
+  const observed=observedBaselineEnd(window);if(observed)return observed;
   // Only interpret the explicit saved window formats. Never substitute today's
   // metric window for an unknown historical baseline.
   const dated=/^(?:完整周 W[1-9]\d* · |快照 )(\d{4}-\d{2}-\d{2})(?:(?: · 设备行为口径v1 · (?:近30天活跃|(?:21|30)天未使用))|(?: · 活跃窗口v1 · UTC零时截止))?$/.exec(window);
@@ -478,8 +518,9 @@ function trialMetric(state=filterState) {
   const result=trialRows({...state,week:selectedWeek});
   if(!result.rows)return na(result.reason);
   const {denominator,numerator,value}=trialAggregate(result.rows);
-  return denominator>=30?{kind:'rate',denominator,numerator,value,source:'trial-facts'}:
-    na(denominator?`新增试用明细样本不足30（${denominator}人）`:'新增试用明细中没有该筛选组合');
+  if(denominator<30)return na(denominator?`新增试用明细样本不足30（${denominator}人）`:'新增试用明细中没有该筛选组合');
+  const observation=cohortObservation(18,state,result.rows);
+  return observation.reason?pending(observation.reason):{kind:'rate',denominator,numerator,value,source:'trial-facts'};
 }
 const relevantFilters=page=>page?Object.entries(sourceData?.filterPolicy?.controls??{})
   .filter(([,config])=>config.pages.includes(page)).map(([key])=>key):['country','productLine','appPlatform'];
@@ -3863,7 +3904,9 @@ function metricEvidence(id,page) {
     value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
-  const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
+  const observed=[11,13,18].includes(id)?cohortObservation(id):null;
+  const evidenceWindow=observed&&!observed.reason?`W${observed.week} · ${observed.start}—${observed.end}；观察截至 ${observed.observedThrough}（UTC）`:contract.window;
+  const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${evidenceWindow} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   panel.append(intro);
   if(id===23)panel.append(renewalControl());
   if(id===24)panel.append(retentionControl());
@@ -4409,7 +4452,10 @@ function actionRecord(page,evidenceId) {
   };
   updateIssueLabels();
   switchLabel.append(switcher);form.append(switchLabel);
-  if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note',
+  const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
+  if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
+    `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
+  else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note',
     `当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
   if(evidenceId===24&&current.baseline&&!current.baseline.includes('→'))form.append(element('p','action-baseline-note',
     '原登记未保存留存人数与基期月份；保留原文字基线，不补写或反推历史人数。'));
@@ -4793,6 +4839,7 @@ function metricInspector(id,page) {
   fact('统计对象',metricEntityLabel(contract.entity));
   fact('时间窗口',contract.window);
   if(id===23){const part=renewalProjection();if(!part.reason){const r=part.current;fact('到期月 / 最晚观察日',`${part.month} / ${new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)}`);fact('发生权益流失 / 期初',`${number(r.lostDuring)} / ${number(r.opening)}人`);fact('主动取消 / 期初',`${number(r.cancelled)} / ${number(r.opening)}人`);}}
+  if([11,13,18].includes(id)){const c=cohortObservation(id);fact('本批次 / 观察截止',c.reason?c.reason:`W${c.week} · ${c.start}—${c.end} / ${c.observedThrough}（UTC）`);}
   if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)fact('基期 → 观察期',`${row.baseMonth} → ${row.observedMonth}`);}
   if(id===43&&value.kind==='group'){const c=deviceRetentionCurrent();fact('激活批次',`${c.start}—${c.end}`);fact('观察截至',`${sourceData.deviceRetentionFacts.asOf} UTC`);for(const key of ['D7','D30'])fact(`${key}留存设备`,`${deviceRetentionText(c.measures[key])} · ${c.measures[key].numerator===null?'批次观察未结束':`${number(c.measures[key].numerator)} / ${number(c.denominator)} 台`}`);}
   if(id===54&&value.kind==='group') {

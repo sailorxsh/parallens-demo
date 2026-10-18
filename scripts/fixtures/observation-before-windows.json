@@ -1,0 +1,248 @@
+{
+  "sourceCommit": "62373d4f791b49fd461b62d0c18fdcba120aed2c",
+  "classification": "entirely_synthetic",
+  "records": {
+    "record:A:统计周：W12:11": {
+      "issueId": "DEMO-A-11-C3310X",
+      "owner": "观察截止核查",
+      "status": "verified",
+      "note": "",
+      "due": "",
+      "target": "只验证复查日期先后",
+      "linkedSample": "",
+      "reviewValue": "当前比例仅作日期校验演示",
+      "reviewedAt": "2026-09-14",
+      "updatedAt": "2026/10/19 01:31:03",
+      "page": "A",
+      "evidenceId": 11,
+      "scope": "统计周：W12",
+      "filters": {
+        "week": "12"
+      },
+      "baseline": "90.0%",
+      "baselineAt": "完整周 W12 · 2026-09-13",
+      "reviewMetric": 11
+    },
+    "record:A:统计周：W12:13": {
+      "issueId": "DEMO-A-13-C3310Z",
+      "owner": "观察截止核查",
+      "status": "verified",
+      "note": "",
+      "due": "",
+      "target": "只验证复查日期先后",
+      "linkedSample": "",
+      "reviewValue": "当前比例仅作日期校验演示",
+      "reviewedAt": "2026-09-14",
+      "updatedAt": "2026/10/19 01:31:03",
+      "page": "A",
+      "evidenceId": 13,
+      "scope": "统计周：W12",
+      "filters": {
+        "week": "12"
+      },
+      "baseline": "48.0%",
+      "baselineAt": "完整周 W12 · 2026-09-13",
+      "reviewMetric": 13,
+      "comparisonEvidence": {
+        "version": 1,
+        "metricId": 13,
+        "filters": [
+          [
+            "week",
+            "12"
+          ]
+        ],
+        "asOf": "2026-09-24",
+        "rule": "demo-2026-10-18-v5",
+        "kind": "rate",
+        "source": "同源合成绑定／激活频数v1",
+        "unit": "人",
+        "periods": [
+          {
+            "label": "W11 · W11 · 8/31–9/6",
+            "numerator": 904,
+            "denominator": 1883
+          },
+          {
+            "label": "W12 · W12 · 9/7–9/13",
+            "numerator": 924,
+            "denominator": 1925
+          }
+        ],
+        "groups": [],
+        "groupNote": "当前比较未提供可核验的分组贡献，未保存分组判断。"
+      }
+    },
+    "record:D:统计周：W12:18": {
+      "issueId": "DEMO-D-18-IHN3MD",
+      "owner": "观察截止核查",
+      "status": "verified",
+      "note": "",
+      "due": "",
+      "target": "只验证复查日期先后",
+      "linkedSample": "",
+      "reviewValue": "当前比例仅作日期校验演示",
+      "reviewedAt": "2026-09-14",
+      "updatedAt": "2026/10/19 01:31:03",
+      "page": "D",
+      "evidenceId": 18,
+      "scope": "统计周：W12",
+      "filters": {
+        "week": "12"
+      },
+      "baseline": "43.4%",
+      "baselineAt": "完整周 W12 · 2026-09-13",
+      "reviewMetric": 18,
+      "comparisonEvidence": {
+        "version": 1,
+        "metricId": 18,
+        "filters": [
+          [
+            "week",
+            "12"
+          ]
+        ],
+        "asOf": "2026-09-24",
+        "rule": "demo-2026-10-18-v5",
+        "kind": "rate",
+        "source": "合成试用明细汇总",
+        "unit": "人",
+        "periods": [
+          {
+            "label": "W11 · W11 · 8/31–9/6",
+            "numerator": 434,
+            "denominator": 1000
+          },
+          {
+            "label": "W12 · W12 · 9/7–9/13",
+            "numerator": 434,
+            "denominator": 1000
+          }
+        ],
+        "groups": [],
+        "groupNote": "当前比较未提供可核验的分组贡献，未保存分组判断。"
+      }
+    },
+    "record:A:统计周：W2:11": {
+      "issueId": "DEMO-A-11-17XBIC0",
+      "owner": "观察截止核查",
+      "status": "verified",
+      "note": "",
+      "due": "",
+      "target": "只验证复查日期先后",
+      "linkedSample": "",
+      "reviewValue": "当前比例仅作日期校验演示",
+      "reviewedAt": "2026-07-06",
+      "updatedAt": "2026/10/19 01:31:04",
+      "page": "A",
+      "evidenceId": 11,
+      "scope": "统计周：W2",
+      "filters": {
+        "week": "2"
+      },
+      "baseline": "90.0%",
+      "baselineAt": "完整周 W2 · 2026-07-05",
+      "reviewMetric": 11
+    },
+    "record:A:统计周：W2:13": {
+      "issueId": "DEMO-A-13-17XBIC2",
+      "owner": "观察截止核查",
+      "status": "verified",
+      "note": "",
+      "due": "",
+      "target": "只验证复查日期先后",
+      "linkedSample": "",
+      "reviewValue": "当前比例仅作日期校验演示",
+      "reviewedAt": "2026-07-06",
+      "updatedAt": "2026/10/19 01:31:04",
+      "page": "A",
+      "evidenceId": 13,
+      "scope": "统计周：W2",
+      "filters": {
+        "week": "2"
+      },
+      "baseline": "56.0%",
+      "baselineAt": "完整周 W2 · 2026-07-05",
+      "reviewMetric": 13,
+      "comparisonEvidence": {
+        "version": 1,
+        "metricId": 13,
+        "filters": [
+          [
+            "week",
+            "2"
+          ]
+        ],
+        "asOf": "2026-09-24",
+        "rule": "demo-2026-10-18-v5",
+        "kind": "rate",
+        "source": "同源合成绑定／激活频数v1",
+        "unit": "人",
+        "periods": [
+          {
+            "label": "W1 · W1 · 6/22–6/28",
+            "numerator": 949,
+            "denominator": 1694
+          },
+          {
+            "label": "W2 · W2 · 6/29–7/5",
+            "numerator": 976,
+            "denominator": 1743
+          }
+        ],
+        "groups": [],
+        "groupNote": "当前比较未提供可核验的分组贡献，未保存分组判断。"
+      }
+    },
+    "record:D:统计周：W2:18": {
+      "issueId": "DEMO-D-18-PSUUOQ",
+      "owner": "观察截止核查",
+      "status": "verified",
+      "note": "",
+      "due": "",
+      "target": "只验证复查日期先后",
+      "linkedSample": "",
+      "reviewValue": "当前比例仅作日期校验演示",
+      "reviewedAt": "2026-07-06",
+      "updatedAt": "2026/10/19 01:31:04",
+      "page": "D",
+      "evidenceId": 18,
+      "scope": "统计周：W2",
+      "filters": {
+        "week": "2"
+      },
+      "baseline": "45.0%",
+      "baselineAt": "完整周 W2 · 2026-07-05",
+      "reviewMetric": 18,
+      "comparisonEvidence": {
+        "version": 1,
+        "metricId": 18,
+        "filters": [
+          [
+            "week",
+            "2"
+          ]
+        ],
+        "asOf": "2026-09-24",
+        "rule": "demo-2026-10-18-v5",
+        "kind": "rate",
+        "source": "合成试用明细汇总",
+        "unit": "人",
+        "periods": [
+          {
+            "label": "W1 · W1 · 6/22–6/28",
+            "numerator": 450,
+            "denominator": 1000
+          },
+          {
+            "label": "W2 · W2 · 6/29–7/5",
+            "numerator": 450,
+            "denominator": 1000
+          }
+        ],
+        "groups": [],
+        "groupNote": "当前比较未提供可核验的分组贡献，未保存分组判断。"
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ async(parent)=>{
  try{
   for(const [width,size] of [[1366,16],[1600,16],[1920,16],[1366,32]]){
    await p.setViewportSize({width,height:1000});
-   for(const [page,id,query,end] of [['D',18,'','2026-09-13'],['D',18,'week=2','2026-07-05'],
+   for(const [page,id,query,end] of [['D',18,'','2026-09-16'],['D',18,'week=2','2026-07-08'],
     ['E',35,'','2026-08-31'],['B',4,'','2026-09-24']]){
     await open(page,id,query);await p.evaluate(size=>document.documentElement.style.fontSize=`${size}px`,size);
     check(await field('reviewedAt').getAttribute('min')===end,`Wrong end for ${page}${id} ${query}`);

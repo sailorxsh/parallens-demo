@@ -611,7 +611,7 @@ evaluate('sourceData=__fixtures');
 project({country:'UK',productLine:'Bird',subscriptionPlatform:'Web',plan:'Plus',billingCycle:'monthly'});
 assert.equal(evaluate('weeklyRateComparison(18)'),null,'All suppressed weekly samples must not produce a strong comparison');
 project({});
-assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W12 · ${fixtures.weekly.at(-1).weekEnd}`);
+assert.equal(evaluate('actionBaselineWindow(18)'),'完整周 W12 · 2026-09-07—2026-09-13 · 观察截至 2026-09-16（UTC）');
 assert.equal(evaluate('actionBaselineWindow(35)'),'完整月 2026-08');
 assert.equal(evaluate('actionBaselineValue(35)'),
   '订阅ARPPU：$5.20/人；月内订阅付款主账号：10,000人；订阅净收入：$52,000');
@@ -630,7 +630,7 @@ assert.equal(evaluate('actionBaselineValue(35)'),'待补数据','Missing facts m
 project({});
 assert.equal(evaluate('actionBaselineWindow(3)'),`快照 ${fixtures.snapshot.asOf}`);
 project({week:'2'});
-assert.equal(evaluate('actionBaselineWindow(18)'),`完整周 W2 · ${fixtures.weekly[1].weekEnd}`);
+assert.equal(evaluate('actionBaselineWindow(18)'),'完整周 W2 · 2026-06-29—2026-07-05 · 观察截至 2026-07-08（UTC）');
 project({productLine:'Bird',plan:'Starter'});
 assert.equal(evaluate('actionBaselineWindow(18)'),'当前范围暂无可用基线周期','Unavailable data must not imply a snapshot baseline');
 project({});
