@@ -1556,3 +1556,25 @@ Chrome／WebKit各通过evidence_focus、search、saved_issues、reading_history
 Chrome和WebKit各通过home_contribution、home_trial_clue、home_priority、home_chart_selection、home_brief、home_filter_context、home_device_clue、reading_history、loading、chart_recovery。旧chart_recovery把C分组页所有evidence-pair当成唯一型号图，现有贡献图已使该选择器命中两项；本轮将故障注入、恢复与核算表查找明确限定到“设备型号 · 模拟分组对比”，原来的24次故障、数值、草稿／历史基线、健康图不重绘及重试断言全部保留并通过，未屏蔽失败。
 
 结果及截图位于output/playwright/v125-audit，查看各独立*-名称.json；suite只代表最后一批运行。早期测试失败包括对首页非适用week参数的错误假设、只读ECharts导出方法未成功注入及旧选择器多命中，均已明确修正测试并重跑。已人工查看三个桌面宽度和实际放大截图。语法、projection、40项数据检查、12000条试用事实／8类就绪分桶、diff及28文件构建通过。README说明新行为，未修改数据、依赖、CI或Netlify。发布后另核准确提交SHA与线上资源，不以本地通过代替上线验收。
+
+## v126 · 复杂图表复查与零贡献核对（2026-10-18）
+
+起始295c79d，工作树干净；上一轮已部署并核验28文件，是已验证进展。继续原整体品质目标，沿用Product Design审查与Modern Web Guidance可访问性指引，不把再改一处交互当作全部目标达成。
+
+本次实际进入A14箱线、E39型号热力与付费结构、D23续订分组、B30复合活跃、F8设备数分布、G53异常分组，1366桌面下逐项以16px／32px根字号绘制，结果chart-scan.json共12状态，无页面横向溢出或已显示SVG文字越界。B30显式分组标签没有图表，不把不存在的图算作通过。已打开检查A16／32、E32、D32、F16、G16代表画面。E32与D32最初以自动化把图框滚入视野，标题处于吸顶栏后方；再用真实“定位证据”按钮核验，焦点标题分别在导航底部下约16px，中心命中自身，没有据人工滚图截图误改导航。原生定位状态及截图为locations.json、E／D-navigation-32。
+
+| 实际步骤 | 结果 | 当前证据（output/playwright/v126-audit） |
+|---|---|---|
+| 1 打开上述六项分组并放大阅读 | 所检图的刻度及文字未越界；B30未提供分组图，完整值沿用数据标签 | chart-scan.json，A／E／D／F／G截图 |
+| 2 用定位按钮进入展开区 | E及D的焦点标题在吸顶导航下可见 | locations.json，E／D-navigation-32.png |
+| 3 首页点击零贡献灰点 | 修前点无反应，数据表未展开；非零柱已有展开行为 | zero-before-live.json，01-zero-point-before.png |
+| 4 修复后点击同一灰点 | 选中“其他成熟试用”，展开2304/9000→768/3000及0.00个百分点行；提示保持当前筛选 | zero-after-final.json，02-zero-point-after.png |
+
+根因是新增零贡献散点设为silent，主动禁用了鼠标事件。仅移除该字段，复用原有事件与表格绑定。零点保留真实0.00、灰色及原尺寸；未改原始数据、数值、布局、筛选、问题单或存储。新增测试对存在零组的范围真实点击散点中心，逐项核对组名、两期总体分母、唯一选中行及状态提示；仍保留非零柱、键盘展开、筛选、跳转、历史、存储不写、错误及降级断言。每浏览器44状态，其中8状态含零点，三种桌面宽度及实际200%文字均覆盖。
+
+Chrome／WebKit分别通过home_contribution、home_chart_selection、chart_point_evidence；后者仍核对53指标中可用图的真实鼠标点选及88次原数据行。语法、projection、40项数据规则、12000试用事实和8类批次可用性、diff及28文件构建通过。最初新断言误用了不存在的chart-point-feedback类，现按真实chart-selection状态节点核对，重跑完整三组通过，未删除反馈断言。
+
+首次复用截图探针把修前同名图覆盖为修后，已从仍运行295c79d／app版本125的实际线上页面重新捕获修前图，修后另存02前缀；JSON同时记录实际脚本版本，未回退本地源码或用旧缓存伪作现状。修前、修后与导航截图均已打开检查。本轮边界检查不是全部文字相互遮挡、全部辅助技术、真人效率或奖项品质的证明；整体目标保留，发布另以准确SHA与线上零点操作验证，Netlify未动。
+
+![修前：零贡献点没有展开数据](output/playwright/v126-audit/01-zero-point-before.png)
+![修后：零贡献点定位到原始核算行](output/playwright/v126-audit/02-zero-point-after.png)

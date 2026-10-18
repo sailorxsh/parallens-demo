@@ -56,6 +56,22 @@ async(parent)=>{
           await p.mouse.click(point.x,point.y);
           check(await section.locator('tbody tr.chart-selected').count()===1,'Chart point does not reveal its calculation row');
           await section.locator('summary').click();
+          const zeroIndex=exp.groups.findIndex(group=>Math.abs(group.value)<1e-10);
+          if(zeroIndex>=0){
+            await section.locator('.home-contribution-chart').scrollIntoViewIfNeeded();
+            const zero=await section.locator('.home-contribution-chart').evaluate((n,index)=>{
+              const c=echarts.getInstanceByDom(n),xy=c.convertToPixel({seriesIndex:1},[0,index]),rect=n.getBoundingClientRect();
+              return {x:rect.left+xy[0],y:rect.top+xy[1]};
+            },zeroIndex);
+            await p.mouse.click(zero.x,zero.y);
+            check(await section.locator('.chart-data').evaluate(n=>n.open),'Zero contribution point does not reveal its data');
+            const selected=section.locator('tbody tr.chart-selected');
+            const selectedText=await selected.innerText();
+            check(await selected.count()===1&&selectedText.includes(exp.groups[zeroIndex].name)&&
+              exp.groups[zeroIndex].ratios.every(r=>selectedText.includes(r)),'Zero contribution point selects the wrong group or loses its counts');
+            check((await section.locator('.chart-selection').innerText()).includes(exp.groups[zeroIndex].name),'Zero-point feedback names the wrong group');
+            await section.locator('summary').click();
+          }
           const storage=await p.evaluate(()=>JSON.stringify({...localStorage}));
           await section.locator('a').click();await p.locator('#D-panel-groups').waitFor();
           check(p.url().includes('metric=18')&&p.url().includes('panel=groups'),'Contribution link misses its evidence destination');
@@ -65,7 +81,7 @@ async(parent)=>{
         }
         check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Contribution layout causes document overflow');
         check(await p.locator('.home-contribution h4,.home-contribution-note').evaluateAll(nodes=>nodes.every(n=>n.scrollWidth<=n.clientWidth+1&&n.scrollHeight<=n.clientHeight+1)),'Contribution copy is clipped');
-        states.push({width,font,filters,shown:!!exp});
+        states.push({width,font,filters,shown:!!exp,zeroPoint:!!exp?.groups.some(group=>Math.abs(group.value)<1e-10)});
       }
       await open();await p.evaluate(size=>document.documentElement.style.fontSize=`${size}px`,font);
       await p.locator('.home-contribution').scrollIntoViewIfNeeded();
@@ -108,6 +124,6 @@ async(parent)=>{
     check(await p.locator('.home-contribution .chart-fallback').evaluate(n=>n.clientHeight<100),'Missing library leaves a large empty contribution plot');
     // Deliberate renderer exception is logged; pageerror must still remain empty.
     check(!errors.length,errors.join('; '));
-    return {status:'PASS',checks:['44 independent filtered desktop/font cases','same-period counts and contribution closure','keyboard table and chart-point selection','scope-preserving drill and history','no persisted issue writes','unrelated/invalid/week capability suppression','positive and negative fixture','renderer failure and retry','missing library retains compact facts'],states,fixture};
+    return {status:'PASS',checks:['44 independent filtered desktop/font cases','same-period counts and contribution closure','keyboard table and real pointer selection of nonzero bars and zero points','scope-preserving drill and history','no persisted issue writes','unrelated/invalid/week capability suppression','positive and negative fixture','renderer failure and retry','missing library retains compact facts'],states,fixture};
   }finally{await context.close();}
 }

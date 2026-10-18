@@ -2559,7 +2559,7 @@ function drawDetailChart(box,spec) {
               label:{show:true,position:value<0?(inside?'insideLeft':'left'):(inside?'insideRight':'right'),
                 distance:chartText(6),color:inside?'#fffefa':'#405a48',fontWeight:600,fontSize:chartText(12),formatter:label(value)}};
           })},
-          {name:'零贡献',type:'scatter',silent:true,symbolSize:chartText(6),itemStyle:{color:'#718078'},
+          {name:'零贡献',type:'scatter',symbolSize:chartText(6),itemStyle:{color:'#718078'},
             data:values.map((value,index)=>value===0?[0,index]:[null,index])}],
       };
     },{responsive:true});
