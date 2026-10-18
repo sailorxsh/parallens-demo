@@ -5727,7 +5727,13 @@ async function start() {
       if(dataTab)dataTab.click();
       else {
         const trendTable=main.querySelector('.trend-table-wrap');
-        if(trendTable)trendTable.open=true;
+        if(trendTable) {
+          trendTable.open=true;
+          const summary=trendTable.querySelector('summary');
+          summary?.focus({preventScroll:true});
+          summary?.scrollIntoView({block:'center',behavior:'instant'});
+          document.querySelector('#announcement').textContent='已打开近12周趋势数据表，可继续核对过程指标。';
+        }
       }
     }
   } catch(error) {
