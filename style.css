@@ -467,6 +467,10 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .action-stage-badge {flex:none;border:1px solid #c5d6c4;background:#edf3e8;padding:.2rem .45rem;border-radius:.25rem;color:#365a43;font-size:var(--text-xs)}
 .action-stage-badge[data-state=draft] {border-color:#d8b98b;background:#fff3e2;color:#83521d}
 .action-baseline-note {font-size:var(--text-xs);color:#83521d;background:#fff6e9;padding:.45rem .6rem;border-left:2px solid #c99553}
+.comparison-evidence {min-width:0;overflow-wrap:anywhere}
+.comparison-evidence:empty {display:none}
+.saved-comparison-evidence>summary {scroll-margin-top:5rem}
+.evidence-contributions {padding-left:1.2rem;font-size:var(--text-xs);line-height:1.65}
 .action-stages {list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;margin:.8rem 0;padding:0}
 .action-stages li {border-top:2px solid #dce5d8;padding-top:.25rem;color:#58695b;font-size:var(--text-xs)}
 .action-stages li[data-active] {border-color:#356d51;color:#254632;font-weight:700}

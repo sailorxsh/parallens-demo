@@ -70,8 +70,13 @@ async(parent)=>{
       'The model headline hides its unchanged scope');
     await p.getByRole('tab',{name:'完整数据',exact:true}).click();
     check(await p.locator('.model-calculation tbody tr').count()===4,'Irrelevant dimension wrongly discards the valid model cohort');
-    await open('productLine=Bird&deviceModel=Hunt%20Pro');
-    check(await p.getByLabel('设备型号',{exact:true}).inputValue()==='All','A conflicting dependent model is not reset by the route policy');
+    await p.goto(`${base}#/E?metric=39&panel=groups&productLine=Bird&deviceModel=Hunt%20Pro`);
+    await p.locator('.filter-error-notice').waitFor();
+    check(p.url().includes('deviceModel=Hunt%20Pro')&&await p.locator('#metric-evidence-39').count()===0,
+      'An incompatible shared URL silently resets to measured Bird evidence');
+    await p.getByRole('button',{name:'清除设备型号条件',exact:true}).click();
+    await p.locator('#metric-evidence-39').waitFor();
+    check(await p.getByLabel('设备型号',{exact:true}).inputValue()==='All','Explicit model clearing did not restore the supported range');
     await p.getByRole('tab',{name:'完整数据',exact:true}).click();
     check(await p.locator('.model-calculation tbody tr').count()===3,'Resetting an incompatible model does not retain the Bird cohort');
     const modelSource=await p.evaluate(()=>sourceData.modelMarket);
@@ -116,7 +121,7 @@ async(parent)=>{
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['21 desktop and source-cohort states','source counts and weighted rates',
       'chart/table/tooltip agreement','semantic numeric tables without clipping','scope boundaries','filtered registration/save/reload',
-      'ignored dimensions labeled and conflicting model reset','empty and invalid source reasons persist across panels',
+      'ignored dimensions labeled and conflicting shared model explicitly cleared','empty and invalid source reasons persist across panels',
       'generic shares, channel rates and ARPPU units'],results};
   } finally {await context.close();}
 }

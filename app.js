@@ -3019,6 +3019,97 @@ function registerIssueButton(page,id,{compact=false}={}) {
   button.addEventListener('click',()=>registerIssue(page,id));
   return button;
 }
+const comparisonEvidenceIds=new Set([13,18,35,42]);
+const comparisonEvidenceFilters=(id,state=filterState)=>effectiveFor(id,state).sort(([a],[b])=>a.localeCompare(b,'en'));
+function currentComparisonEvidence(id) {
+  if(!comparisonEvidenceIds.has(id)||metric(id).kind==='na'||filterErrors.length)return null;
+  const base={version:1,metricId:id,filters:comparisonEvidenceFilters(id),asOf:sourceData.snapshot.asOf,rule:findingRuleVersion};
+  if(id===35) {
+    const change=subscriptionIncomeChange();if(!change)return null;
+    return {...base,kind:'income',source:change.source,
+      periods:[change.before,change.after].map((part,index)=>({label:`完整月 ${base.asOf.slice(0,4)}年${index?change.afterLabel:change.beforeLabel}`,
+        numerator:part.numerator,denominator:part.denominator})),
+      contributions:[{name:'付款人数变化',value:change.payersContribution},{name:'ARPPU变化',value:change.arppuContribution}]};
+  }
+  const comparison=weeklyRateComparison(id);if(!comparison)return null;
+  const periods=['before','after'].map(key=>({label:`${comparison[`${key}Label`]} · ${comparison[`${key}Window`]}`,
+    numerator:comparison[key].numerator,denominator:comparison[key].denominator}));
+  const parts=id===42?deviceEventGroupChanges(comparison):id===18&&!filterState.week?
+    trialGroupContributions(['previous','current'].map(period=>trialRows(filterState,period).rows)):null;
+  const matched=parts?.groups&&parts.overall.every((part,index)=>part.numerator===periods[index].numerator&&part.denominator===periods[index].denominator);
+  return {...base,kind:'rate',source:comparison.source,unit:comparison.unit,periods,
+    groups:matched?parts.groups.map((group,index)=>({name:group.name,
+      periods:group.summaries.map(part=>({numerator:part.numerator,denominator:part.denominator})),
+      contribution:parts.changes[index]})):[],
+    groupNote:matched?'':parts?.reason??'当前比较未提供可核验的分组贡献，未保存分组判断。'};
+}
+function validComparisonEvidence(value,id,state=filterState) {
+  if(!value||typeof value!=='object'||value.version!==1||value.metricId!==id||!comparisonEvidenceIds.has(id)||
+    value.kind!==(id===35?'income':'rate')||typeof value.source!=='string'||typeof value.rule!=='string'||
+    !baselineWindowEnd(`快照 ${value.asOf}`)||
+    JSON.stringify(value.filters)!==JSON.stringify(comparisonEvidenceFilters(id,state)))return false;
+  const count=part=>part&&Number.isFinite(part.numerator)&&Number.isFinite(part.denominator)&&part.denominator>=30&&
+    (value.kind==='income'||part.numerator>=0&&part.numerator<=part.denominator);
+  if(!Array.isArray(value.periods)||value.periods.length!==2||!value.periods.every(part=>count(part)&&typeof part.label==='string'))return false;
+  if(value.kind==='income') {
+    if(!Array.isArray(value.contributions)||value.contributions.length!==2||
+      !value.contributions.every(part=>typeof part.name==='string'&&Number.isFinite(part.value)))return false;
+    const [before,after]=value.periods,expected=Math.round((after.denominator-before.denominator)*
+      (before.numerator/before.denominator+after.numerator/after.denominator)/2*100)/100;
+    return Math.abs(value.contributions[0].value-expected)<1e-8&&
+      Math.abs(value.contributions.reduce((sum,part)=>sum+part.value,0)-(after.numerator-before.numerator))<1e-8;
+  }
+  if(!['人','次'].includes(value.unit)||typeof value.groupNote!=='string'||!Array.isArray(value.groups)||value.groups.length>32)return false;
+  if(!value.groups.length)return Boolean(value.groupNote);
+  if(!value.groups.every(group=>typeof group.name==='string'&&Array.isArray(group.periods)&&group.periods.length===2&&
+    group.periods.every(count)&&Number.isFinite(group.contribution)&&Math.abs(group.contribution-
+      (group.periods[1].numerator/value.periods[1].denominator-group.periods[0].numerator/value.periods[0].denominator)*100)<1e-8))return false;
+  return value.periods.every((part,index)=>['numerator','denominator'].every(key=>
+    value.groups.reduce((sum,group)=>sum+group.periods[index][key],0)===part[key]));
+}
+function comparisonEvidenceSection(id,record) {
+  const section=element('div','comparison-evidence');
+  if(!comparisonEvidenceIds.has(id))return section;
+  const current=currentComparisonEvidence(id),saved=record?.comparisonEvidence,exists=Boolean(record);
+  const valid=validComparisonEvidence(saved,id);
+  if(exists&&!valid) {
+    section.append(element('p','table-note comparison-evidence-status',saved===null?
+      '首次保存时无可比数据，未保存比较证据；原单点基线仍保留。':Object.hasOwn(record,'comparisonEvidence')?
+      '已保存的比较证据无法核对或版本不支持；原内容保留，不用当前数据替换。':
+      '旧记录未保存比较证据；仅保留原单点基线，不从当前数据补写历史。'));
+    return section;
+  }
+  const evidence=exists?saved:current;
+  if(!evidence) {
+    section.append(element('p','table-note comparison-evidence-status','当前无两期可比数据；首次保存将保留单点基线，不生成比较证据。'));return section;
+  }
+  const result=value=>value.kind==='income'?
+    `${value.periods.map(part=>`$${number(part.numerator)}`).join(' → ')}（变化 ${chartValue(value.periods[1].numerator-value.periods[0].numerator,'美元')}）`:
+    `${value.periods.map(part=>percent(part.numerator/part.denominator)).join(' → ')}（${chartValue((value.periods[1].numerator/value.periods[1].denominator-value.periods[0].numerator/value.periods[0].denominator)*100,'个百分点')}）`;
+  const changes=current?[['periods','两期窗口或计数'],['groups','分组贡献或计数'],['contributions','收入贡献'],
+    ['groupNote','分组可用性'],['asOf','数据快照'],['source','来源'],['rule','规则']]
+    .filter(([key])=>JSON.stringify(saved?.[key])!==JSON.stringify(current[key])).map(([,label])=>label):[];
+  if(exists&&(!current||changes.length))section.append(element('p','action-baseline-note comparison-evidence-warning',
+    `比较证据已变化：首次保存 ${result(saved)}；${current?`当前 ${result(current)}。${changes.join('、')}与原证据不同`:'当前缺少可比证据'}。图表为当前数据，首次保存的证据保留。`));
+  const details=element('details','workspace-calculation saved-comparison-evidence');
+  details.append(element('summary','',exists?'查看首次保存时的比较证据':'查看首次保存时将记录的比较证据'));
+  details.append(element('p','table-note',`${evidence.source} · 数据快照 ${evidence.asOf} · 规则 ${evidence.rule}。${exists?'此处为首次保存的证据，更新处理进度不会覆盖。':'以下为当前比较事实，首次成功保存后固定。'}`));
+  const scope=evidence.filters.map(([key,value])=>`${filterLabels[key]}：${key==='week'?`W${value}`:optionLabel(key,value)}`).join(' · ')||'总体 · 默认业务对象';
+  details.append(element('p','table-note',`计算范围：${scope}。${result(evidence)}`));
+  for(const part of evidence.periods)details.append(element('p','table-note evidence-period',evidence.kind==='income'?
+    `${part.label}：订阅净收入 $${number(part.numerator)}／付款主账号 ${number(part.denominator)} 人；ARPPU $${(part.numerator/part.denominator).toFixed(2)}/人。`:
+    `${part.label}：${number(part.numerator)}／${number(part.denominator)} ${evidence.unit}（${percent(part.numerator/part.denominator)}）。`));
+  const list=element('ul','evidence-contributions');
+  if(evidence.kind==='income')for(const part of evidence.contributions)list.append(element('li','',`${part.name}贡献：${chartValue(part.value,'美元')}。`));
+  else {
+    if(evidence.groups.length)details.append(element('p','table-note','下列分组分子除以同一期总体分母，用于验算变化贡献；组内率需按各组自己的分母另算。'));
+    for(const group of evidence.groups)list.append(element('li','',`${group.name}：${group.periods.map((part,index)=>`${number(part.numerator)}／${number(evidence.periods[index].denominator)} ${evidence.unit}`).join(' → ')}；贡献 ${chartValue(group.contribution,'个百分点')}。`));
+  }
+  if(list.children.length)details.append(list);
+  if(evidence.groupNote)details.append(element('p','table-note',evidence.groupNote));
+  details.append(element('p','table-note','合成数据的比较与算术分解，不证明原因，也不表示处理后恢复。'));
+  section.append(details);return section;
+}
 function actionRecord(page,evidenceId) {
   const defaultId=evidenceId;
   evidenceId=activeIssueMetrics.get(issueScopeKey(page))??evidenceId;
@@ -3035,6 +3126,7 @@ function actionRecord(page,evidenceId) {
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
   form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}。`));
+  let comparisonSection=comparisonEvidenceSection(evidenceId,simulatedActionState[key]);form.append(comparisonSection);
   const filterContext=metricFilterContext(evidenceId),scopeDetails=element('dl','action-scope');
   const calculationScope=filterContext.applied.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'总体 · 默认业务对象';
   const calculationDescription=element('dd','',calculationScope);
@@ -3181,12 +3273,19 @@ function actionRecord(page,evidenceId) {
     const record={issueId,owner:owner.value.trim()||'待指派',status:status.value,note:note.value.trim(),
       due:due.value,target:target.value.trim(),linkedSample:linkedSample.value.trim(),reviewValue:reviewValue.value.trim(),reviewedAt:reviewedAt.value,
       updatedAt,page,evidenceId,scope,filters:{...filterState},baseline,baselineAt,reviewMetric:evidenceId};
+    const previous=simulatedActionState[key];
+    if(previous&&Object.hasOwn(previous,'comparisonEvidence'))record.comparisonEvidence=previous.comparisonEvidence;
+    else if(!previous&&comparisonEvidenceIds.has(evidenceId))record.comparisonEvidence=currentComparisonEvidence(evidenceId);
     if(!saveActionState(key,record)) {
       actionDrafts.set(key,{...readFields(),baseline,baselineAt});updateIssueLabels();updateActionDraftWarning();
       showReceipt('浏览器存储不可用，未保存；内容仍暂存在当前页面会话，刷新会丢失。','error');return;
     }
     controls.forEach(control=>{control.value=record[control.name];control.setCustomValidity('');clearFieldError(control);});
     savedFingerprint=JSON.stringify(readFields());actionDrafts.delete(key);updateIssueLabels();updateActionDraftWarning();updateStage();
+    const nextComparison=comparisonEvidenceSection(evidenceId,record);
+    const nextDisclosure=nextComparison.querySelector('details');
+    if(nextDisclosure)nextDisclosure.open=Boolean(comparisonSection.querySelector('details')?.open);
+    comparisonSection.replaceWith(nextComparison);comparisonSection=nextComparison;
     savedDateWarning?.remove();
     showReceipt(`已保存至此浏览器：${updatedAt} · ${status.selectedOptions[0].textContent}`,'saved');
   });
@@ -3336,12 +3435,22 @@ function filteredFinding(page,requestedId) {
     return {id:35,text:`所选范围的月度订阅付款主账号 ${number(v.monthlySubscriptionPayers)} 人，订阅净收入 $${number(v.subscriptionNetIncome)}，ARPPU $${v.ARPPU.toFixed(2)}${changeText(recentChange(35),2)}。付款人数与ARPPU的月度趋势分别见下方图表。`};
   }
   if(page==='E'&&isTarget(39)&&m(39).kind==='group') {
-    const [name,part]=Object.entries(m(39).value)[0];
-    return {id:39,text:`${filterState.country?`${optionLabel('country',filterState.country)} · `:''}${name}主型号样本 ${number(part.owners)} 位主账号，其中有效订阅 ${number(part.subscribedOwners)} 位，订阅率 ${percent(part.subscriptionRate)}。仅覆盖可归属主型号的合成样本；不代表全部合资格主账号。`};
+    const entries=Object.entries(m(39).value),prefix=filterState.country?`${optionLabel('country',filterState.country)} · `:'';
+    const boundary='仅覆盖可归属主型号的合成样本；不代表全部合资格主账号，也不能据此判断型号差异的原因。';
+    if(entries.length===1) {
+      const [name,part]=entries[0];
+      return {id:39,text:`${prefix}${name}主型号样本 ${number(part.owners)} 位主账号，其中有效订阅 ${number(part.subscribedOwners)} 位，订阅率 ${percent(part.subscriptionRate)}。${boundary}`};
+    }
+    const owners=entries.reduce((sum,[,part])=>sum+part.owners,0),subscribed=entries.reduce((sum,[,part])=>sum+part.subscribedOwners,0);
+    const rates=entries.map(([,part])=>part.subscriptionRate),low=Math.min(...rates),high=Math.max(...rates);
+    const range=percent(low)===percent(high)?`各型号订阅率按一位小数显示均为 ${percent(low)}，精确人数见数据表`:
+      `各型号订阅率范围 ${percent(low)}–${percent(high)}`;
+    return {id:39,text:`${prefix}${entries.length}种主型号样本，合计 ${number(owners)} 位主账号。其中有效订阅 ${number(subscribed)} 位，合并订阅率 ${percent(subscribed/owners)}（按主账号人数计算）；${range}。${boundary}`};
   }
   if(page==='E'&&isTarget(40)&&m(40).kind==='group') {
-    const [channel,v]=Object.entries(m(40).value)[0];
-    return {id:40,text:`自报${channel}渠道演示样本 ${number(v.owners)} 位主账号，订阅率 ${percent(v.subscriptionRate)}。渠道为用户自报，不能直接解释购买归因。`};
+    const entries=Object.entries(m(40).value).sort(([a],[b])=>a.localeCompare(b,'en'));
+    const facts=entries.map(([channel,part])=>`${channel} ${number(part.owners)} 位主账号，订阅率 ${percent(part.subscriptionRate)}`).join('；');
+    return {id:40,text:`当前 ${entries.length} 个自报渠道演示样本。${facts}。各渠道分别核对，不将分组人数相加作为总用户；渠道为用户自报，不能直接解释购买归因。`};
   }
   if(page==='F'&&isTarget(48)&&m(48).kind==='rate'&&m(49).kind==='rate')
     return {id:48,text:`多设备主账号占比 ${percent(m(48).value)}${changeText(recentChange(48))}；设备共享率 ${percent(m(49).value)}。前者以主账号为分母，后者以当前绑定设备为分母。`};

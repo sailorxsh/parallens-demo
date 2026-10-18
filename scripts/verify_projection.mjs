@@ -22,6 +22,34 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+// A comparison archive contains exact aggregates, not the current single-point baseline.
+for(const id of [13,18,35,42]) {
+  const evidence=evaluate(`currentComparisonEvidence(${id})`);
+  assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(evidence)},${id})`),true);
+  assert.equal(evidence.metricId,id);
+  assert.equal(evidence.periods.length,2);
+  const reversed={...JSON.parse(JSON.stringify(evidence)),version:99};
+  assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(reversed)},${id})`),false,'Unknown archive versions must not be rendered as verified evidence');
+  const corrupt=JSON.parse(JSON.stringify(evidence));corrupt.periods[0].denominator=0;
+  assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(corrupt)},${id})`),false);
+  const badDate={...JSON.parse(JSON.stringify(evidence)),asOf:'2026-02-30'};
+  assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(badDate)},${id})`),false);
+  if(id===35) {
+    const badCent=JSON.parse(JSON.stringify(evidence));badCent.contributions[1].value+=.01;
+    assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(badCent)},35)`),false,'An incorrect income cent must not be trusted');
+  }
+}
+const archivedDevice=JSON.parse(JSON.stringify(evaluate('currentComparisonEvidence(42)')));
+assert.deepEqual(archivedDevice.periods.map(p=>[p.numerator,p.denominator]),[[33600,80000],[23200,40000]]);
+assert.ok(Math.abs(archivedDevice.groups[0].contribution-16)<1e-9);
+const corruptContribution=JSON.parse(JSON.stringify(archivedDevice));corruptContribution.groups[0].contribution=5;
+assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(corruptContribution)},42)`),false,'Archive arithmetic corruption must be identified');
+project({country:'US'});
+assert.equal(evaluate('currentComparisonEvidence(42)'),null);
+assert.equal(evaluate(`validComparisonEvidence(${JSON.stringify(archivedDevice)},42)`),false,'A different scope must not reuse an archive');
+project({week:'1'});assert.equal(evaluate('currentComparisonEvidence(13)'),null);
+assert.equal(evaluate('currentComparisonEvidence(18)'),null);
+project({});
 for(const [window,end] of [
  ['完整周 W12 · 2026-09-13','2026-09-13'],['完整周 W2 · 2026-07-05','2026-07-05'],
  ['快照 2026-09-24','2026-09-24'],['完整月 2026-08','2026-08-31'],
