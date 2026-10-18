@@ -3401,10 +3401,13 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   if(page==='E'&&selectedMetric===35) {
     const histories=[paidPayersHistory(),metricHistory(35)].filter(Boolean);
     if(histories.length) {
-      const trends=element('details','workspace-context');
+      const trends=element('details','workspace-context monthly-comparison');
       trends.append(element('summary','','查看付款人数与ARPPU趋势'));
-      for(const history of histories)addChart(trends,{title:`${history.title} · 最近3个完整月`,unit:history.unit,
+      trends.append(element('p','table-note','按同一完整自然月对照：付款人数（人）与订阅ARPPU（美元/人）。两图纵轴独立取值，不能直接比较线条高低或斜率。'));
+      const pair=element('div','monthly-trend-pair');
+      for(const history of histories)addChart(pair,{title:`${history.title} · 最近3个完整月`,unit:history.unit,
         labels:history.labels,details:history.details,series:[{name:history.title,values:history.values}],note:history.note});
+      trends.append(pair);
       panels.get('change').append(trends);
     }
   }

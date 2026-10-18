@@ -676,6 +676,16 @@ article.trial-sample-item {cursor:auto}
 .workspace-calculation .data-table-scroll {margin:0;padding:.45rem .65rem;min-width:0}
 .income-evidence .table-note {font-size:var(--text-sm);line-height:1.65}
 .workspace-chart-title {font-size:.87rem;line-height:1.5;margin:.5rem 0}
+.monthly-comparison {container:monthly-comparison / inline-size}
+.monthly-trend-pair {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr));gap:.75rem;align-items:start}
+.monthly-trend-pair > .workspace-chart-panel {min-width:0;margin:0}
+.monthly-trend-pair .workspace-chart-title {min-height:3em}
+.monthly-trend-pair .diagnostic-table {min-width:0}
+.monthly-trend-pair .chart-cell-basis {white-space:normal}
+/* Two 20rem plots and their gap determine when title alignment is needed. */
+@container monthly-comparison (max-width:40.75rem) {
+  .monthly-trend-pair .workspace-chart-title {min-height:0}
+}
 .income-evidence .workspace-chart-panel {padding:.6rem .8rem;margin:.6rem 0;min-width:0}
 .income-evidence .data-table-scroll {min-width:0}
 .income-context {position:sticky;top:4rem;max-height:calc(100dvh - 5rem);overflow:auto;overscroll-behavior:contain;border:1px solid #ccd9c6;border-radius:var(--card-radius);background:#f1f5eb;min-width:0;scrollbar-gutter:stable}
