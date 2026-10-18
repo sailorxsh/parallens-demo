@@ -248,6 +248,7 @@ function baselineWindowEnd(window) {
   return date.toISOString().slice(0,10);
 }
 window.addEventListener('resize',()=>{
+  document.querySelectorAll('.income-context').forEach(node=>node.style.removeProperty('--context-height-limit'));
   [chart,statusChart,...sparklines,...detailCharts].filter(item=>item&&!item.isDisposed()).forEach(item=>{
     if(!refreshEvidenceChart(item)){refreshChartTypography(item);item.resize();}
   });
@@ -3577,11 +3578,15 @@ function trialSamplesPanel() {
   panel.append(element('p','table-note',`W${week} · 成熟试用 ${number(result.rows.length)} 人 · 支付失败 ${number(failed.length)} 条；下列最多5条参与当前范围的合成试用聚合，只作逐条核对入口。`));
   if(!canLink)panel.append(element('p','na-note',`${measure.reason}；记录保留供核对，当前指标尚不能作为问题登记基线。`));
   if(!failed.length) {panel.append(element('p','na-note','该范围无支付失败演示记录；不能据此推断真实业务没有失败。'));return panel;}
+  const feedback=element('p','trial-sample-feedback table-note');feedback.hidden=true;
+  panel.append(feedback);
   const list=element('div','trial-sample-list');
   failed.slice(0,5).forEach(row=>{
     const button=element(canLink?'button':'article','trial-sample-item');if(canLink)button.type='button';
     button.append(element('strong','',row.trial_id),element('span','',
-      `${optionLabel('country',row.country)} · ${row.app_platform} · ${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · 观察至${row.outcome_observed_through}`),
+      `${optionLabel('country',row.country)} · ${optionLabel('productLine',row.product_line)} · ${row.app_platform}`),
+      element('span','',`${row.plan} ${row.billing_cycle==='monthly'?'月付':'年付'} · ${row.subscription_platform}`),
+      element('span','',`观察至${row.outcome_observed_through}`),
       element('span',canLink?'trial-sample-action':'trial-sample-context',canLink?'关联到试用转正问题单 ↘':'仅供核对 · 暂不可登记'));
     if(canLink)button.addEventListener('click',()=>{
       const side=document.querySelector('.income-context');
@@ -3590,18 +3595,33 @@ function trialSamplesPanel() {
       const form=document.querySelector('.action-record');
       const linked=form?.querySelector('[name="linkedSample"]');
       if(!linked)return;
-      linked.value=`${row.trial_id} / ${row.user_id}`;
-      const note=form.querySelector('[name="note"]');
-      if(note&&!note.value.trim())note.value=`核对${row.trial_id}的支付失败记录与重试结果`;
-      linked.dispatchEvent(new Event('input',{bubbles:true}));
+      const reference=`${row.trial_id} / ${row.user_id}`,existing=linked.value.trim();
+      let message;
+      if(existing&&existing!==reference)message=`当前问题单已有其他关联样本，未覆盖。若需更换，请在问题登记中人工核对后修改；原处理说明和基线保留。`;
+      else if(existing===reference)message=`当前问题单已关联${row.trial_id}；再次选择未修改记录。`;
+      else {
+        linked.value=reference;
+        const note=form.querySelector('[name="note"]');
+        if(note&&!note.value.trim())note.value=`核对${row.trial_id}的支付失败记录与重试结果`;
+        linked.dispatchEvent(new Event('input',{bubbles:true}));
+        message=`已将${row.trial_id}关联到问题单草稿，请核对处理说明；保存后生效。`;
+      }
+      feedback.textContent=message;feedback.hidden=false;
       if(alongside) {
-        const rail=form.closest('.income-context'),bounds=rail.getBoundingClientRect(),field=linked.getBoundingClientRect();
+        const rail=form.closest('.income-context');
+        rail.style.removeProperty('--context-height-limit');
+        const stickyTop=parseFloat(getComputedStyle(rail).top),available=rail.parentElement.getBoundingClientRect().bottom-stickyTop-1;
+        // A taller replacement form can meet the grid's bottom before its
+        // sticky top, hiding its controls beneath the page navigation.
+        if(rail.getBoundingClientRect().top<stickyTop&&available>rail.querySelector('.income-context-controls').offsetHeight+80)
+          rail.style.setProperty('--context-height-limit',`${available}px`);
+        const bounds=rail.getBoundingClientRect(),field=linked.getBoundingClientRect();
         const visibleTop=bounds.top+rail.querySelector('.income-context-controls').offsetHeight+12;
         if(field.top<visibleTop)rail.scrollTop+=field.top-visibleTop;
         else if(field.bottom>bounds.bottom-12)rail.scrollTop+=field.bottom-bounds.bottom+12;
       } else form.scrollIntoView({block:'center',behavior:chartAnimationDuration(1)?'smooth':'instant'});
       linked.focus({preventScroll:true});
-      document.querySelector('#announcement').textContent=`已将${row.trial_id}关联到问题单，保存后生效`;
+      document.querySelector('#announcement').textContent=message;
     });
     list.append(button);
   });

@@ -8,7 +8,14 @@ async (page) => {
   p.on('dialog',dialog=>dialog.accept());
   const form=()=>p.locator('.action-record');
   const field=name=>form().locator(`[name="${name}"]`);
-  const open=async hash=>{await p.goto(`${base}#/${hash}`);await form().waitFor();};
+  const open=async hash=>{
+    await p.goto(`${base}#/${hash}`);
+    await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));
+    if(hash.split('?')[0]==='D') {
+      if(!await form().isVisible())await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
+      await form().waitFor();
+    }
+  };
   const register=async id=>{
     await p.locator(`#metric-evidence-${id} .issue-register`).click();
     await p.waitForFunction(id=>document.querySelector('.action-record-header strong')?.textContent.startsWith(`问题单 DEMO-D-${id}-`),id);
@@ -17,6 +24,8 @@ async (page) => {
   try {
     await open('D');await field('note').fill('保留原转正核查草稿');
     const original=await form().locator('strong').first().innerText();
+    await p.locator('#D-tab-data').click();
+    await p.getByText('查看核查对象与演示行动清单',{exact:true}).click();
     await p.locator('.action-evidence-link[aria-label^="D-02，"]').click();
     await p.locator('#metric-evidence-52').waitFor();
     check(await form().locator('strong').first().innerText()===original,'Auxiliary evidence changed current issue');
@@ -28,8 +37,8 @@ async (page) => {
     await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
     let records=await stored();
     const riskKey=Object.keys(records).find(key=>key.endsWith(':52'));
-    check(records[riskKey]?.evidenceId===52&&records[riskKey].reviewMetric===52&&records[riskKey].baseline==='168','Risk record saved trial metric or baseline');
-    await p.goBack();await p.waitForFunction(()=>!location.hash.includes('issue='));
+    check(records[riskKey]?.evidenceId===52&&records[riskKey].reviewMetric===52&&records[riskKey].baseline==='168人','Risk record saved trial metric or baseline');
+    await p.goBack();await p.waitForFunction(()=>new URLSearchParams(location.hash.split('?')[1]??'').get('issue')==='18');
     check(await field('note').inputValue()==='保留原转正核查草稿','Browser back lost trial draft');
     await p.goForward();await p.waitForFunction(()=>location.hash.includes('issue=52'));
     check(await field('owner').inputValue()==='风险运营','Browser forward lost risk issue');
@@ -48,7 +57,7 @@ async (page) => {
     check(await field('note').inputValue()==='风险草稿保存失败','Failed-save draft lost when switching issues');
     check((await stored())[riskKey].note==='风险用户核查','Failed save overwrote committed risk record');
     await p.evaluate(()=>{Storage.prototype.setItem=window.__write;});
-    await p.locator('.trial-sample-item').first().click();
+    await p.locator('#D-tab-groups').click();await p.locator('.trial-sample-item').first().click();
     check(await field('issueMetric').inputValue()==='18','Trial sample attached to risk metric issue');
     check(Boolean(await field('linkedSample').inputValue()),'Trial sample missing');
     await field('issueMetric').selectOption('52');
@@ -63,9 +72,12 @@ async (page) => {
       await open('C?deviceModel=K6&firmware=2.8&metric=42');
       const card=p.locator('.detail-kpi[data-metric-id="42"]');
       check((await card.innerText()).includes('82.0%'),'Filtered card disagrees with original K6 group');
+      await p.locator('#C-tab-data').click();
       const evidence=p.locator('#metric-evidence-42');
       check((await evidence.innerText()).includes('3,280')&&(await evidence.innerText()).includes('4,000'),'Filtered evidence uses independent slices');
-      const points=await p.locator('.analysis-main .detail-chart').first().evaluate(node=>window.echarts.getInstanceByDom(node).getOption().series[0].data);
+      await p.locator('#C-tab-change').click();
+      const plot=p.locator('#C-panel-change').getByRole('img',{name:/^空触发率 · 12期趋势/});await plot.locator('svg').waitFor();
+      const points=await plot.evaluate(node=>window.echarts.getInstanceByDom(node).getOption().series[0].data);
       check(points.at(-1)===82&&points[0]===42,'Filtered trend contradicts card');
       check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Desktop page overflow');
       if(width===1366)await evidence.screenshot({path:'output/playwright/v51-event-evidence.png'});

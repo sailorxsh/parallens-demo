@@ -1,0 +1,78 @@
+{
+  "sourceCommit": "388b4ea6b0e66b8f7d951a7a918da39027ddfe89",
+  "classification": "entirely_synthetic",
+  "records": {
+    "record:D:默认演示范围:18": {
+      "issueId": "DEMO-D-18-1S7DAQU",
+      "owner": "合成业务核查",
+      "status": "pending",
+      "note": "核对SIM-W12-0178的支付失败记录与重试结果",
+      "due": "",
+      "target": "",
+      "linkedSample": "SIM-W12-0178 / SIM-U-W12-0178",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 20:49:25",
+      "page": "D",
+      "evidenceId": 18,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "43.4%",
+      "baselineAt": "完整周 W12 · 2026-09-13",
+      "reviewMetric": 18,
+      "comparisonEvidence": {
+        "version": 1,
+        "metricId": 18,
+        "filters": [],
+        "asOf": "2026-09-24",
+        "rule": "demo-2026-10-18-v5",
+        "kind": "rate",
+        "source": "合成试用明细汇总",
+        "unit": "人",
+        "periods": [
+          {
+            "label": "前9周合并率 · W1–W9 · 6/22–8/23",
+            "numerator": 4050,
+            "denominator": 9000
+          },
+          {
+            "label": "近3周合并率 · W10–W12 · 8/24–9/13",
+            "numerator": 1302,
+            "denominator": 3000
+          }
+        ],
+        "groups": [
+          {
+            "name": "观鸟 Android Plus月付",
+            "periods": [
+              {
+                "numerator": 1746,
+                "denominator": 3600
+              },
+              {
+                "numerator": 534,
+                "denominator": 1200
+              }
+            ],
+            "contribution": -1.6000000000000014
+          },
+          {
+            "name": "其他成熟试用",
+            "periods": [
+              {
+                "numerator": 2304,
+                "denominator": 5400
+              },
+              {
+                "numerator": 768,
+                "denominator": 1800
+              }
+            ],
+            "contribution": 0
+          }
+        ],
+        "groupNote": ""
+      }
+    }
+  }
+}
