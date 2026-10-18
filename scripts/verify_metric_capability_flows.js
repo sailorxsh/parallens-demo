@@ -21,8 +21,8 @@ async(parent)=>{
       const source=contract.find(item=>item.id===id),capabilities=policy.metrics.find(item=>item.id===id);
       const expected=capabilities.demonstrableDimensions.filter(key=>controls.includes(key)).map(key=>controlLabels[key]).sort();
       const text=await evidence.locator('> .evidence-meta').innerText();
-      const match=text.match(/本页可演示筛选：([^。]*)。/);
-      check(!!match,`Missing current-page capability description #${id} on ${page}`);
+      const match=text.match(/本指标可演示筛选：([^。]*)。/);
+      check(!!match,`Missing current-metric capability description #${id} on ${page}`);
       const actual=match[1]==='无'?[]:match[1].split('、').sort();
       check(JSON.stringify(actual)===JSON.stringify(expected),`Unavailable controls advertised #${id} on ${page}: ${JSON.stringify({actual,expected})}`);
       check(text.includes(`统计对象：${entityNames[source.entity]??source.entity} · 窗口：${source.window}`),`Entity or observation window changed incorrectly #${id}`);
@@ -39,7 +39,7 @@ async(parent)=>{
     await p.goto(`${base}#/C?metric=42&country=US&panel=data`);
     await p.locator('#metric-evidence-42').waitFor();
     check(await p.evaluate(()=>metric(42).availability)==='pending','Missing device geography became a measured number');
-    check((await p.locator('#metric-evidence-42 > .evidence-meta').innerText()).includes('本页可演示筛选：设备型号'),'Supported device dimensions disappeared in a pending scope');
+    check((await p.locator('#metric-evidence-42 > .evidence-meta').innerText()).includes('本指标可演示筛选：设备型号'),'Supported device dimensions disappeared in a pending scope');
     for(const width of [1366,1600,1920])for(const [page,id] of [['A',13],['B',27],['G',53],['F',48]]){
       await p.setViewportSize({width,height:900});
       await p.goto(`${base}#/${page}?metric=${id}`);await p.locator(`#metric-evidence-${id}`).waitFor();
