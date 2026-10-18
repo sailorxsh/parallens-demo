@@ -34,6 +34,9 @@ async (page) => {
         check(!await dialog.evaluate(node=>node.scrollWidth>node.clientWidth+1),`Search overflows at ${width}: ${query}`);
       }
       check((await lookup('DAU')).length===1,'DAU matches unrelated metrics');
+      for(const query of ['#3','#03','＃３'])check((await lookup(query)).join(',')==='3',`Explicit metric ID matches other IDs: ${query}`);
+      check((await lookup('#30')).join(',')==='30'&&(await lookup('#3 #30')).length===0,'Explicit metric IDs are ambiguous');
+      await lookup('DAU');
       check((await p.locator('.metric-search-alias').innerText()).includes('DAU'),'Alias lookup does not explain the catalog result');
       await dialog.screenshot({path:`output/playwright/v48-search-dau-${width}.png`});
       check((await lookup('没有这个指标xyz')).length===0,'An unknown query returns a result');
