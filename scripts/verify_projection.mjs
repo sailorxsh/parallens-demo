@@ -22,6 +22,14 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+for(const [window,end] of [
+ ['完整周 W12 · 2026-09-13','2026-09-13'],['完整周 W2 · 2026-07-05','2026-07-05'],
+ ['快照 2026-09-24','2026-09-24'],['完整月 2026-08','2026-08-31'],
+ ['完整月 2024-02','2024-02-29'],['完整月 2026-02','2026-02-28'],['完整月 2026-12','2026-12-31'],
+ ['完整月 2000-02','2000-02-29'],['完整月 1900-02','1900-02-28'],
+ ['完整周 W0 · 2026-09-13',null],['快照 2026-02-30',null],['完整月 2026-13',null],
+ ['2026-09-24',null],['旧窗口 2026-09-24',null],['当前范围暂无可用基线周期',null],[null,null]
+])assert.equal(evaluate(`baselineWindowEnd(${JSON.stringify(window)})`),end,`Unreliable baseline end: ${window}`);
 // Pending outcomes never become false conversions or enter mature denominators.
 const readiness=state=>JSON.parse(JSON.stringify(evaluate(`trialReadiness(${JSON.stringify(state)})`)));
 let ready=readiness({});

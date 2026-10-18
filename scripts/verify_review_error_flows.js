@@ -11,7 +11,8 @@ async(parent)=>{
     fields:[...n.querySelectorAll('[name=target],[name=reviewValue],[name=reviewedAt]')].map(control=>{
       const id=control.getAttribute('aria-describedby'),error=id&&document.getElementById(id);
       return {name:control.name,required:control.required,valid:control.validity.valid,
-        invalid:control.getAttribute('aria-invalid'),description:error?.textContent??'',errorVisible:!!error&&!error.hidden};
+        invalid:control.getAttribute('aria-invalid'),description:error?.textContent??'',
+        errorVisible:!!error&&error.classList.contains('action-field-error')&&!error.hidden};
     })}));
   const save=()=>form().getByRole('button',{name:'保存本地记录',exact:true}).click();
   const stored=()=>p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'));

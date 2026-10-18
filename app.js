@@ -227,6 +227,19 @@ function actionBaselineWindow(id) {
   if(last&&/^\d+月$/.test(last))return `完整月 ${sourceData.snapshot.asOf.slice(0,4)}-${last.slice(0,-1).padStart(2,'0')}`;
   return `快照 ${sourceData.snapshot.asOf}`;
 }
+function baselineWindowEnd(window) {
+  if(typeof window!=='string')return null;
+  // Only interpret the explicit saved window formats. Never substitute today's
+  // metric window for an unknown historical baseline.
+  const dated=/^(?:完整周 W[1-9]\d* · |快照 )(\d{4}-\d{2}-\d{2})$/.exec(window);
+  const month=/^完整月 (\d{4}-(?:0[1-9]|1[0-2]))$/.exec(window);
+  const text=dated?.[1]??(month?`${month[1]}-01`:null);
+  if(!text)return null;
+  const date=new Date(`${text}T00:00:00Z`);
+  if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==text)return null;
+  if(month)date.setUTCMonth(date.getUTCMonth()+1,0);
+  return date.toISOString().slice(0,10);
+}
 window.addEventListener('resize',()=>{
   [chart,statusChart,...sparklines,...detailCharts].filter(item=>item&&!item.isDisposed()).forEach(item=>{
     if(!refreshEvidenceChart(item)){refreshChartTypography(item);item.resize();}
@@ -3043,8 +3056,19 @@ function actionRecord(page,evidenceId) {
   const reviewLabel=element('label','','复查实测值');const reviewValue=element('input','');reviewValue.name='reviewValue';reviewValue.placeholder='如 45.2% 或 434/1000';reviewValue.value=initial.reviewValue??'';reviewLabel.append(reviewValue);
   const reviewedLabel=element('label','','实际复查日');const reviewedAt=element('input','');reviewedAt.type='date';reviewedAt.name='reviewedAt';reviewedAt.value=initial.reviewedAt??'';
   const today=new Date();reviewedAt.max=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;reviewedLabel.append(reviewedAt);
+  const baselineEnd=baselineWindowEnd(baselineAt);
+  if(baselineEnd)reviewedAt.min=baselineEnd;
+  const dateGuidance=element('p','table-note action-review-date-note',baselineEnd?
+    `实际复查日不得早于原登记基线统计期末 ${baselineEnd}，且不能晚于今天。`:
+    '原登记基线的统计期末无法核实，未推定最早复查日；请人工核对先后关系。实际复查日仍不能晚于今天。');
+  dateGuidance.id=`review-date-guidance-${issueId}`;reviewedAt.setAttribute('aria-describedby',dateGuidance.id);
   reviewFields.append(targetLabel,reviewLabel,reviewedLabel);reviewDetails.append(element('p','table-note',
-    '登记“复查通过”时，这三项必填。结果由人工确认，系统不自动验算目标是否达成。'),reviewFields);form.append(reviewDetails);
+    '登记“复查通过”时，这三项必填。结果由人工确认，系统不自动验算目标是否达成。'),reviewFields,dateGuidance);form.append(reviewDetails);
+  let savedDateWarning;
+  if(current.reviewedAt&&(!draft||draft.reviewedAt===current.reviewedAt)&&reviewedAt.validity.rangeUnderflow) {
+    savedDateWarning=element('p','action-baseline-note','原保存的实际复查日早于登记基线统计期末；原记录仍保留，再次保存前请核对并更正日期。');
+    reviewDetails.append(savedDateWarning);
+  }
   reviewDetails.open=['resolved','verified'].includes(status.value)||Boolean(target.value||reviewValue.value||reviewedAt.value);
   const save=element('button','action-toggle','保存本地记录');save.type='submit';
   const receipt=element('p','action-receipt');receipt.id=`receipt-${issueId}`;receipt.setAttribute('role','status');
@@ -3061,13 +3085,16 @@ function actionRecord(page,evidenceId) {
   const clearFieldError=control=>{
     const error=fieldErrors.get(control);
     if(error){error.hidden=true;error.textContent='';}
-    control.removeAttribute('aria-invalid');control.removeAttribute('aria-describedby');
+    control.removeAttribute('aria-invalid');
+    if(control===reviewedAt)control.setAttribute('aria-describedby',dateGuidance.id);
+    else control.removeAttribute('aria-describedby');
   };
   const fieldErrorText=control=>{
     const labels={owner:'负责人',status:'处理状态',due:'计划复查日',target:'验收条件',note:'处理说明',
       linkedSample:'关联演示记录',reviewValue:'复查实测值',reviewedAt:'实际复查日'};
     const label=labels[control.name]??'有效信息';
-    return control.validity.rangeOverflow?`${label}不能晚于今天`:
+    return control.validity.rangeUnderflow?`${label}不能早于原登记基线统计期末 ${baselineEnd}`:
+      control.validity.rangeOverflow?`${label}不能晚于今天`:
       control.validity.badInput?`请填写有效的${label}`:`请填写${label}`;
   };
   const readFields=()=>Object.fromEntries(controls.map(control=>[control.name,control.value]));
@@ -3132,6 +3159,7 @@ function actionRecord(page,evidenceId) {
     }
     controls.forEach(control=>{control.value=record[control.name];control.setCustomValidity('');clearFieldError(control);});
     savedFingerprint=JSON.stringify(readFields());actionDrafts.delete(key);updateIssueLabels();updateActionDraftWarning();updateStage();
+    savedDateWarning?.remove();
     showReceipt(`已保存至此浏览器：${updatedAt} · ${status.selectedOptions[0].textContent}`,'saved');
   });
   return form;
