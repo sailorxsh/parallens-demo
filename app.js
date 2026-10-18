@@ -115,6 +115,27 @@ const actionDrafts=new Map();
 const activeIssueMetrics=new Map();
 const issueScopeKey=page=>`${page}:${activeFilterDescription()||'默认演示范围'}`;
 const warnActionDrafts=event=>{event.preventDefault();event.returnValue='';};
+function focusIssueOwner(form=document.querySelector('.action-record')) {
+  const owner=form?.querySelector('[name="owner"]');
+  if(!owner)return;
+  owner.focus({preventScroll:true});
+  const entry=currentReadingEntry,revision=readingRevision,hash=location.hash;
+  const reveal=()=>{
+    if(!owner.isConnected||document.activeElement!==owner||entry!==currentReadingEntry||
+      revision!==readingRevision||hash!==location.hash||document.querySelector('dialog:modal'))return;
+    const target=owner.closest('label')??owner,bounds=target.getBoundingClientRect(),field=owner.getBoundingClientRect();
+    const navigation=document.querySelector('.section-navigation')?.getBoundingClientRect();
+    const top=navigation?.top<=0?Math.max(0,navigation.bottom):0;
+    const hit=document.elementFromPoint(field.x+field.width/2,field.y+field.height/2);
+    if(bounds.top<top||bounds.bottom>innerHeight||hit!==owner)
+      target.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
+  };
+  reveal();
+  const left=scrollX,top=scrollY;
+  // Evidence explorers build their initial content in the next animation frame.
+  // Only finish this explicit action if the user has not moved or chosen another target.
+  requestAnimationFrame(()=>{if(scrollX===left&&scrollY===top)reveal();});
+}
 function updateActionDraftWarning() {
   window.removeEventListener('beforeunload',warnActionDrafts);
   if(actionDrafts.size)window.addEventListener('beforeunload',warnActionDrafts);
@@ -215,7 +236,7 @@ function renderSavedIssues() {
         requestAnimationFrame(()=>{
           if(entry!==currentReadingEntry||location.hash!==current.href||document.activeElement!==main||document.querySelector('dialog:modal'))return;
           main.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
-          main.querySelector('.action-record [name="owner"]')?.focus({preventScroll:true});
+          focusIssueOwner();
           document.querySelector('#announcement').textContent=`已打开${title}的原范围问题单；登记基线和会话草稿保留。`;
         });
       });action.append(open);
@@ -4242,7 +4263,7 @@ function registerIssue(page,id,{preserveEvidence=false}={}) {
   renderRoute({preserveScroll:true});
   const form=document.querySelector('.action-record');
   document.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
-  form?.querySelector('[name="owner"]')?.focus({preventScroll:true});
+  focusIssueOwner(form);
   document.querySelector('#announcement').textContent=`已打开 #${id} ${catalogItem(id).name} 的当前范围问题单；填写后保存本地记录`;
 }
 function registerIssueButton(page,id,{compact=false}={}) {
