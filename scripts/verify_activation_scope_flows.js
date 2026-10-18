@@ -4,6 +4,7 @@ async(parent)=>{
  const check=(ok,message)=>{if(!ok)throw Error(message);};p.on('pageerror',e=>errors.push(e.message));
  const ready=async()=>{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));await p.evaluate(()=>document.fonts.ready);};
  const open=async(filters={},extra='')=>{await p.goto(`${base}#/A?metric=13&${new URLSearchParams(filters)}${extra}`);await ready();};
+ const form=()=>p.locator('.action-record');
  const scopes=[{deviceModel:'Hunt Pro'},{deviceModel:'Hunt Pro',country:'US',appPlatform:'Android',week:'12'},{productLine:'Hunting',deviceModel:'Hunt Pro'}];
  try{
   for(const [width,font] of [[1366,16],[1600,16],[1920,16],[1366,32]])for(const filters of scopes){
