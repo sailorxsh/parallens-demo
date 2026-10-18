@@ -3052,8 +3052,8 @@ function actionRecord(page,evidenceId) {
   fields.append(ownerLabel,statusLabel,dueLabel,sampleLabel,noteLabel);registration.append(fields);form.append(registration);
   const reviewDetails=element('details','action-review');reviewDetails.append(element('summary','','复查与验收'));
   const reviewFields=element('div','action-record-fields action-review-fields');
-  const targetLabel=element('label','','验收条件');const target=element('input','');target.name='target';target.placeholder='填写业务确认的目标';target.value=initial.target??'';targetLabel.append(target);
-  const reviewLabel=element('label','','复查实测值');const reviewValue=element('input','');reviewValue.name='reviewValue';reviewValue.placeholder='如 45.2% 或 434/1000';reviewValue.value=initial.reviewValue??'';reviewLabel.append(reviewValue);
+  const targetLabel=element('label','action-note-field','验收条件');const target=element('textarea','review-text');target.name='target';target.rows=3;target.placeholder='填写业务确认的目标';target.value=initial.target??'';targetLabel.append(target);
+  const reviewLabel=element('label','action-note-field','复查实测值');const reviewValue=element('textarea','review-text');reviewValue.name='reviewValue';reviewValue.rows=3;reviewValue.placeholder='如 45.2% 或 434/1000';reviewValue.value=initial.reviewValue??'';reviewLabel.append(reviewValue);
   const reviewedLabel=element('label','','实际复查日');const reviewedAt=element('input','');reviewedAt.type='date';reviewedAt.name='reviewedAt';reviewedAt.value=initial.reviewedAt??'';
   const today=new Date();reviewedAt.max=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;reviewedLabel.append(reviewedAt);
   const baselineEnd=baselineWindowEnd(baselineAt);
@@ -3098,7 +3098,12 @@ function actionRecord(page,evidenceId) {
       control.validity.badInput?`请填写有效的${label}`:`请填写${label}`;
   };
   const readFields=()=>Object.fromEntries(controls.map(control=>[control.name,control.value]));
-  const savedFields=Object.fromEntries(controls.map(control=>[control.name,current[control.name]??(control===status?'pending':'')]));
+  const savedFields=Object.fromEntries(controls.map(control=>{
+    const value=current[control.name]??(control===status?'pending':'');
+    // Native textareas normalize line endings; compare the same representation
+    // without rewriting the original saved record on read.
+    return [control.name,control.tagName==='TEXTAREA'&&typeof value==='string'?value.replace(/\r\n?/g,'\n'):value];
+  }));
   let savedFingerprint=JSON.stringify(savedFields);
   const showReceipt=(text,state)=>{
     if(receipt.textContent!==text)receipt.textContent=text;
