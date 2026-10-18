@@ -9,15 +9,25 @@ async (page) => {
   const inspect=async(topic,filters='')=>{
     await p.goto(`${base}#/${topic}${filters?`?${filters}`:''}`);
     await p.locator('.detail-kpi').first().waitFor();await p.evaluate(()=>document.fonts.ready);
+    await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     const items=await p.locator('.detail-kpi').evaluateAll(nodes=>nodes.map(node=>{
       const value=node.querySelector('.detail-select');
+      const footer=node.querySelector('.headline-trend,.metric-compare-unavailable,.net-add-flow'),rect=node.getBoundingClientRect();
+      const style=getComputedStyle(node),delta=node.querySelector('.metric-delta'),link=node.querySelector('.detail-evidence-link');
       return {id:Number(node.dataset.metricId),label:node.querySelector('h3').textContent,value:value.textContent,
         name:value.getAttribute('aria-label'),fields:[...node.querySelectorAll('.metric-secondary-values>div')].map(row=>[...row.children].map(cell=>cell.textContent)),
+        footerGap:footer?rect.bottom-footer.getBoundingClientRect().bottom:null,footerInset:parseFloat(style.paddingBottom)+parseFloat(style.borderBottomWidth),
+        delta:delta?{text:delta.textContent,tone:delta.classList.contains('improving')?'improving':delta.classList.contains('adverse')?'adverse':'neutral',
+          color:getComputedStyle(delta).color,background:getComputedStyle(delta).backgroundColor}:null,
+        linkWidth:link.getBoundingClientRect().width,contentWidth:node.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),
         overflow:node.scrollWidth>node.clientWidth+1};
     }));
     for(const item of items) {
       check(item.name.includes(item.value),`Visible value is missing from the button name: ${JSON.stringify(item)}`);
       check(!item.overflow,`Card content is clipped: ${JSON.stringify(item)}`);
+      check(item.footerGap===null||Math.abs(item.footerGap-item.footerInset)<1.5,
+        `Card footer does not share the row's reading baseline: ${JSON.stringify(item)}`);
+      check(item.linkWidth<item.contentWidth-8,'The evidence underline expands across the entire card');
       check(!/undefined|NaN/.test(JSON.stringify(item)),`Card shows an invalid value: ${JSON.stringify(item)}`);
     }
     results.push({topic,filters,width:await p.evaluate(()=>innerWidth),items});return items;
@@ -36,6 +46,20 @@ async (page) => {
       }
     }
     await p.setViewportSize({width:1440,height:1000});
+    const structural=await inspect('F');
+    const structuralTone=structural.find(item=>item.id===48).delta;
+    await inspect('A');
+    const tones=await p.locator('.detail-kpi .metric-delta').evaluateAll(nodes=>nodes.map(n=>({
+      tone:n.classList.contains('improving')?'improving':n.classList.contains('adverse')?'adverse':'neutral',
+      text:n.textContent,color:getComputedStyle(n).color,background:getComputedStyle(n).backgroundColor})));
+    const rgb=s=>s.match(/[\d.]+/g).slice(0,3).map(Number);
+    const luminance=s=>rgb(s).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+    const neutral=tones.find(item=>item.tone==='neutral');
+    check(neutral?.text.includes('持平')&&structuralTone.background===neutral.background,
+      'Stable and unclassified structural changes do not share a neutral appearance');
+    check(new Set(tones.map(item=>item.background)).size===3,'Stable, improving and adverse changes share a visual state');
+    for(const item of tones){const a=luminance(item.color),b=luminance(item.background);
+      check((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,`Change label has insufficient text contrast: ${JSON.stringify(item)}`);}
     await inspect('F');
     check(await card(48).locator('h3').innerText()==='多设备主账号占比','Device share is presented as an average device count');
     check(await card(7).locator('.detail-select').innerText()==='128,600人','Registered user count is ambiguous');
@@ -117,7 +141,8 @@ async (page) => {
       await card(8).locator('.metric-secondary-values').count()===0,'Unavailable device data is shown as a real count');
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['precise metric names and units','independent composite measures','visible values in accessible names',
-      'seven pages at three specified desktop sizes','first-view observations and rate comparisons','neutral structural changes','device-share evidence history','inspector consistency',
+      'seven pages at three specified desktop sizes','first-view observations and rate comparisons','aligned trend and availability footers','compact evidence link underlines',
+      'distinct stable, improving and adverse states with readable contrast','neutral structural changes','device-share evidence history','inspector consistency',
       'all independent technical rates and request failures','single-chain model and firmware evidence','filtered payment and weekly values','unavailable data without fabricated counts'],results};
   } finally {await context.close();}
 }
