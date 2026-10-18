@@ -10,7 +10,7 @@ const fixtures={
   stories:file('stories'),diagnostics:file('diagnostics'),contract:file('filter-contract'),filterPolicy:file('filter-policy'),slices:file('filter-slices'),
   trialFacts:file('trial-facts'),modelMarket:file('model-market'),metricTrends:file('metric-trends'),entitySamples:file('entity-samples'),
   functionUsage:file('function-usage'),inactivityCohorts:file('inactivity-cohorts'),technicalFacts:file('technical-facts'),
-  subscriptionFlow:file('subscription-flow'),bindingDeviceFacts:file('binding-device-facts'),deviceActivityFacts:file('device-activity-facts'),
+  subscriptionFlow:file('subscription-flow'),bindingDeviceFacts:file('binding-device-facts'),deviceActivityFacts:file('device-activity-facts'),onboardingDurationFacts:file('onboarding-duration-facts'),
 };
 const context=vm.createContext({
   __fixtures:fixtures,document:{documentElement:{},querySelector:()=>null},getComputedStyle:()=>({fontSize:'16px'}),window:{addEventListener:()=>{},removeEventListener:()=>{}},
@@ -115,20 +115,19 @@ assert.match(evaluate('actionBaselineWindow(44)'),/21天未使用/);project({sea
 assert.equal(project({deviceStatus:'Inactive'}).m41.kind,'na');assert.equal(project({deviceStatus:'Inactive'}).m44.kind,'na');
 project({});
 
-// Failure categories are exact W12 attempts, never estimates borrowed for another scope.
+// Failure categories now use the approved per-cohort, per-group frequencies.
 const binding=evaluate('bindingFailureEvidence()');
 assert.deepEqual(JSON.parse(JSON.stringify(binding.spec.series[0].values)),[85,70,45]);
-assert.equal(binding.table.rows.at(-1)[1],200);
-assert.equal(binding.table.rows[0][3],'42.5%');
-for(const filters of [{week:'12'},{country:'US'},{productLine:'Bird'},{country:'US',week:'12'}]) {
-  project(filters);assert.ok(evaluate('bindingFailureEvidence().spec'),'Applicable W12 overall failure evidence was hidden');
+assert.equal(binding.table.rows.at(-1)[1],200);assert.equal(binding.table.rows[0][3],'42.5%');
+for(const filters of [{week:'12'},{country:'US'},{productLine:'Bird'},{week:'1'},{week:'11'},{appPlatform:'iOS'},{deviceModel:'K6'},{deviceStatus:'Effective'},{week:'12',appPlatform:'Android'}]) {
+ const current=project(filters).m11,sourceRows=fixtures.onboardingDurationFacts.binding.cohorts.find(c=>String(c.week)===String(filters.week??12)).records.filter(r=>
+   ['appPlatform','deviceModel','deviceStatus'].every(k=>!filters[k]||r[k]===filters[k]));
+ const failures=sourceRows.reduce((sum,r)=>sum+Object.values(r.failureCounts).reduce((n,c)=>n+c,0),0);
+ assert.equal(evaluate('bindingFailureEvidence().table.rows.at(-1)[1]'),failures);
+ assert.equal(current.denominator-current.numerator,failures);
 }
-for(const filters of [{week:'1'},{week:'11'},{appPlatform:'iOS'},{deviceModel:'K6'},{deviceStatus:'Effective'},{week:'12',appPlatform:'Android'}]) {
-  project(filters);assert.ok(evaluate('bindingFailureEvidence().reason'),'Another scope borrowed overall failure causes');
-  assert.equal(evaluate('bindingFailureEvidence().spec'),undefined);
-}
-evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.diagnostics.A.tables.find(t=>t.title==="首次绑定失败原因 · W12").rows[0][1]++');
-project({});assert.ok(evaluate('bindingFailureEvidence().reason'),'Corrupt failure categories still draw a distribution');
+evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.onboardingDurationFacts.binding.cohorts[0].records[0].failureCounts[Object.keys(sourceData.onboardingDurationFacts.binding.cohorts[0].records[0].failureCounts)[0]]++');
+project({});assert.ok(evaluate('bindingFailureEvidence().reason'),'Unclosed canonical failure source still draws a reliable distribution');
 evaluate('sourceData=__fixtures');project({});
 // One user belongs to one activity cell; filtered union and all source margins agree.
 const activitySource=fixtures.metrics.m30.value;
@@ -602,7 +601,13 @@ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));
 sourceData.weekly.forEach((week,index)=>{
   week.registrationCohort.birdEligible=index===0||index===8?1000:100;
   week.registrationCohort.valueActivated7dBird=index===0?900:index===8?500:index<8?10:30;
-});`);
+  sourceData.onboardingDurationFacts.activation.cohorts[index].records.forEach((r,j)=>{
+    r.eligible=j===0?week.registrationCohort.birdEligible:0;
+    r.durationCounts.forEach((cell,k)=>cell[1]=j===0&&k===0?week.registrationCohort.valueActivated7dBird:0);
+    r.notActivatedWithin7d=r.eligible-r.durationCounts.reduce((n,cell)=>n+cell[1],0);
+  });
+});
+Object.assign(sourceData.metrics.m13,{numerator:30,denominator:100,value:.3});`);
 project({});
 const weightedStress=evaluate('filteredFinding("A").comparison');
 assert.equal(weightedStress.before.numerator,970);

@@ -1,6 +1,6 @@
 {
-  "passed": 44,
-  "total": 44,
+  "passed": 45,
+  "total": 45,
   "checks": [
     {
       "rule": "catalog",
@@ -221,6 +221,11 @@
       "rule": "D22-complete-payment-months",
       "passed": true,
       "detail": "12个连续完整自然月、合成来源及原6–8月锚点一致；人数、净收入、ARPPU及两图/完整表闭合"
+    },
+    {
+      "rule": "D23-onboarding-frequency-source",
+      "passed": true,
+      "detail": "576个互斥合成分组；成功频数与失败/未达成闭合、24个原周度总计和完整观察窗保留"
     }
   ]
 }

@@ -22,7 +22,8 @@ async(parent)=>{
       try{
         for(const filters of cases){
           await p.goto(`${base}#/?${new URLSearchParams(filters)}`);
-          await p.waitForFunction(()=>document.querySelector('#main[aria-busy="false"] .home-alerts')&&lastRenderedHash===location.hash);
+          try{await p.waitForFunction(()=>document.querySelector('#main[aria-busy="false"] .home-alerts')&&lastRenderedHash===location.hash);}
+          catch(e){throw Error(`${e.message}; scope=${JSON.stringify(filters)}; state=${JSON.stringify(await p.evaluate(()=>({url:location.href,last:typeof lastRenderedHash==='undefined'?null:lastRenderedHash,body:document.querySelector('#main')?.innerText.slice(0,300)})))}; errors=${errors.join('; ')}`);}
           await p.evaluate(size=>document.documentElement.style.fontSize=`${size}px`,size);await p.evaluate(()=>document.fonts.ready);await settle(p);
           const measures=await p.evaluate(ids=>ids.map(id=>({id,kind:metric(id).kind,reason:metric(id).reason})),ids);
           const observed=[];

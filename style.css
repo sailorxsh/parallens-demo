@@ -945,3 +945,18 @@ article.trial-sample-item {cursor:auto}
 .device-return-evidence .diagnostic-table {min-width:0}
 .device-return-evidence .diagnostic-table thead th {white-space:normal}
 .device-return-evidence .diagnostic-table tbody td:nth-child(-n+4) {white-space:nowrap}
+
+/* Onboarding evidence uses the existing desktop workspace, without changing its rail or cards. */
+.onboarding-duration{min-width:0;margin:1rem 0;padding:1rem;border:1px solid var(--line);border-radius:.4rem;background:var(--paper)}
+.onboarding-duration>h3{margin:0 0 .8rem;font-size:1rem}
+.onboarding-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:.65rem;margin:.7rem 0}
+.onboarding-stats>div{padding:.65rem .75rem;background:#f0f4eb;border-radius:.3rem;min-width:0}
+.onboarding-stats dt{font-size:.72rem;color:var(--ink-soft)}
+.onboarding-stats dd{margin:.35rem 0 0;font-size:1.12rem;font-weight:700;overflow-wrap:anywhere}
+.onboarding-tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin:1rem 0 .6rem}
+.onboarding-tabs button{font:inherit;font-size:.78rem;padding:.5rem .7rem;border:1px solid var(--line);border-radius:.3rem;background:var(--paper);color:var(--ink);cursor:pointer}
+.onboarding-tabs button[aria-selected=true]{background:var(--forest-soft);color:var(--paper)}
+.onboarding-tabs button:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.onboarding-plot .diagnostic-table{min-width:0}
+.onboarding-plot .diagnostic-table th,.onboarding-plot .diagnostic-table td,.onboarding-group-table .diagnostic-table th{white-space:normal}
+.onboarding-group-table{margin:.8rem 0}

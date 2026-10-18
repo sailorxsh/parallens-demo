@@ -409,10 +409,11 @@
         "country",
         "deviceModel",
         "productLine",
-        "season",
         "week"
       ],
-      "unavailableDimensions": []
+      "unavailableDimensions": [
+        "season"
+      ]
     },
     {
       "id": 14,

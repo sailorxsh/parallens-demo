@@ -25,6 +25,7 @@ technical = load("technical-facts.json")
 subscription_flow = load("subscription-flow.json")
 binding_devices = load("binding-device-facts.json")
 device_activity = load("device-activity-facts.json")
+onboarding = load("onboarding-duration-facts.json")
 filter_policy = load("filter-policy.json")
 model_market = load("model-market.json")
 checks = []
@@ -488,6 +489,24 @@ check('D22-complete-payment-months', payment['version']=='synthetic-payment-mont
       [payment_rows[-1]['payers'],payment_rows[-1]['netIncome'],payment_arppu[-1]]==
       [metrics['m35']['value']['monthlySubscriptionPayers'],metrics['m35']['value']['subscriptionNetIncome'],metrics['m35']['value']['ARPPU']],
       '12个连续完整自然月、合成来源及原6–8月锚点一致；人数、净收入、ARPPU及两图/完整表闭合')
+
+duration_ok = onboarding['version']=='synthetic-onboarding-duration-v1' and onboarding['status']=='SYNTHETIC_DEMO' and onboarding['asOf']==snapshot['asOf']
+for label,mid in [('binding',11),('activation',13)]:
+    cohorts=onboarding[label]['cohorts']
+    duration_ok &= len(cohorts)==12
+    for c,w in zip(cohorts,weekly):
+        n=sum(count for r in c['records'] for seconds,count in r['durationCounts'])
+        d=sum(r['eligible'] for r in c['records'])
+        expected=(w['bindingAttempts']['successful'],w['bindingAttempts']['total']) if mid==11 else (w['registrationCohort']['valueActivated7dBird'],w['registrationCohort']['birdEligible'])
+        duration_ok &= ((n,d)==expected and c['week']==w['week'] and c['cohortEnd']==w['weekEnd'] and len(c['records'])==24 and
+            date.fromisoformat(c['cohortEnd'])-date.fromisoformat(c['cohortStart'])==timedelta(days=6) and
+            date.fromisoformat(c['cohortEnd'])+timedelta(days=2 if mid==11 else 8)<=date.fromisoformat(c['observedThrough'])<=date.fromisoformat(onboarding['asOf']))
+        for r in c['records']:
+            success=sum(count for seconds,count in r['durationCounts'])
+            excluded=sum(r['failureCounts'].values()) if mid==11 else r['notActivatedWithin7d']
+            duration_ok &= (success+excluded==r['eligible'] and all(type(seconds) is int and type(count) is int and
+                0<=seconds<=(86400 if mid==11 else 604799) and count>=0 for seconds,count in r['durationCounts']))
+check('D23-onboarding-frequency-source',duration_ok,'576个互斥合成分组；成功频数与失败/未达成闭合、24个原周度总计和完整观察窗保留')
 
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

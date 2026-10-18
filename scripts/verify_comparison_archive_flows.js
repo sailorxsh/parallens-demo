@@ -4,7 +4,7 @@ async(parent)=>{
  const c=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',reducedMotion:'reduce'}),p=await c.newPage();
  const check=(ok,message)=>{if(!ok)throw Error(message);};p.on('pageerror',e=>errors.push(e.message));
  const source=async name=>(await(await parent.request.get(`${base}data/${name}.json`)).json());
- const [weekly,trial,diagnostics]=await Promise.all(['weekly','trial-facts','diagnostics'].map(source));
+ const [weekly,trial,diagnostics,onboarding]=await Promise.all(['weekly','trial-facts','diagnostics','onboarding-duration-facts'].map(source));
  const ready=async()=>{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));
   await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));};
  const open=async(id,query='')=>{await p.goto(`${base}#/${{13:'A',18:'D',35:'E',42:'C'}[id]}?metric=${id}&issue=${id}${query?'&'+query:''}`);await ready();};
@@ -51,6 +51,10 @@ async(parent)=>{
     if(id===13)w.registrationCohort.valueActivated7dBird-=10;
     else {w.deviceEventsBird.records.forEach(r=>r.empty=r.triggers/2);w.deviceEventsBird.empty=w.deviceEventsBird.records.reduce((n,r)=>n+r.empty,0);}
    });}
+   if(id===13){const facts=structuredClone(onboarding);facts.activation.cohorts.slice(0,8).forEach(cohort=>{
+    let left=10;for(const row of cohort.records)for(const cell of row.durationCounts){const count=Math.min(left,cell[1]);cell[1]-=count;row.notActivatedWithin7d+=count;left-=count;}
+    check(left===0,'Historical backfill fixture lacks ten successes');
+   });await p.route('**/data/onboarding-duration-facts.json',r=>r.fulfill({json:facts}));}
    await p.route(`**/data/${path}.json`,r=>r.fulfill({json:data}));await p.reload();await ready();
    check((await form().locator('> .table-note').innerText()).includes(before.baseline),'Controlled historical backfill changed the latest single-point baseline');
    const warning=form().locator('.comparison-evidence-warning');check(await warning.isVisible()&&(await warning.innerText()).includes('比较证据已变化'),'Unchanged latest value hides changed historical evidence');
@@ -73,6 +77,7 @@ async(parent)=>{
     await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.setViewportSize({width:1600,height:1000});await ready();
     await p.screenshot({path:`output/playwright/v120-audit/06-archive-backfill-${browser.browserType().name()}.png`,scale:'css'});
    }
+   if(id===13)await p.unroute('**/data/onboarding-duration-facts.json');
    await p.unroute(`**/data/${path}.json`);await p.reload();await ready();
    check(await form().locator('.comparison-evidence-warning').count()===0,'Restored data retains stale discrepancy warning');
    states.push({id,kind:'historical-backfill',baseline:before.baseline});

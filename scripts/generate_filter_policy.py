@@ -67,6 +67,9 @@ for item in contract:
     if mid in (18, 23, 32, 33, 34, 35):
         business.add("billingCycle")
     business.discard("userType")
+    if mid == 13:
+        # No natural-season attribution exists in the onboarding frequency source.
+        demonstrable.discard('season')
     if mid == 42:
         # Business applicability remains; event facts have no geography/season
         # fields, so rebuilding must not re-enable independent slice estimates.
