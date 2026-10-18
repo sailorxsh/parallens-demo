@@ -189,7 +189,7 @@ metrics = {
     21: group({"opening":12020,"trialPaid":530,"directPaid":120,"recovered":90,"lost":360,"closing":12400}),
     22: group({"anyExhausted":rate(312,47880), "aiExhausted":rate(220,47880),
                "storageExhausted":rate(160,47880), "transferExhausted":rate(140,47880)}),
-    23: rate(430,500), 24: rate(54000,70000),
+    23: rate(9443,9940), 24: rate(54000,70000),
     25: group({"DAU":12600,"WAU":29800,"MAU":68000,"appMAU":46800}),
     26: group({"sessionsPerUser":2.1,"durationP50Minutes":4.5,"durationP90Minutes":26}),
     27: rate(26000,68000), 28: group({"D1":rate(1900,2500),"D7":rate(1500,2500),"D30":rate(1100,2500)}),

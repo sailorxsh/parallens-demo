@@ -28,7 +28,8 @@ async(parent)=>{
    if(type==='heatmap') {index=0;coordinate=[dimension??1,0];}
    else if(Array.isArray(values[index]))coordinate=values[index].slice(0,2);
    else coordinate=o.yAxis[0].type==='category'?[values[index]/2,index]:[index,type==='bar'?values[index]/2:values[index]];
-   const [x,y]=e.convertToPixel({seriesIndex},coordinate);
+   const layout=type==='bar'?e.getModel().getSeriesByIndex(seriesIndex).getData().getItemLayout(index):null;
+   const [x,y]=layout&&[layout.x,layout.y,layout.width,layout.height].every(Number.isFinite)?[layout.x+layout.width/2,layout.y+layout.height/2]:e.convertToPixel({seriesIndex},coordinate);
    return {x:r.left+x,y:r.top+y,index,type};
   },dimension);
   check(point&&Number.isFinite(point.x)&&Number.isFinite(point.y),`No finite native chart point in ${await plot.getAttribute('aria-label')}`);
@@ -46,6 +47,21 @@ async(parent)=>{
    if(!await plot.isVisible())continue;
    await plot.locator('svg').waitFor();
    const panel=plot.locator('xpath=ancestor::*[contains(concat(" ",normalize-space(@class)," ")," evidence-pair ") or contains(concat(" ",normalize-space(@class)," ")," detail-chart-panel ")][1]');
+   if(await plot.evaluate(n=>!!n.closest('.structure-panel'))) {
+    const sourcePanel=plot.locator('..'),table=sourcePanel.locator('table'),before=p.url();
+    check(await table.isVisible(),'Owned structure table is not directly readable');
+    const point=await clickPoint(plot),selected=table.locator('tr.chart-selected');
+    check(await selected.count()===1&&await selected.evaluate(n=>[...n.parentElement.children].indexOf(n))===point.index,'Owned structure selects the wrong data row');
+    check((await sourcePanel.locator('.chart-selection').innerText()).includes('全局筛选保持不变')&&p.url()===before,'Owned structure changes scope or lacks feedback');
+    results.push({metric:item.id,page:item.page,view,type:point.type,row:point.index,table:'always-visible'});continue;
+   }
+   if(await plot.evaluate(n=>n.classList.contains('device-retention-heatmap'))) {
+    const scale=await plot.evaluate(n=>echarts.getInstanceByDom(n).getOption().visualMap[0]);check(scale.min===0&&scale.max===100,'Cohort matrix changes its colour scale');
+    const before=p.url();await plot.scrollIntoViewIfNeeded();await settle();const point=await plot.evaluate(n=>{const r=n.getBoundingClientRect(),v=echarts.getInstanceByDom(n).convertToPixel({seriesIndex:0},[1,6]);return {x:r.x+v[0],y:r.y+v[1]};});await p.mouse.click(point.x,point.y);await p.waitForFunction(()=>lastRenderedHash===location.hash);await settle();
+    check(await p.locator('[name=activationCohort]').inputValue()==='2026-08-10','Cohort matrix does not select its pointed batch');
+    await p.goto(before);await p.waitForFunction(()=>lastRenderedHash===location.hash);await settle();
+    results.push({metric:item.id,page:item.page,view,type:'heatmap',interaction:'select-activation-cohort'});continue;
+   }
    const details=panel.locator(':scope > .chart-data,:scope > .workspace-calculation');
    check(await details.count()===1,`#${item.id} has no adjacent data disclosure`);
    check(!await details.evaluate(n=>n.open),`#${item.id} expands data before selection`);

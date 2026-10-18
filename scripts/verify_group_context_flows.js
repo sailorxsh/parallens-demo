@@ -8,7 +8,7 @@ async(parent)=>{
   const cases=[['A',13,'','完整周 W12 · 2026-09-13'],
     ['A',13,'week=2&country=US','完整周 W2'],['C',42,'','完整周 W12 · 2026-09-13'],
     ['C',42,'week=2&firmware=2.8','完整周 W2'],['B',24,'','完整月 2026-08'],
-    ['C',41,'','快照 2026-09-24'],['D',23,'country=US','完整周 W12'],['G',53,'','快照 2026-09-24']];
+    ['C',41,'','快照 2026-09-24'],['D',23,'country=US','月度续订观察期末'],['G',53,'','快照 2026-09-24']];
   cases.push(['C',42,'deviceModel=K6&firmware=2.8','完整周 W12 · 2026-09-13'],
     ['A',13,'country=US','完整周 W12 · 2026-09-13'],['F',48,'country=US','快照 2026-09-24']);
   try{
@@ -21,7 +21,7 @@ async(parent)=>{
         const note=evidence.locator('.evidence-pair:not([data-comparison-group="device-periods"]) .group-evidence-context:visible').first();
         const text=await note.innerText();
         check(text.includes(period)&&text.includes('不表示跨期变化贡献'),`Wrong group meaning or period: ${text}`);
-        check(text.includes(id===42?'型号分配为构造样本':'独立分布假设'),`Hidden source boundary for #${id}`);
+        check(text.includes(({13:'同一合成频数',23:'互斥合成频数',24:'互斥合成分组',41:'同一行为间隔聚合事实',42:'型号分配为构造样本'})[id]??'独立分布假设'),`Hidden source boundary for #${id}`);
         const pair=note.locator('..').locator('..');
         const disclosure=pair.locator('.workspace-calculation');
         check(await disclosure.count()===1&&!await disclosure.evaluate(node=>node.open),'Source note requires an open calculation table');

@@ -28,6 +28,7 @@ device_activity = load("device-activity-facts.json")
 onboarding = load("onboarding-duration-facts.json")
 filter_policy = load("filter-policy.json")
 model_market = load("model-market.json")
+monthly_renewal = load('monthly-renewal-facts.json')
 checks = []
 
 
@@ -162,8 +163,8 @@ check("R2", all_rates_match(metrics) and
       metrics["m10"]["numerator"] == weekly[-1]["registrationCohort"]["bound72h"] and
       metrics["m13"]["denominator"] == weekly[-1]["registrationCohort"]["birdEligible"] and
       metrics["m18"]["numerator"] == weekly[-1]["trialMaturity"]["converted"] and
-      metrics["m23"]["numerator"] == weekly[-1]["renewal"]["successful"],
-      "全部率可回算；首页关键率与最新完整周一致")
+      metrics["m23"]["numerator"] == monthly_renewal["months"][-1]["renewed"] and metrics["m23"]["denominator"] == monthly_renewal["months"][-1]["due"],
+      "全部率可回算；关键率各按已定义完整周或完整月核对")
 bird = snapshot["subscriptionStatuses"]["bird"]
 hunting = snapshot["subscriptionStatuses"]["hunting"]
 check("R3", sum(bird.values()) == snapshot["birdOwners"] and
@@ -566,6 +567,22 @@ cohort_ok &= anchor_cohort['id']=='2026-08-17' and all(
     metrics['m43']['value'][key]['numerator']==sum(o['count'] for r in anchor_cohort['records'] for o in r['outcomeCounts'] if o[key]) and
     metrics['m43']['value'][key]['denominator']==anchor_cohort['activated'] for key in ['D7','D30'])
 check('D26-device-retention-cohorts',cohort_ok,'12个激活周、384个同源互斥分组；UTC日界、成熟性与两项留存计数闭合，后续停用不剔除')
+
+renewal_ok = monthly_renewal['status']=='APPROVED_SYNTHETIC' and monthly_renewal['classification']=='entirely_synthetic' and len(monthly_renewal['months'])==12
+for m in monthly_renewal['months']:
+    outcomes=[o for r in m['records'] for o in r['outcomeCounts']]
+    renewal_ok &= (len(m['records'])==240 and sum(o['count'] for o in outcomes)==m['opening'] and
+                   sum(o['count'] for o in outcomes if o['due'])==m['due'] and
+                   sum(o['count'] for o in outcomes if o['renewed'])==m['renewed'] and
+                   sum(o['count'] for o in outcomes if o['lossReason'] is not None)==m['lostDuring'] and
+                   sum(o['count'] for o in outcomes if o['cancelled'])==m['cancelled'] and
+                   date.fromisoformat(m['renewalObservationEndExclusive'])-date.fromisoformat(m['endExclusive'])==timedelta(days=7) and
+                   all(not o['renewed'] or o['due'] for o in outcomes))
+check('D27-monthly-renewal',renewal_ok,'12个到期月、2880个互斥合成频数单元；三项人数及7天演示观察窗闭合，旧周度不是月度环比')
+views=diagnostics['E']['structureViews']
+check('D28-structure-source',len(views)==3 and all(sum(r[1] for r in v['rows'])==v['denominator'] for v in views) and
+      views[0]['denominator']==views[1]['denominator']==metrics['m07']['value']['registered'] and views[2]['denominator']==metrics['m08']['value']['boundCurrent'],
+      '国家与App按全部注册用户、型号按当前绑定设备，人数与各自分母闭合；没有12个月历史或交叉切片')
 
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

@@ -1,0 +1,25 @@
+{
+  "sourceCommit": "6c622dd72c28154810518456827a2eaaa6cf0844",
+  "classification": "Isolated synthetic legacy record; no user browser storage accessed",
+  "records": {
+    "record:D:默认演示范围:23": {
+      "issueId": "DEMO-D-23-1S7DARK",
+      "owner": "续订方案前合成兼容验收",
+      "status": "pending",
+      "note": "",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 22:53:09",
+      "page": "D",
+      "evidenceId": 23,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "86.0%",
+      "baselineAt": "完整周 W12 · 2026-09-13",
+      "reviewMetric": 23
+    }
+  }
+}

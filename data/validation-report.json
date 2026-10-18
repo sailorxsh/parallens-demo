@@ -1,6 +1,6 @@
 {
-  "passed": 48,
-  "total": 48,
+  "passed": 50,
+  "total": 50,
   "checks": [
     {
       "rule": "catalog",
@@ -70,7 +70,7 @@
     {
       "rule": "R2",
       "passed": true,
-      "detail": "全部率可回算；首页关键率与最新完整周一致"
+      "detail": "全部率可回算；关键率各按已定义完整周或完整月核对"
     },
     {
       "rule": "R3",
@@ -241,6 +241,16 @@
       "rule": "D26-device-retention-cohorts",
       "passed": true,
       "detail": "12个激活周、384个同源互斥分组；UTC日界、成熟性与两项留存计数闭合，后续停用不剔除"
+    },
+    {
+      "rule": "D27-monthly-renewal",
+      "passed": true,
+      "detail": "12个到期月、2880个互斥合成频数单元；三项人数及7天演示观察窗闭合，旧周度不是月度环比"
+    },
+    {
+      "rule": "D28-structure-source",
+      "passed": true,
+      "detail": "国家与App按全部注册用户、型号按当前绑定设备，人数与各自分母闭合；没有12个月历史或交叉切片"
     }
   ]
 }

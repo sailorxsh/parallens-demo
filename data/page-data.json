@@ -478,9 +478,9 @@
       "metricId": 23,
       "value": {
         "kind": "rate",
-        "numerator": 430,
-        "denominator": 500,
-        "value": 0.86
+        "numerator": 9443,
+        "denominator": 9940,
+        "value": 0.95
       }
     },
     {

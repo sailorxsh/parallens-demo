@@ -607,8 +607,8 @@
     {
       "id": 23,
       "page": "D",
-      "entity": "用户",
-      "window": "完整观察窗内的指定批次",
+      "entity": "期初有效主订阅主账号",
+      "window": "所选完整到期月；到期后7天合成观察窗，默认2026-08",
       "businessDimensions": [
         "appPlatform",
         "billingCycle",
@@ -616,19 +616,17 @@
         "deviceModel",
         "plan",
         "productLine",
-        "subscriptionPlatform",
-        "week"
+        "subscriptionPlatform"
       ],
       "demonstrableDimensions": [
         "appPlatform",
+        "billingCycle",
         "country",
         "plan",
         "productLine",
-        "subscriptionPlatform",
-        "week"
+        "subscriptionPlatform"
       ],
       "unavailableDimensions": [
-        "billingCycle",
         "deviceModel"
       ]
     },
@@ -911,7 +909,7 @@
     {
       "id": 38,
       "page": "E",
-      "entity": "主账号/设备",
+      "entity": "注册用户/当前绑定设备",
       "window": "2026-09-24 用户与设备结构快照",
       "businessDimensions": [
         "appPlatform",
