@@ -965,7 +965,7 @@
       "id": 41,
       "page": "C",
       "entity": "设备",
-      "window": "有效激活设备活跃演示汇总；截至2026-09-24，设备行为观察期未注明",
+      "window": "截至2026-09-24 00:00 UTC；近30天（8/25含至9/24不含）有效设备行为；同一完整30天可观察有效已激活设备池",
       "businessDimensions": [
         "country",
         "deviceModel",
@@ -1033,11 +1033,12 @@
       "id": 44,
       "page": "C",
       "entity": "设备",
-      "window": "迁徙季连续21天无有效设备行为的2026-09-24演示汇总；淡季30天数据未提供",
+      "window": "截至2026-09-24 00:00 UTC；迁徙季连续21天、淡季连续30天无有效设备行为；回流独立入组9/10、观察至9/17",
       "businessDimensions": [
         "country",
         "deviceModel",
         "deviceStatus",
+        "firmware",
         "productLine",
         "season"
       ],
@@ -1045,11 +1046,11 @@
         "country",
         "deviceModel",
         "deviceStatus",
-        "productLine"
-      ],
-      "unavailableDimensions": [
+        "firmware",
+        "productLine",
         "season"
-      ]
+      ],
+      "unavailableDimensions": []
     },
     {
       "id": 45,

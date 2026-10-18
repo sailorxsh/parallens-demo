@@ -558,8 +558,8 @@
         "value": 0.61
       }
     ],
-    "note": "活跃设备来自周度演示汇总；有效且已激活设备分母按快照构造，最新点为85,278/139,800。",
-    "source": "constructed-weekly-simulation"
+    "note": "各期均为截至当时近30天有效设备行为；与未使用同源合成行为间隔事实。原有总体计数保留，新定义不是追溯测得的历史。",
+    "source": "synthetic-device-age-v1"
   },
   "m48": {
     "labels": [
@@ -922,5 +922,99 @@
     ],
     "note": "日埋点丢失率；每日期望事件10,000，最新220/10,000与质量快照一致。",
     "source": "diagnostic-summary"
+  },
+  "m44": {
+    "labels": [
+      "7/9",
+      "7/16",
+      "7/23",
+      "7/30",
+      "8/6",
+      "8/13",
+      "8/20",
+      "8/27",
+      "9/3",
+      "9/10",
+      "9/17",
+      "9/24"
+    ],
+    "unit": "%",
+    "kind": "rate",
+    "points": [
+      {
+        "kind": "rate",
+        "numerator": 58402,
+        "denominator": 135400,
+        "value": 0.43132939438700146
+      },
+      {
+        "kind": "rate",
+        "numerator": 58357,
+        "denominator": 135800,
+        "value": 0.42972754050073636
+      },
+      {
+        "kind": "rate",
+        "numerator": 58313,
+        "denominator": 136200,
+        "value": 0.4281424375917768
+      },
+      {
+        "kind": "rate",
+        "numerator": 58269,
+        "denominator": 136600,
+        "value": 0.4265666178623719
+      },
+      {
+        "kind": "rate",
+        "numerator": 58225,
+        "denominator": 137000,
+        "value": 0.425
+      },
+      {
+        "kind": "rate",
+        "numerator": 58181,
+        "denominator": 137400,
+        "value": 0.4234425036390102
+      },
+      {
+        "kind": "rate",
+        "numerator": 58138,
+        "denominator": 137800,
+        "value": 0.42190130624092886
+      },
+      {
+        "kind": "rate",
+        "numerator": 58095,
+        "denominator": 138200,
+        "value": 0.4203690303907381
+      },
+      {
+        "kind": "rate",
+        "numerator": 60134,
+        "denominator": 138600,
+        "value": 0.43386724386724385
+      },
+      {
+        "kind": "rate",
+        "numerator": 60091,
+        "denominator": 139000,
+        "value": 0.43230935251798563
+      },
+      {
+        "kind": "rate",
+        "numerator": 60048,
+        "denominator": 139400,
+        "value": 0.4307604017216643
+      },
+      {
+        "kind": "rate",
+        "numerator": 60000,
+        "denominator": 139800,
+        "value": 0.4291845493562232
+      }
+    ],
+    "source": "synthetic-device-age-v1",
+    "note": "默认21天未使用；切换淡季按同一事实改用30天，按各期有效可观察设备重算。"
   }
 }

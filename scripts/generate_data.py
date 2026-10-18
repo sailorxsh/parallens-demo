@@ -211,7 +211,7 @@ metrics = {
     40: group(channel_performance),
     41: rate(85278,139800), 42: rate(5800,10000),
     43: group({"D7":rate(1600,2000),"D30":rate(1450,2000)}),
-    44: rate(12000,139800),
+    44: rate(60000,139800),
     45: group({"networkSuccess":rate(9500,10000),"reportedWithin24h":120000}),
     46: group({"upload":rate(9900,10000),"live":rate(9700,10000),"push":rate(9850,10000)}),
     47: rate(100660,143800), 48: rate(18128,82400), 49: rate(25884,143800),

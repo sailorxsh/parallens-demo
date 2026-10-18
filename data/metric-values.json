@@ -483,9 +483,9 @@
   },
   "m44": {
     "kind": "rate",
-    "numerator": 12000,
+    "numerator": 60000,
     "denominator": 139800,
-    "value": 0.085837
+    "value": 0.429185
   },
   "m45": {
     "kind": "group",

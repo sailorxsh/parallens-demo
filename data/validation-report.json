@@ -1,6 +1,6 @@
 {
-  "passed": 41,
-  "total": 41,
+  "passed": 43,
+  "total": 43,
   "checks": [
     {
       "rule": "catalog",
@@ -206,6 +206,16 @@
       "rule": "D19-binding-device-ledger",
       "passed": true,
       "detail": "128台当前候选设备及12期总体数量由同一绑定/首图台账回算；型号归属、时间、唯一性和源字段有效"
+    },
+    {
+      "rule": "D20-device-behaviour-windows",
+      "passed": true,
+      "detail": "近24小时/7/30天活跃是子集，21/30天未使用单调，同群30天互补；12期同源分组和当前61%闭合"
+    },
+    {
+      "rule": "D21-independent-device-return",
+      "passed": true,
+      "detail": "设备回流有独立历史入组、完整7天观察日期及同范围分母，不用当前未使用池计算"
     }
   ]
 }

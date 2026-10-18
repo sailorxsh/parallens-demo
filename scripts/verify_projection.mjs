@@ -10,7 +10,7 @@ const fixtures={
   stories:file('stories'),diagnostics:file('diagnostics'),contract:file('filter-contract'),filterPolicy:file('filter-policy'),slices:file('filter-slices'),
   trialFacts:file('trial-facts'),modelMarket:file('model-market'),metricTrends:file('metric-trends'),entitySamples:file('entity-samples'),
   functionUsage:file('function-usage'),inactivityCohorts:file('inactivity-cohorts'),technicalFacts:file('technical-facts'),
-  subscriptionFlow:file('subscription-flow'),bindingDeviceFacts:file('binding-device-facts'),
+  subscriptionFlow:file('subscription-flow'),bindingDeviceFacts:file('binding-device-facts'),deviceActivityFacts:file('device-activity-facts'),
 };
 const context=vm.createContext({
   __fixtures:fixtures,document:{documentElement:{},querySelector:()=>null},getComputedStyle:()=>({fontSize:'16px'}),window:{addEventListener:()=>{},removeEventListener:()=>{}},
@@ -61,6 +61,60 @@ for(const [kind,expected] of [['exact72',127],['over72',128],['imageAtSnapshot',
 evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.bindingDeviceFacts.records=[];sourceData.bindingDeviceFacts.snapshots.forEach(p=>p.count=0);sourceData.metricTrends.m15.points.forEach(p=>p.value=0);sourceData.metrics.m15.value=0');
 project({});assert.equal(evaluate('metric(15).value'),0,'Known empty complete facts are not missing data');
 evaluate('sourceData=__fixtures');project({});
+// Active windows and unused thresholds use the same disjoint device-age cells.
+const activityFacts=fixtures.deviceActivityFacts;
+const activityExpected=(filters,point=activityFacts.snapshots.at(-1))=>{
+ const rows=point.records.filter(row=>Object.entries(filters).every(([k,v])=>['country','productLine','deviceModel','firmware','deviceStatus'].includes(k)?row[k]===v:true));
+ const bands=Array.from({length:5},(_,i)=>rows.reduce((n,r)=>n+r.counts[i],0));
+ return {bands,total:bands.reduce((a,b)=>a+b,0),active:bands.slice(0,4).reduce((a,b)=>a+b,0),unused21:bands[3]+bands[4],unused30:bands[4]};
+};
+for(const country of ['', 'US','UK','DE','Other'])for(const productLine of ['', 'Bird','Hunting'])
+for(const deviceModel of ['', 'K6','Bird Lite','Bird Pro','Hunt Pro'])for(const firmware of ['', '2.8','Other']){
+ const filters=Object.fromEntries(Object.entries({country,productLine,deviceModel,firmware}).filter(([,v])=>v));
+ const expected=activityExpected(filters),result=project(filters);
+ if(!expected.total){assert.equal(result.m41.kind,'na');assert.equal(result.m44.kind,'na');continue;}
+ assert.equal(result.m41.numerator,expected.active);assert.equal(result.m41.denominator,expected.total);
+ assert.equal(result.m44.numerator,expected.unused21);assert.equal(result.m44.denominator,expected.total);
+ assert.equal(project({...filters,season:'Other'}).m44.numerator+project(filters).m41.numerator,expected.total);
+ const windows=evaluate('deviceActivitySummary(41)');assert.ok(windows.active1<=windows.active7&&windows.active7<=windows.active30);
+ const history=evaluate('metricHistory(41)');assert.deepEqual(JSON.parse(JSON.stringify(history.values)),activityFacts.snapshots.map(point=>{const e=activityExpected(filters,point);return e.active/e.total*100}));
+ const unused=evaluate('metricHistory(44)');assert.deepEqual(JSON.parse(JSON.stringify(unused.values)),activityFacts.snapshots.map(point=>{const e=activityExpected(filters,point);return e.unused21/e.total*100}));
+ for(const season of ['Migration','Other']){
+  project({...filters,season});const cohort=activityFacts.returnCohorts.find(p=>p.thresholdDays===(season==='Other'?30:21));
+  const rows=cohort.records.filter(row=>Object.entries(filters).every(([k,v])=>row[k]===v));
+  const actual=evaluate('deviceReturnSummary()');assert.equal(actual.numerator,rows.reduce((n,r)=>n+r.returned,0));assert.equal(actual.denominator,rows.reduce((n,r)=>n+r.eligible,0));
+ }
+}
+for(const corrupt of [
+ 'sourceData.deviceActivityFacts.snapshots.at(-1).records.pop()',
+ 'sourceData.deviceActivityFacts.snapshots[0].records[1]=sourceData.deviceActivityFacts.snapshots[0].records[0]',
+ 'sourceData.deviceActivityFacts.snapshots[0].records[0].counts[0]++',
+ 'sourceData.deviceActivityFacts.snapshots[0].records[0].productLine="Hunting"',
+ 'sourceData.deviceActivityFacts.snapshots[0].records[0]=null',
+ 'sourceData.deviceActivityFacts.ageBands[0][1]=2',
+ 'sourceData.deviceActivityFacts.snapshots[0].observedFrom="2026-02-30T00:00:00Z"',
+ 'sourceData.deviceActivityFacts.snapshots.at(-1).observedFrom="2026-09-01T00:00:00Z"',
+ 'sourceData.deviceActivityFacts.asOf="2026-09-25T00:00:00Z"',
+]){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));${corrupt}`);const result=project({});
+ assert.equal(result.m41.availability,'pending');assert.equal(result.m44.availability,'pending');assert.equal(evaluate('metricHistory(41)'),null);
+}
+for(const corrupt of [
+ 'sourceData.deviceActivityFacts.returnCohorts[0].records.pop()',
+ 'sourceData.deviceActivityFacts.returnCohorts[0].records[0].returned=99999',
+ 'sourceData.deviceActivityFacts.returnCohorts[0].observedThrough="2026-09-16T00:00:00Z"',
+ 'sourceData.deviceActivityFacts.returnCohorts[0].entryAt="2026-09-20T00:00:00Z";sourceData.deviceActivityFacts.returnCohorts[0].observedThrough="2026-09-27T00:00:00Z"',
+]){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));${corrupt}`);assert.equal(project({}).m41.value,.61);
+ assert.ok(evaluate('deviceReturnSummary().reason'),'Unmatured or incomplete history borrows a current denominator');
+}
+evaluate('sourceData=__fixtures');project({});
+assert.equal(evaluate('metric(44).numerator'),60000);assert.equal(evaluate('metric(41).value'),.61);
+assert.match(evaluate('actionBaselineWindow(41)'),/设备行为口径v1/);assert.equal(evaluate('baselineWindowEnd(actionBaselineWindow(41))'),'2026-09-24');
+assert.match(evaluate('actionBaselineWindow(44)'),/21天未使用/);project({season:'Other'});assert.match(evaluate('actionBaselineWindow(44)'),/30天未使用/);
+assert.equal(project({deviceStatus:'Inactive'}).m41.kind,'na');assert.equal(project({deviceStatus:'Inactive'}).m44.kind,'na');
+project({});
+
 // Failure categories are exact W12 attempts, never estimates borrowed for another scope.
 const binding=evaluate('bindingFailureEvidence()');
 assert.deepEqual(JSON.parse(JSON.stringify(binding.spec.series[0].values)),[85,70,45]);

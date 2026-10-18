@@ -24,6 +24,7 @@ inactivity = load("inactivity-cohorts.json")
 technical = load("technical-facts.json")
 subscription_flow = load("subscription-flow.json")
 binding_devices = load("binding-device-facts.json")
+device_activity = load("device-activity-facts.json")
 filter_policy = load("filter-policy.json")
 model_market = load("model-market.json")
 checks = []
@@ -425,6 +426,51 @@ check("D19-binding-device-ledger", binding_devices["thresholdHours"] == 72 and
       [p["count"] for p in binding_devices["snapshots"]] == [p["value"] for p in metric_trends["m15"]["points"]] and
       [f"{device_time(p['at']).month}/{device_time(p['at']).day}" for p in binding_devices["snapshots"]] == metric_trends["m15"]["labels"],
       "128台当前候选设备及12期总体数量由同一绑定/首图台账回算；型号归属、时间、唯一性和源字段有效")
+# Same complete, disjoint behaviour-age population for active and unused devices.
+activity_groups = {(country, model, firmware) for country in filter_policy['controls']['country']['options']
+                   for model in filter_policy['controls']['deviceModel']['options']
+                   for firmware in (['2.8', 'Other'] if model == 'K6' else ['Other'])}
+def valid_activity_groups(rows):
+    return (len(rows) == len(activity_groups) and
+            {(r['country'], r['deviceModel'], r['firmware']) for r in rows} == activity_groups and
+            all(r['productLine'] == ('Hunting' if r['deviceModel'] == 'Hunt Pro' else 'Bird') and
+                r['deviceStatus'] == 'Effective' for r in rows))
+activity_ok = (device_activity['version'] == 'synthetic-device-age-v1' and
+               device_activity['activeWindowDays'] == 30 and
+               device_activity['ageBands'] == [[0,1],[1,7],[7,21],[21,30],[30,None]] and
+               len(device_activity['snapshots']) == 12)
+for i, point in enumerate(device_activity['snapshots']):
+    bands = [sum(row['counts'][j] for row in point['records']) for j in range(5)]
+    daily, weekly_active, active21, active30 = [sum(bands[:j]) for j in [1,2,3,4]]
+    total = sum(bands)
+    activity_ok &= (valid_activity_groups(point['records']) and
+                    all(len(row['counts']) == 5 and all(type(n) is int and n >= 0 for n in row['counts'])
+                        for row in point['records']) and
+                    device_time(point['at'])-device_time(point['observedFrom']) == timedelta(days=30) and
+                    total == point['eligibleDevices'] == metric_trends['m41']['points'][i]['denominator'] and
+                    active30 == metric_trends['m41']['points'][i]['numerator'] and
+                    bands[3]+bands[4] == metric_trends['m44']['points'][i]['numerator'] and
+                    0 <= daily <= weekly_active <= active21 <= active30 <= total and
+                    active30+bands[4] == total)
+activity_ok &= (device_activity['snapshots'][-1]['at'] == device_activity['asOf'] and
+                device_activity['asOf'][:10] == snapshot['asOf'] and
+                [daily,weekly_active,active30,total,bands[3]+bands[4],bands[4]] ==
+                [16200,46500,85278,139800,60000,54522] and
+                metrics['m44']['numerator'] == 60000)
+check('D20-device-behaviour-windows', activity_ok,
+      '近24小时/7/30天活跃是子集，21/30天未使用单调，同群30天互补；12期同源分组和当前61%闭合')
+returns_ok = {p['thresholdDays'] for p in device_activity['returnCohorts']} == {21,30}
+for cohort in device_activity['returnCohorts']:
+    returns_ok &= (cohort['windowDays'] == 7 and valid_activity_groups(cohort['records']) and
+                   device_time(cohort['observedThrough'])-device_time(cohort['entryAt']) == timedelta(days=7) and
+                   device_time(cohort['observedThrough']) <= device_time(device_activity['asOf']) and
+                   all(type(r['eligible']) is int and type(r['returned']) is int and
+                       0 <= r['returned'] <= r['eligible'] for r in cohort['records']) and
+                   sum(r['eligible'] for r in cohort['records']) == cohort['eligibleDevices'] and
+                   sum(r['returned'] for r in cohort['records']) == cohort['returnedDevices'])
+check('D21-independent-device-return', returns_ok,
+      '设备回流有独立历史入组、完整7天观察日期及同范围分母，不用当前未使用池计算')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

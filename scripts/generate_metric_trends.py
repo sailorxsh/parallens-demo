@@ -62,5 +62,19 @@ for id in [24,27,41,48,49]:
     assert dataset[f'm{id:02d}']['points'][-1]['denominator']==metrics[f'm{id:02d}']['denominator']
 assert dataset['m53']['points'][-1]['value']==metrics['m53']['value']
 assert dataset['m54']['points'][-1]['numerator']==metrics['m54']['value']['eventLoss']['numerator']
+# Preserve the approved 30-day definition and its same-source unused history.
+activity_path = DATA / 'device-activity-facts.json'
+if activity_path.exists():
+    activity = json.loads(activity_path.read_text())
+    assert activity['version'] == 'synthetic-device-age-v1'
+    activity_points, unused_points = [], []
+    for point in activity['snapshots']:
+        bands = [sum(r['counts'][i] for r in point['records']) for i in range(5)]
+        denominator = sum(bands)
+        for target, numerator in [(activity_points,sum(bands[:4])),(unused_points,sum(bands[3:]))]:
+            target.append({'kind':'rate','numerator':numerator,'denominator':denominator,'value':numerator/denominator})
+    dataset['m41'].update(points=activity_points,source='synthetic-device-age-v1',note='各期均为截至当时近30天有效设备行为；与未使用同源合成行为间隔事实。原有总体计数保留，新定义不是追溯测得的历史。')
+    dataset['m44'] = {'labels':dataset['m41']['labels'],'unit':'%','kind':'rate','points':unused_points,
+                      'source':'synthetic-device-age-v1','note':'默认21天未使用；切换淡季按同一事实改用30天，按各期有效可观察设备重算。'}
 (DATA/'metric-trends.json').write_text(json.dumps(dataset,ensure_ascii=False,indent=2)+'\n')
 print(f'PASS selected metric trends: {len(dataset)} histories anchored to current metric values')

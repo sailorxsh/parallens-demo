@@ -1,0 +1,3856 @@
+{
+  "version": "synthetic-device-age-v1",
+  "asOf": "2026-09-24T00:00:00Z",
+  "activeWindowDays": 30,
+  "ageBands": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      7
+    ],
+    [
+      7,
+      21
+    ],
+    [
+      21,
+      30
+    ],
+    [
+      30,
+      null
+    ]
+  ],
+  "snapshots": [
+    {
+      "at": "2026-07-09T00:00:00Z",
+      "observedFrom": "2026-06-09T00:00:00Z",
+      "eligibleDevices": 135400,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1102,
+            1807,
+            1615,
+            192,
+            1591
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            350,
+            708,
+            782,
+            114,
+            1175
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3051,
+            6473,
+            7487,
+            1149,
+            12350
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2386,
+            5430,
+            6738,
+            1110,
+            12789
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2684,
+            4917,
+            4912,
+            651,
+            6043
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            295,
+            492,
+            447,
+            54,
+            457
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            94,
+            193,
+            216,
+            32,
+            338
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            816,
+            1761,
+            2073,
+            324,
+            3550
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            638,
+            1477,
+            1866,
+            313,
+            3676
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            718,
+            1338,
+            1360,
+            184,
+            1737
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            158,
+            268,
+            248,
+            31,
+            263
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            50,
+            105,
+            120,
+            18,
+            195
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            437,
+            961,
+            1152,
+            183,
+            2045
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            342,
+            806,
+            1037,
+            177,
+            2117
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            385,
+            730,
+            756,
+            104,
+            1000
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            107,
+            184,
+            174,
+            22,
+            191
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            34,
+            72,
+            84,
+            13,
+            141
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            295,
+            660,
+            806,
+            131,
+            1482
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            231,
+            554,
+            726,
+            126,
+            1535
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            259,
+            502,
+            529,
+            74,
+            725
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-07-16T00:00:00Z",
+      "observedFrom": "2026-06-16T00:00:00Z",
+      "eligibleDevices": 135800,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1117,
+            1816,
+            1620,
+            194,
+            1588
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            354,
+            712,
+            784,
+            116,
+            1173
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3093,
+            6507,
+            7509,
+            1162,
+            12327
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2419,
+            5459,
+            6757,
+            1122,
+            12765
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2720,
+            4943,
+            4926,
+            658,
+            6032
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            299,
+            494,
+            448,
+            55,
+            456
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            95,
+            194,
+            217,
+            33,
+            337
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            827,
+            1770,
+            2079,
+            328,
+            3543
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            647,
+            1485,
+            1871,
+            316,
+            3669
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            727,
+            1345,
+            1364,
+            186,
+            1734
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            160,
+            270,
+            249,
+            31,
+            263
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            51,
+            106,
+            121,
+            18,
+            194
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            443,
+            966,
+            1155,
+            185,
+            2041
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            347,
+            810,
+            1040,
+            179,
+            2113
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            390,
+            734,
+            758,
+            105,
+            999
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            108,
+            185,
+            174,
+            22,
+            190
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            34,
+            72,
+            84,
+            13,
+            141
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            299,
+            664,
+            809,
+            132,
+            1479
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            234,
+            557,
+            728,
+            127,
+            1532
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            263,
+            504,
+            530,
+            75,
+            724
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-07-23T00:00:00Z",
+      "observedFrom": "2026-06-23T00:00:00Z",
+      "eligibleDevices": 136200,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1132,
+            1826,
+            1624,
+            196,
+            1585
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            359,
+            715,
+            786,
+            117,
+            1170
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3134,
+            6541,
+            7529,
+            1175,
+            12304
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2451,
+            5487,
+            6776,
+            1134,
+            12741
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2757,
+            4968,
+            4940,
+            666,
+            6020
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            303,
+            497,
+            450,
+            55,
+            456
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            96,
+            195,
+            218,
+            33,
+            337
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            838,
+            1779,
+            2085,
+            331,
+            3537
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            656,
+            1493,
+            1876,
+            320,
+            3663
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            737,
+            1352,
+            1368,
+            188,
+            1731
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            162,
+            271,
+            250,
+            31,
+            262
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            52,
+            106,
+            121,
+            19,
+            194
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            449,
+            971,
+            1158,
+            187,
+            2037
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            351,
+            815,
+            1042,
+            181,
+            2109
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            395,
+            738,
+            760,
+            106,
+            997
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            110,
+            186,
+            175,
+            22,
+            190
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            35,
+            73,
+            85,
+            13,
+            140
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            303,
+            667,
+            811,
+            134,
+            1476
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            237,
+            560,
+            730,
+            129,
+            1529
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            267,
+            507,
+            532,
+            76,
+            722
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-07-30T00:00:00Z",
+      "observedFrom": "2026-06-30T00:00:00Z",
+      "eligibleDevices": 136600,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1147,
+            1835,
+            1629,
+            198,
+            1582
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            364,
+            719,
+            788,
+            118,
+            1168
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3176,
+            6575,
+            7550,
+            1188,
+            12281
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2484,
+            5515,
+            6795,
+            1147,
+            12717
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2794,
+            4994,
+            4953,
+            673,
+            6009
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            307,
+            499,
+            451,
+            56,
+            455
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            97,
+            196,
+            218,
+            33,
+            336
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            850,
+            1789,
+            2091,
+            335,
+            3530
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            664,
+            1501,
+            1882,
+            323,
+            3656
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            747,
+            1359,
+            1372,
+            190,
+            1727
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            165,
+            272,
+            251,
+            32,
+            262
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            52,
+            107,
+            121,
+            19,
+            193
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            455,
+            976,
+            1162,
+            189,
+            2033
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            356,
+            819,
+            1045,
+            183,
+            2105
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            401,
+            741,
+            762,
+            107,
+            995
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            111,
+            187,
+            175,
+            23,
+            190
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            35,
+            73,
+            85,
+            13,
+            140
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            307,
+            671,
+            813,
+            135,
+            1474
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            240,
+            563,
+            732,
+            130,
+            1526
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            270,
+            510,
+            533,
+            77,
+            721
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-08-06T00:00:00Z",
+      "observedFrom": "2026-07-07T00:00:00Z",
+      "eligibleDevices": 137000,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1162,
+            1845,
+            1633,
+            200,
+            1579
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            369,
+            723,
+            790,
+            120,
+            1166
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3218,
+            6608,
+            7571,
+            1201,
+            12257
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2517,
+            5544,
+            6813,
+            1159,
+            12694
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2831,
+            5020,
+            4967,
+            680,
+            5998
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            311,
+            502,
+            452,
+            56,
+            454
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            99,
+            197,
+            219,
+            34,
+            335
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            861,
+            1798,
+            2097,
+            339,
+            3524
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            673,
+            1508,
+            1887,
+            327,
+            3649
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            757,
+            1366,
+            1375,
+            192,
+            1724
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            167,
+            274,
+            251,
+            32,
+            261
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            53,
+            107,
+            122,
+            19,
+            193
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            461,
+            981,
+            1165,
+            191,
+            2029
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            361,
+            823,
+            1048,
+            185,
+            2101
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            406,
+            745,
+            764,
+            108,
+            993
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            112,
+            188,
+            176,
+            23,
+            189
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            36,
+            74,
+            85,
+            14,
+            140
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            311,
+            674,
+            815,
+            136,
+            1471
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            243,
+            566,
+            734,
+            132,
+            1523
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            273,
+            512,
+            535,
+            77,
+            720
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-08-13T00:00:00Z",
+      "observedFrom": "2026-07-14T00:00:00Z",
+      "eligibleDevices": 137400,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1178,
+            1854,
+            1637,
+            202,
+            1576
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            374,
+            727,
+            793,
+            121,
+            1164
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3261,
+            6642,
+            7591,
+            1214,
+            12234
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2550,
+            5572,
+            6832,
+            1171,
+            12670
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2868,
+            5046,
+            4980,
+            688,
+            5986
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            315,
+            504,
+            453,
+            57,
+            453
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            100,
+            198,
+            220,
+            34,
+            335
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            872,
+            1807,
+            2102,
+            342,
+            3517
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            682,
+            1516,
+            1892,
+            330,
+            3642
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            767,
+            1373,
+            1379,
+            194,
+            1721
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            169,
+            275,
+            252,
+            32,
+            261
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            54,
+            108,
+            122,
+            19,
+            193
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            467,
+            986,
+            1168,
+            194,
+            2025
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            365,
+            827,
+            1051,
+            187,
+            2097
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            411,
+            749,
+            766,
+            110,
+            991
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            114,
+            189,
+            176,
+            23,
+            189
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            36,
+            74,
+            85,
+            14,
+            140
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            315,
+            678,
+            818,
+            138,
+            1468
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            246,
+            569,
+            736,
+            133,
+            1520
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            277,
+            515,
+            536,
+            78,
+            718
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-08-20T00:00:00Z",
+      "observedFrom": "2026-07-21T00:00:00Z",
+      "eligibleDevices": 137800,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1193,
+            1864,
+            1642,
+            204,
+            1573
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            379,
+            730,
+            794,
+            122,
+            1162
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3303,
+            6676,
+            7611,
+            1227,
+            12211
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2583,
+            5601,
+            6849,
+            1184,
+            12646
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2905,
+            5071,
+            4993,
+            695,
+            5975
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            319,
+            507,
+            455,
+            58,
+            452
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            101,
+            199,
+            220,
+            34,
+            334
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            884,
+            1816,
+            2108,
+            346,
+            3510
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            691,
+            1524,
+            1897,
+            334,
+            3635
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            777,
+            1380,
+            1383,
+            196,
+            1718
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            171,
+            277,
+            252,
+            33,
+            260
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            54,
+            108,
+            122,
+            19,
+            192
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            474,
+            991,
+            1171,
+            196,
+            2022
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            370,
+            831,
+            1054,
+            189,
+            2094
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            417,
+            753,
+            768,
+            111,
+            989
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            115,
+            190,
+            177,
+            23,
+            189
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            37,
+            75,
+            85,
+            14,
+            139
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            319,
+            681,
+            820,
+            139,
+            1465
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            250,
+            571,
+            738,
+            135,
+            1517
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            281,
+            517,
+            538,
+            79,
+            717
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-08-27T00:00:00Z",
+      "observedFrom": "2026-07-28T00:00:00Z",
+      "eligibleDevices": 138200,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1209,
+            1873,
+            1646,
+            207,
+            1570
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            383,
+            734,
+            797,
+            123,
+            1159
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3346,
+            6710,
+            7631,
+            1240,
+            12188
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2617,
+            5629,
+            6867,
+            1197,
+            12622
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2943,
+            5097,
+            5006,
+            702,
+            5964
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            323,
+            509,
+            456,
+            58,
+            451
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            103,
+            200,
+            221,
+            35,
+            333
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            895,
+            1825,
+            2113,
+            350,
+            3504
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            700,
+            1531,
+            1902,
+            337,
+            3628
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            787,
+            1387,
+            1386,
+            198,
+            1714
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            173,
+            278,
+            253,
+            33,
+            260
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            55,
+            109,
+            123,
+            20,
+            192
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            480,
+            996,
+            1174,
+            198,
+            2018
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            375,
+            836,
+            1056,
+            191,
+            2090
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            422,
+            757,
+            770,
+            112,
+            987
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            117,
+            191,
+            177,
+            23,
+            188
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            37,
+            75,
+            86,
+            14,
+            139
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            323,
+            684,
+            822,
+            141,
+            1462
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            253,
+            574,
+            739,
+            136,
+            1515
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            285,
+            520,
+            539,
+            80,
+            716
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-09-03T00:00:00Z",
+      "observedFrom": "2026-08-04T00:00:00Z",
+      "eligibleDevices": 138600,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1193,
+            1834,
+            1608,
+            203,
+            1633
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            378,
+            718,
+            778,
+            122,
+            1206
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3302,
+            6569,
+            7452,
+            1221,
+            12679
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2582,
+            5511,
+            6707,
+            1178,
+            13130
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2904,
+            4990,
+            4889,
+            692,
+            6204
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            319,
+            499,
+            445,
+            57,
+            470
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            101,
+            196,
+            215,
+            34,
+            347
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            883,
+            1787,
+            2064,
+            344,
+            3645
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            691,
+            1499,
+            1857,
+            332,
+            3774
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            777,
+            1358,
+            1354,
+            195,
+            1783
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            171,
+            272,
+            247,
+            33,
+            270
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            54,
+            107,
+            120,
+            19,
+            200
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            473,
+            975,
+            1147,
+            195,
+            2099
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            370,
+            818,
+            1032,
+            188,
+            2174
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            416,
+            741,
+            752,
+            110,
+            1027
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            115,
+            187,
+            173,
+            23,
+            196
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            37,
+            73,
+            84,
+            14,
+            145
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            319,
+            670,
+            803,
+            139,
+            1521
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            250,
+            562,
+            722,
+            134,
+            1575
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            281,
+            509,
+            526,
+            79,
+            744
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-09-10T00:00:00Z",
+      "observedFrom": "2026-08-11T00:00:00Z",
+      "eligibleDevices": 139000,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1208,
+            1843,
+            1612,
+            206,
+            1630
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            383,
+            722,
+            780,
+            123,
+            1204
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3345,
+            6603,
+            7472,
+            1234,
+            12656
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2616,
+            5539,
+            6724,
+            1191,
+            13106
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2942,
+            5015,
+            4902,
+            699,
+            6193
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            323,
+            501,
+            446,
+            58,
+            469
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            102,
+            196,
+            216,
+            35,
+            346
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            895,
+            1796,
+            2069,
+            348,
+            3638
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            700,
+            1507,
+            1862,
+            336,
+            3767
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            787,
+            1365,
+            1357,
+            197,
+            1780
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            173,
+            274,
+            248,
+            33,
+            270
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            55,
+            107,
+            120,
+            20,
+            199
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            479,
+            980,
+            1150,
+            197,
+            2095
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            375,
+            822,
+            1035,
+            190,
+            2170
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            422,
+            745,
+            754,
+            111,
+            1025
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            117,
+            188,
+            174,
+            23,
+            196
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            37,
+            74,
+            84,
+            14,
+            144
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            323,
+            674,
+            805,
+            140,
+            1518
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            253,
+            565,
+            724,
+            135,
+            1573
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            284,
+            512,
+            528,
+            79,
+            743
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-09-17T00:00:00Z",
+      "observedFrom": "2026-08-18T00:00:00Z",
+      "eligibleDevices": 139400,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1224,
+            1853,
+            1616,
+            208,
+            1627
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            388,
+            726,
+            782,
+            124,
+            1202
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3388,
+            6636,
+            7492,
+            1247,
+            12633
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2649,
+            5567,
+            6742,
+            1203,
+            13082
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2980,
+            5041,
+            4915,
+            706,
+            6181
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            327,
+            504,
+            447,
+            59,
+            468
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            104,
+            197,
+            217,
+            35,
+            345
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            906,
+            1806,
+            2075,
+            352,
+            3631
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            709,
+            1515,
+            1867,
+            339,
+            3761
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            797,
+            1372,
+            1361,
+            199,
+            1777
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            175,
+            275,
+            249,
+            33,
+            269
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            56,
+            108,
+            120,
+            20,
+            199
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            486,
+            985,
+            1152,
+            199,
+            2091
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            380,
+            826,
+            1037,
+            192,
+            2166
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            427,
+            748,
+            756,
+            113,
+            1023
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            118,
+            189,
+            174,
+            24,
+            195
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            38,
+            74,
+            84,
+            14,
+            144
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            327,
+            677,
+            807,
+            142,
+            1516
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            256,
+            568,
+            726,
+            137,
+            1570
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            288,
+            514,
+            529,
+            80,
+            742
+          ]
+        }
+      ]
+    },
+    {
+      "at": "2026-09-24T00:00:00Z",
+      "observedFrom": "2026-08-25T00:00:00Z",
+      "eligibleDevices": 139800,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            1237,
+            1860,
+            1623,
+            210,
+            1624
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            393,
+            729,
+            786,
+            125,
+            1199
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3425,
+            6662,
+            7526,
+            1259,
+            12609
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            2679,
+            5589,
+            6773,
+            1215,
+            13058
+          ]
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            3013,
+            5061,
+            4937,
+            713,
+            6170
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            331,
+            506,
+            449,
+            59,
+            467
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            105,
+            198,
+            218,
+            35,
+            345
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            916,
+            1813,
+            2084,
+            355,
+            3625
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            716,
+            1521,
+            1875,
+            343,
+            3754
+          ]
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            806,
+            1377,
+            1367,
+            201,
+            1774
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            177,
+            276,
+            250,
+            34,
+            269
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            56,
+            108,
+            121,
+            20,
+            199
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            491,
+            989,
+            1158,
+            201,
+            2087
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            384,
+            830,
+            1042,
+            194,
+            2162
+          ]
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            432,
+            751,
+            760,
+            114,
+            1021
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "counts": [
+            120,
+            190,
+            175,
+            24,
+            195
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            38,
+            74,
+            85,
+            14,
+            144
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            331,
+            680,
+            810,
+            143,
+            1513
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            259,
+            570,
+            729,
+            138,
+            1567
+          ]
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "counts": [
+            291,
+            516,
+            532,
+            81,
+            740
+          ]
+        }
+      ]
+    }
+  ],
+  "returnCohorts": [
+    {
+      "thresholdDays": 21,
+      "entryAt": "2026-09-10T00:00:00Z",
+      "observedThrough": "2026-09-17T00:00:00Z",
+      "windowDays": 7,
+      "eligibleDevices": 3000,
+      "returnedDevices": 600,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 146,
+          "returned": 23
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 71,
+          "returned": 12
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 678,
+          "returned": 129
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 610,
+          "returned": 126
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 445,
+          "returned": 100
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 40,
+          "returned": 6
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 20,
+          "returned": 3
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 188,
+          "returned": 36
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 169,
+          "returned": 35
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 123,
+          "returned": 28
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 22,
+          "returned": 3
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 11,
+          "returned": 2
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 104,
+          "returned": 20
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 94,
+          "returned": 20
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 68,
+          "returned": 15
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 16,
+          "returned": 2
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 8,
+          "returned": 1
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 73,
+          "returned": 14
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 66,
+          "returned": 14
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 48,
+          "returned": 11
+        }
+      ]
+    },
+    {
+      "thresholdDays": 30,
+      "entryAt": "2026-09-10T00:00:00Z",
+      "observedThrough": "2026-09-17T00:00:00Z",
+      "windowDays": 7,
+      "eligibleDevices": 1800,
+      "returnedDevices": 270,
+      "records": [
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 88,
+          "returned": 10
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 42,
+          "returned": 5
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 407,
+          "returned": 58
+        },
+        {
+          "country": "US",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 366,
+          "returned": 57
+        },
+        {
+          "country": "US",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 267,
+          "returned": 45
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 24,
+          "returned": 3
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 12,
+          "returned": 2
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 113,
+          "returned": 16
+        },
+        {
+          "country": "UK",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 101,
+          "returned": 16
+        },
+        {
+          "country": "UK",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 74,
+          "returned": 12
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 13,
+          "returned": 1
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 7,
+          "returned": 1
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 63,
+          "returned": 9
+        },
+        {
+          "country": "DE",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 56,
+          "returned": 9
+        },
+        {
+          "country": "DE",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 41,
+          "returned": 7
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "2.8",
+          "deviceStatus": "Effective",
+          "eligible": 9,
+          "returned": 1
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "K6",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 5,
+          "returned": 1
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Lite",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 44,
+          "returned": 6
+        },
+        {
+          "country": "Other",
+          "productLine": "Bird",
+          "deviceModel": "Bird Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 39,
+          "returned": 6
+        },
+        {
+          "country": "Other",
+          "productLine": "Hunting",
+          "deviceModel": "Hunt Pro",
+          "firmware": "Other",
+          "deviceStatus": "Effective",
+          "eligible": 29,
+          "returned": 5
+        }
+      ]
+    }
+  ],
+  "note": "合成聚合事实，不是生产设备日志。最近有效行为间隔按UTC、左闭右开区间分层；有效行为含内容上传、直播或同步，纯心跳不计。每期分母仅含已激活、有效且具备完整30天行为观察的设备。国家、型号、固件为当期归属；不同快照不保证同一设备集合，不能相减推算回流。历史回流为入组时已连续21/30天无行为的独立设备群，随后7天内有有效行为计回流；两阈值群体可重叠，不相加，不解释为召回效果。"
+}
