@@ -17,8 +17,8 @@ async(parent)=>{
       for(const [page,id,query,period] of cases){
         await p.goto(`${base}#/${page}?metric=${id}&panel=groups${query?`&${query}`:''}`);
         const evidence=p.locator(`#metric-evidence-${id}`);
-        await evidence.locator('.group-evidence-context:visible').waitFor();
-        const note=evidence.locator('.group-evidence-context:visible').first();
+        await evidence.locator('.evidence-pair:not([data-comparison-group="device-periods"]) .group-evidence-context:visible').waitFor();
+        const note=evidence.locator('.evidence-pair:not([data-comparison-group="device-periods"]) .group-evidence-context:visible').first();
         const text=await note.innerText();
         check(text.includes(period)&&text.includes('不表示跨期变化贡献'),`Wrong group meaning or period: ${text}`);
         check(text.includes(id===42?'型号分配为构造样本':'独立分布假设'),`Hidden source boundary for #${id}`);

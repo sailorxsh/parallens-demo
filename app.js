@@ -650,6 +650,48 @@ function deviceEventContributionTable() {
   return {title:'空触发异常贡献',columns:['周期 / 分组','空触发（次）','触发（次）','合并空触发率'],rows,
     note:'各周期汇总合成事件计数再计算比例。总体42%→58%；K6固件2.8每周增加1,600次空触发，占总体每周10,000次触发的16个百分点。其他型号拆分为构造样本，不作因果归因。'};
 }
+function deviceEventGroupChanges(comparison=weeklyRateComparison(42)) {
+  if(!comparison)return {reason:filterState.week==='1'?'所选W1没有前一完整周，暂不生成分组变化贡献。':'当前范围缺少两期可比触发计数，暂不生成分组变化贡献。'};
+  const scoped=Object.fromEntries(effectiveFor(42));
+  const index=comparison.selectedWeek?sourceData.weekly.findIndex(w=>w.week===comparison.selectedWeek):-1;
+  const periods=comparison.selectedWeek?[[sourceData.weekly[index-1]],[sourceData.weekly[index]]]:
+    [sourceData.weekly.slice(0,comparison.split),sourceData.weekly.slice(comparison.split)];
+  const periodRows=periods.map(weeks=>weeks.flatMap(w=>w.deviceEventsBird.records).filter(row=>
+    (!scoped.deviceModel||row.model===scoped.deviceModel)&&(!scoped.firmware||row.firmware===scoped.firmware)));
+  const aggregate=rows=>{
+    const numerator=rows.reduce((sum,row)=>sum+row.empty,0),denominator=rows.reduce((sum,row)=>sum+row.triggers,0);
+    return {numerator,denominator,value:denominator?numerator/denominator:null};
+  };
+  const overall=periodRows.map(aggregate);
+  if(overall.some((part,i)=>part.numerator!==[comparison.before,comparison.after][i].numerator||
+    part.denominator!==[comparison.before,comparison.after][i].denominator))
+    return {reason:'分组计数与两期总体不闭合，暂停展示变化贡献，请先核对来源。'};
+  const target=row=>row.model==='K6'&&row.firmware==='2.8';
+  const groups=[['K6 · 固件2.8',target],['其他型号／固件',row=>!target(row)]]
+    .map(([name,matches])=>({name,summaries:periodRows.map(rows=>aggregate(rows.filter(matches)))}))
+    .filter(group=>group.summaries.some(part=>part.denominator>0));
+  if(!groups.length||groups.some(group=>group.summaries.some(part=>part.denominator<30)))
+    return {reason:'部分互斥分组在前期或近期的触发样本少于30次，暂不生成变化贡献；总体比较仍可核对。'};
+  const changes=groups.map(group=>(group.summaries[1].numerator/overall[1].denominator-
+    group.summaries[0].numerator/overall[0].denominator)*100);
+  const effects=groups.map(group=>{
+    const rates=group.summaries.map(part=>part.value),weights=group.summaries.map((part,i)=>part.denominator/overall[i].denominator);
+    return {rates,weights,within:(weights[0]+weights[1])/2*(rates[1]-rates[0])*100,
+      composition:(rates[0]+rates[1])/2*(weights[1]-weights[0])*100};
+  });
+  return {comparison,overall,groups,changes,effects};
+}
+function deviceEventChangeSpec(parts) {
+  const {comparison,groups,changes}=parts,low=Math.min(0,...changes),high=Math.max(0,...changes),span=high-low||1;
+  const interval=chartNiceStep(span/4),rounded=value=>Number(value.toPrecision(12));
+  return {title:'空触发率变化 · 互斥分组贡献',comparisonGroup:'device-periods',unit:'个百分点',adverseWhenHigh:true,
+    labels:groups.map(group=>group.name),labelRotation:0,
+    series:[{name:'对总体变化的贡献',values:changes}],
+    minY:low<0?rounded(Math.floor((low-span*.1)/interval)*interval):0,
+    maxY:high>0?rounded(Math.ceil((high+span*.1)/interval)*interval):high===low?1:0,intervalY:interval,
+    scopeNote:`${comparison.beforeWindow} → ${comparison.afterWindow}。合并空触发率 ${comparison.beforeRate.toFixed(1)}% → ${comparison.afterRate.toFixed(1)}%。`,
+    note:`贡献＝近期该组空触发数÷近期总体触发数−前期该组空触发数÷前期总体触发数。两组互斥，合计 ${chartValue(comparison.delta,'个百分点')}；pp＝百分点，纵轴含0。合成事件计数的算术分解，不证明固件导致异常。`};
+}
 function weeklyMetric(id,w) {
   const rateValue=(n,d)=>({kind:'rate',numerator:n,denominator:d,value:d?n/d:0});
   const countValue=n=>({kind:'count',value:n});
@@ -2530,8 +2572,11 @@ function drawDetailChart(box,spec) {
         ...(trendAxis||barAxis?{interval:(trendAxis??barAxis).step}:spec.intervalY?{interval:spec.intervalY}:['人','台','条','次'].includes(spec.unit)?{minInterval:1}:{}),
         axisLabel:{color:'#58695b',formatter:axisValue},splitLine:{lineStyle:{color:'#e7ede6'}}},
       series:spec.series.map((line,index)=>({name:line.name,type:isTimeline?'line':'bar',
-        data:spec.unit==='个百分点'?line.values.map(value=>({value,label:{position:value<0?'bottom':'top',color:value<0?'#97541c':value>0?'#315e41':'#58695b'},
-          itemStyle:{color:value<0?'#bc6a20':value>0?'#356d51':'#718078'}})):line.values,smooth:false,symbolSize:6,
+        data:spec.unit==='个百分点'?line.values.map(value=>{
+          const adverse=spec.adverseWhenHigh?value>0:value<0;
+          return {value,label:{position:value<0?'bottom':'top',color:value===0?'#58695b':adverse?'#97541c':'#315e41'},
+            itemStyle:{color:value===0?'#718078':adverse?'#bc6a20':'#356d51'}};
+        }):line.values,smooth:false,symbolSize:6,
         barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
         lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
         endLabel:{show:isTimeline&&Number.isFinite(line.values.at(-1)),formatter:params=>endText(line,params.value),
@@ -2625,6 +2670,28 @@ function metricEvidence(id,page) {
     panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
   }
   if(id===42&&!selectedFilters().length)panel.append(dataTable(deviceEventContributionTable()));
+  if(id===42&&value.kind==='rate') {
+    const parts=deviceEventGroupChanges();
+    if(parts.groups) {
+      const {comparison,groups,changes,effects}=parts;
+      appendEvidencePair(deviceEventChangeSpec(parts),{
+        title:'空触发率变化贡献 · 计算依据',
+        columns:['互斥分组',`${comparison.beforeLabel}：空触发 / 总体触发（次）`,`${comparison.afterLabel}：空触发 / 总体触发（次）`,'变化贡献（百分点）'],
+        rows:groups.map((group,i)=>[group.name,...group.summaries.map((part,j)=>`${number(part.numerator)} / ${number(parts.overall[j].denominator)}`),chartValue(changes[i],'个百分点')]),
+        note:'每组贡献的分母是同期总体触发数，不是该组触发数；两期长短不同时不直接比较事件合计。来源为当前筛选下的周×型号×固件合成计数，不作因果归因。',
+      });
+      const basis=element('details','workspace-context device-rate-decomposition');basis.dataset.evidenceKind='groups';
+      basis.append(element('summary','','核对组内空触发率与触发构成'),dataTable({
+        title:'空触发率变化拆分 · 同一筛选与比较周期',
+        columns:['互斥分组',`${comparison.beforeLabel}：空触发 / 该组触发（组内率）`,`${comparison.afterLabel}：空触发 / 该组触发（组内率）`,'触发占比（前→后）','组内变化（pp）','构成变化（pp）'],
+        rows:groups.map((group,i)=>[group.name,...group.summaries.map(part=>`${number(part.numerator)} / ${number(part.denominator)}（${percent(part.value)}）`),
+          effects[i].weights.map(percent).join(' → '),chartValue(effects[i].within,'个百分点'),chartValue(effects[i].composition,'个百分点')]),
+        note:`${comparison.beforeWindow} → ${comparison.afterWindow}。组内率r＝该组空触发÷该组触发；触发占比w＝该组触发÷同期总体触发。组内变化＝两期平均w×率差；构成变化＝两期平均r×占比差，均乘100换为百分点。未舍入合计回到每组贡献；这不是设备故障因果判断。`,
+      }));panel.append(basis);
+    } else {
+      const unavailable=element('p','na-note',parts.reason);unavailable.dataset.evidenceKind='groups';panel.append(unavailable);
+    }
+  }
   if(id===18&&value.kind==='rate') {
     const periods=filterState.week?[[`所选W${filterState.week}`,trialRows(filterState)]]:
       [['前9个成熟周 · W1–9',trialRows(filterState,'previous')],['近3个成熟周 · W10–12',trialRows(filterState,'current')]];
@@ -3123,7 +3190,11 @@ function filteredFinding(page,requestedId) {
     return {id:29,text:`按当前${m(29).thresholdDays}天阈值，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。迁徙季与淡季规则不可当作两个互斥人群相加。`};
   if(page==='C'&&isTarget(42)&&m(42).kind==='rate') {
     const t=weeklyRateComparison(42),week=filterState.week??sourceData.weekly.at(-1).week;
-    return {id:42,comparison:t,text:`W${week}空触发率 ${percent(m(42).value)}。${t?'按比较周期的触发次数合并计算。请核对型号与固件分组，尚不能据此认定原因。':'前期无可比样本，暂不生成变化判断。'}`};
+    const parts=deviceEventGroupChanges(t);
+    const contributions=parts.groups?`互斥分组贡献：${parts.groups.map((group,i)=>`${group.name} ${chartValue(parts.changes[i],'个百分点')}`).join('；')}。`:'';
+    const basis=!t?'前期无可比样本，暂不生成变化判断。':parts.groups?
+      '这是合成计数的算术分解，尚不能据此认定设备或固件是原因。':`${parts.reason}未据此生成分组变化判断。`;
+    return {id:42,comparison:t,evidencePanel:parts.groups?'groups':undefined,text:`W${week}空触发率 ${percent(m(42).value)}。${t?'按比较周期的触发次数合并计算。':''}${contributions}${basis}`};
   }
   if(page==='D'&&isTarget(22)&&filterState.plan==='Free'&&m(22).kind==='group') {
     const part=m(22).value.anyExhausted;
@@ -3295,8 +3366,9 @@ function diagnosticFinding(page,id,observation,{current=true}={}) {
     facts.querySelector('.inspector-value').after(status);
     finding.append(facts);
   }
-  const cross=element('a','insight-link',current?'查看本条指标证据 ↓':`查看 ${name} 证据 →`);
-  cross.href=routeHref(page,id);finding.append(cross);
+  const cross=element('a','insight-link',current?(observation?.evidencePanel==='groups'?'查看分组变化证据 ↓':'查看本条指标证据 ↓'):`查看 ${name} 证据 →`);
+  if(observation?.evidencePanel)cross.dataset.evidencePanel=observation.evidencePanel;
+  cross.href=routeHref(page,id,observation?.evidencePanel);finding.append(cross);
   // Other-page links belong to an authored observation, never to an unrelated factual summary.
   if(observation) {
     const info=dataset.diagnostics[page];
@@ -3572,7 +3644,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       const params=new URLSearchParams(href.split('?')[1]??'');
       const issue=activeIssueMetrics.get(issueScopeKey(page));
       if(issue)params.set('issue',String(issue));else params.delete('issue');
-      if(params.has('metric')||diagnosticWorkspaceView==='change')params.delete('panel');else params.set('panel',diagnosticWorkspaceView);
+      if(['change','groups','data'].includes(link.dataset.evidencePanel))params.set('panel',link.dataset.evidencePanel);
+      else if(params.has('metric')||diagnosticWorkspaceView==='change')params.delete('panel');else params.set('panel',diagnosticWorkspaceView);
       link.href=`#/${page}${params.size?`?${params}`:''}`;
     }
   }

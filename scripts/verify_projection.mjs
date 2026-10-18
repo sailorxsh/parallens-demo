@@ -512,4 +512,52 @@ assert.equal(rateParts([...cohort(40,20,true),...cohort(29,10,false)],cohort(60,
 assert.equal(rateParts([],[]),null);
 const singleGroup=rateParts(cohort(40,20,true),cohort(60,24,true));
 assert.equal(singleGroup.groups.length,1);near(singleGroup.effects[0].composition,0);near(singleGroup.changes[0],-10);
-console.log(`PASS metric names and subitem search, indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, symmetric within/composition decomposition including Simpson reversal, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
+// Device contributions use matched windows and the selected raw event partition.
+evaluate('sourceData=__fixtures');
+for(const filters of [{},{deviceModel:'K6'},{firmware:'2.8'},{deviceModel:'K6',firmware:'2.8'},
+  {firmware:'Other'},{deviceModel:'Bird Lite'},{week:'2'},{week:'9'},{week:'12'},{productLine:'Bird'}]) {
+  project(filters);
+  const parts=JSON.parse(JSON.stringify(evaluate('deviceEventGroupChanges()')));
+  const index=filters.week?Number(filters.week)-1:null;
+  const weeks=index===null?[fixtures.weekly.slice(0,8),fixtures.weekly.slice(8)]:
+    [[fixtures.weekly[index-1]],[fixtures.weekly[index]]];
+  const populations=weeks.map(period=>period.flatMap(w=>w.deviceEventsBird.records).filter(row=>
+    (!filters.deviceModel||row.model===filters.deviceModel)&&(!filters.firmware||row.firmware===filters.firmware)));
+  const counts=rows=>({n:rows.reduce((n,r)=>n+r.empty,0),d:rows.reduce((d,r)=>d+r.triggers,0)});
+  const overall=populations.map(counts);
+  parts.groups.forEach((group,g)=>{
+    const target=group.name==='K6 · 固件2.8';
+    const expected=populations.map(rows=>counts(rows.filter(r=>(r.model==='K6'&&r.firmware==='2.8')===target)));
+    group.summaries.forEach((part,j)=>assert.deepEqual([part.numerator,part.denominator],[expected[j].n,expected[j].d]));
+    near(parts.changes[g],(expected[1].n/overall[1].d-expected[0].n/overall[0].d)*100);
+    near(parts.effects[g].within+parts.effects[g].composition,parts.changes[g]);
+  });
+  near(parts.changes.reduce((sum,v)=>sum+v,0),(overall[1].n/overall[1].d-overall[0].n/overall[0].d)*100);
+  const spec=evaluate('deviceEventChangeSpec(deviceEventGroupChanges())');
+  assert.ok(spec.minY<=Math.min(0,...parts.changes)&&spec.maxY>=Math.max(0,...parts.changes));
+  assert.equal(spec.adverseWhenHigh,true,'Increasing empty-trigger rate is adverse');
+}
+project({});
+near(evaluate('deviceEventGroupChanges().changes[0]'),16);
+near(evaluate('deviceEventGroupChanges().changes[1]'),0);
+project({week:'1'});assert.match(evaluate('deviceEventGroupChanges().reason'),/没有前一完整周/);
+for(const filters of [{country:'US'},{productLine:'Hunting'},{deviceStatus:'Inactive'}]){
+  project(filters);assert.equal(evaluate('deviceEventGroupChanges().groups'),undefined);
+}
+const eventFixture=(before,after)=>{
+  evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures))');
+  evaluate(`sourceData.weekly.forEach((w,i)=>w.deviceEventsBird.records=(i<8?${JSON.stringify(before)}:${JSON.stringify(after)}))`);
+  project({});return JSON.parse(JSON.stringify(evaluate('deviceEventGroupChanges()')));
+};
+const events=(n,d,target)=>({model:target?'K6':'Bird Pro',firmware:target?'2.8':'Other',empty:n,triggers:d});
+const mix=eventFixture([events(54,90,true),events(6,30,false)],[events(21,30,true),events(27,90,false)]);
+near(mix.effects.reduce((sum,g)=>sum+g.within,0),10);
+near(mix.effects.reduce((sum,g)=>sum+g.composition,0),-20);
+near(mix.changes.reduce((sum,v)=>sum+v,0),-10);
+assert.match(eventFixture([events(3,7,true),events(50,100,false)],[events(3,7,true),events(50,100,false)]).reason,/少于30次/);
+assert.match(eventFixture([events(20,40,true),events(50,100,false)],[events(50,100,false)]).reason,/少于30次/);
+const only=eventFixture([events(50,100,false)],[events(50,100,false)]);
+assert.equal(only.groups.length,1);near(only.changes[0],0);
+assert.match(evaluate('deviceEventGroupChanges({...weeklyRateComparison(42),before:{...weeklyRateComparison(42).before,numerator:1}}).reason'),/不闭合/);
+evaluate('sourceData=__fixtures');project({});
+console.log(`PASS metric names and subitem search, indexed trial selections and reloads, business filters, weighted observation evidence and adjacent periods, symmetric within/composition decomposition including Simpson reversal, matched-window device contributions, action baseline periods and transactional saves, chart units and point evidence, linked facts and focused scales for ${timelineAxes.length} diagnostic timelines`);
