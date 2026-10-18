@@ -5182,7 +5182,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       info.tables.filter(spec=>!(selectedMetric===35&&spec.title==='完整月付款与人均收入')).forEach(spec=>{
         const table=spec.title==='完整月付款与人均收入'?paymentMonthTable():
           spec.title==='设备型号订阅表现 · 主账号可跨型号'?modelContextTable():spec;
-        tables.append(dataTable(table));
+        tables.append(dataTable(table,spec.title==='设备型号订阅表现 · 主账号可跨型号'?'model-context-calculation':''));
       });panels.get('data').append(tables);
     }
     if(context.children.length>1)panels.get('groups').append(context);

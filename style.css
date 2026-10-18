@@ -986,3 +986,8 @@ article.trial-sample-item {cursor:auto}
 .activity-window-explorer .evidence-charts-grid {
   grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));
 }
+
+/* Keep pinned model labels at the scrollport edge, with no padding gutter exposing clipped counts. */
+.data-table-scroll:is(.model-calculation,.model-context-calculation) {padding-inline:0}
+.data-table-scroll:is(.model-calculation,.model-context-calculation) caption,
+.data-table-scroll:is(.model-calculation,.model-context-calculation) > :is(.table-note,.table-scroll-hint) {padding-inline:.65rem}
