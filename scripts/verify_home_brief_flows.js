@@ -34,10 +34,20 @@ async (parent) => {
       check(layout.sixColumns&&layout.nodes.length===6&&layout.nodes.every(n=>n.trend&&n.change&&!n.overflow),'Six default journey trends or comparisons are missing or clipped');
       check(layout.changeVisible,'Analysis comparison delta escapes its surface');
       check(layout.resultRows[0].text==='+50人9/24 较 9/17'&&layout.resultRows[1].text==='+3.2%9/24 较 9/1'&&
-        layout.resultRows[2].text==='+302美元9/24 较 9/17'&&layout.resultRows[3].text==='+320人9/24 较 9/17','Result comparisons contradict their source periods');
+        layout.resultRows[2].text==='+302美元9/24 较 9/17'&&layout.resultRows[3].text==='+73人9/24 较 9/23','Result comparisons contradict their source periods');
       await p.screenshot({path:`output/playwright/v62-home-${size.width}.png`,scale:'css'});
       results.push({width:size.width,...layout});
     }
+    // Rolling MAU now compares daily snapshots; keep its exact dates without overflowing the one-line card.
+    for(const [width,font]of[[901,24],[1366,32]]){
+      await p.setViewportSize({width,height:1000});await open();await p.evaluate(n=>document.documentElement.style.fontSize=n+'px',font);await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+      const comparison=p.locator('.home-result[data-metric-id="4"] .home-result-comparison');
+      const date=await comparison.locator('.home-result-period').innerText(),full=await comparison.locator('.home-result-period').getAttribute('title');
+      check(date==='9/24 较 9/23'&&full==='2026-09-24 较 2026-09-23'&&(await comparison.getAttribute('aria-label')).includes(full),'Compact dates lose the full rolling comparison period');
+      check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1&&[...document.querySelectorAll('.home-result-comparison')].every(n=>{const [a,b]=[...n.children].map(n=>n.getBoundingClientRect());return n.scrollWidth<=n.clientWidth+1&&Math.abs((a.top+a.bottom-b.top-b.bottom)/2)<1;})),'Enlarged result comparisons overflow or split across lines');
+      await p.screenshot({path:`output/playwright/v159-audit/${p.context().browser().browserType().name()}-home-date-${width}-${font}.png`});results.push({width,font,compactDate:date,fullDate:full});
+    }
+    await p.evaluate(()=>document.documentElement.style.fontSize='16px');
     await p.setViewportSize({width:1487,height:1060});await open();
     await p.screenshot({path:'output/playwright/v62-home-final.png',scale:'css'});
     for(const id of [13,18]) {

@@ -2693,7 +2693,7 @@ function homeResult({id,label,value,page,status}) {
   link.append(valueNode);article.append(heading,link);
   const compare=element('div','home-result-comparison');
   const history=metricHistory(id);
-  let delta=null,change='暂无可比值',period='';
+  let delta=null,change='暂无可比值',period='',fullPeriod='';
   if(id===21&&metric(id).kind==='group') {
     const {opening,closing}=metric(id).value;
     if(opening>0&&Number.isFinite(closing)) {
@@ -2705,13 +2705,18 @@ function homeResult({id,label,value,page,status}) {
     if(Number.isFinite(current)&&Number.isFinite(previous)) {
       delta=current-previous;
       change=Math.abs(delta)<.05?'持平':`${delta>0?'+':'−'}${number(Math.round(Math.abs(delta)))}${history.unit}`;
-      period=`${history.labels[index]} 较 ${history.labels[index-1]}`;
+      const labels=[history.labels[index],history.labels[index-1]];
+      fullPeriod=`${labels[0]} 较 ${labels[1]}`;
+      const sameYear=labels.every(label=>/^\d{4}-\d{2}-\d{2}$/.test(label))&&labels[0].slice(0,4)===labels[1].slice(0,4);
+      const display=label=>sameYear?`${Number(label.slice(5,7))}/${Number(label.slice(8,10))}`:label;
+      period=`${display(labels[0])} 较 ${display(labels[1])}`;
     }
   }
   if(metric(id).kind==='na')change=metric(id).availability==='pending'?'待补数据':'当前范围不适用';
   compare.append(element('span',`home-result-delta${delta==null||Math.abs(delta)<.05?' neutral':delta<0?' adverse':' improving'}`,change),
     element('span','home-result-period',period));
-  compare.setAttribute('aria-label',`${change}${period?`，${period}`:''}${id===21?'；变化比例以期初存量为基准':''}`);
+  compare.lastElementChild.title=fullPeriod||period;
+  compare.setAttribute('aria-label',`${change}${period?`，${fullPeriod||period}`:''}${id===21?'；变化比例以期初存量为基准':''}`);
   article.append(compare);
   if(id===21&&metric(id).kind!=='na') {const flow=netAddComparison();if(flow)article.append(flow);}
   else article.append(element('p','home-result-context',metric(id).kind==='na'?metric(id).reason:status));
@@ -3783,7 +3788,6 @@ function drawDetailChart(box,spec) {
   const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
   const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${chartValue(value,spec.unit)}`;
   const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?12:6.8),0)));
-  const leftReserve=['美元','个百分点'].includes(spec.unit)?70:spec.unit==='人'||spec.unit==='台'?62:46;
   const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+24),box.clientWidth*.32)):18;
   const timelineLabelInterval=index=>{
     const spacing=chartText(Math.max(weeklyAxis?62:42,...spec.labels.map(label=>String(label).length*7+18)));
@@ -3804,6 +3808,10 @@ function drawDetailChart(box,spec) {
     if(value>=1000)return `${(value/1000).toFixed(span<500?2:span<2000?1:0)}k`;
     return number(Math.round(value));
   };
+  const percentageLabels=spec.unit==='%'?[...plotted,trendAxis?.min??barAxis?.min??spec.minY??0,trendAxis?.max??barAxis?.max??spec.maxY??100].map(axisValue):[];
+  // Measure the same base font used by SVG labels; shared typography scales this gutter with the text.
+  const percentageReserve=percentageLabels.length?Math.ceil(Math.max(...percentageLabels.map(label=>window.echarts.format.getTextRect(label,'12px "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif').width)))+12:46;
+  const leftReserve=spec.unit==='%'?Math.max(46,percentageReserve):['美元','个百分点'].includes(spec.unit)?70:spec.unit==='人'||spec.unit==='台'?62:46;
   const categoryLayout=()=>categoryAxisLayout(box,spec,leftReserve,rightReserve);
   setChartOption(instance,()=>{
     const category=isTimeline?null:categoryLayout();

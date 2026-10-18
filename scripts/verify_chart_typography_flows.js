@@ -75,18 +75,21 @@ async(parent)=>{
       }
     }
     await open('A');await reveal();
-    const button=p.locator('.chart-legend-button').first();await button.click();
+    // Use an actual two-series chart: the primary activation chart now has only one series.
+    const frame=p.locator('.chart-legend-frame:visible').filter({has:p.locator('.chart-legend-button:nth-of-type(2)')}).first();
+    const tooltipChart=frame.locator('.detail-chart');
+    const button=frame.locator('.chart-legend-button').first();await button.click();
     const before=await evidence();
     await p.evaluate(()=>document.documentElement.style.fontSize='32px');await settle();await reveal();
     check(JSON.stringify(await evidence())===JSON.stringify(before),'Enlargement resets a user-hidden series');
     check(await button.getAttribute('aria-pressed')==='false','Enlargement resets legend button state');
-    const tooltip=await p.locator('.detail-chart').first().evaluate(box=>{
+    const tooltip=await tooltipChart.evaluate(box=>{
       const instance=echarts.getInstanceByDom(box);instance.dispatchAction({type:'showTip',seriesIndex:1,dataIndex:11});
       return instance.getOption().tooltip[0].textStyle.fontSize;
     });
     check(tooltip===26,'Tooltip does not honor enlarged reading size');
     await settle();
-    const tip=await p.locator('.detail-chart').first().evaluate(box=>{
+    const tip=await tooltipChart.evaluate(box=>{
       const node=[...box.querySelectorAll('div')].find(n=>getComputedStyle(n).position==='absolute'&&getComputedStyle(n).visibility==='visible'&&n.textContent.includes('W12'));
       if(!node)return null;
       const r=node.getBoundingClientRect(),b=box.getBoundingClientRect();
