@@ -4,6 +4,7 @@ async(parent)=>{
   const context=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',reducedMotion:'reduce'});
   const p=await context.newPage(),errors=[],logs=[],results=[];
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')logs.push(m.text());});
+  p.on('dialog',dialog=>dialog.accept());
   const check=(ok,message)=>{if(!ok)throw Error(message);};
   const model=()=>p.locator('#C-panel-groups .evidence-pair .detail-chart');
   const technical=()=>p.locator('#C-panel-groups .detail-chart-panel .detail-chart');
@@ -11,6 +12,8 @@ async(parent)=>{
   const ready=()=>p.locator('#main[aria-busy="false"] #C-tab-change').waitFor();
   const stored=()=>p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'));
   const open=async()=>{
+    // A hash-only navigation keeps the old document and its fault hooks alive.
+    await p.goto('about:blank');
     await p.goto(`${base}#/C?deviceModel=K6&firmware=2.8&metric=42&panel=change`);await ready();
     await p.locator('#C-panel-change svg').first().waitFor();
     await p.locator('.income-evidence > .section-top .issue-register').click();
@@ -27,16 +30,16 @@ async(parent)=>{
     check(await p.evaluate(()=>detailCharts.every(e=>!e.isDisposed())),'Disposed charts remain in the resize collection');
   };
   const inject=async mode=>p.evaluate(mode=>{
-    window.__chartFault={active:true,count:0,mode};
+    window.__chartFault={active:true,count:0,mode,failures:[]};
     const original=window.echarts,test=Object.create(original);
     Object.defineProperty(test,'init',{value:function(box,...args){
       if(box.matches('#C-panel-groups .evidence-pair .detail-chart')&&__chartFault.active&&mode==='init'){
-        __chartFault.count++;throw Error('SIMULATED_EVIDENCE_INIT_FAILURE');
+        __chartFault.count++;__chartFault.failures.push('init');throw Error('SIMULATED_EVIDENCE_INIT_FAILURE');
       }
       const instance=original.init.call(original,box,...args);
       if(box.matches('#C-panel-groups .evidence-pair .detail-chart')&&mode==='option'){
         const set=instance.setOption;instance.setOption=function(...values){
-          if(__chartFault.active){__chartFault.count++;throw Error('SIMULATED_EVIDENCE_OPTION_FAILURE');}
+          if(__chartFault.active){__chartFault.count++;__chartFault.failures.push('option');throw Error('SIMULATED_EVIDENCE_OPTION_FAILURE');}
           return set.apply(this,values);
         };
       }
@@ -58,6 +61,8 @@ async(parent)=>{
       const retry=()=>model().getByRole('button',{name:'重试设备型号 · 模拟分组对比图表',exact:true});
       await retry().focus();await p.keyboard.press('Enter');
       check(await p.evaluate(()=>__chartFault.count)===2,'Explicit retry does not perform a fresh render');
+      check(await p.evaluate(mode=>__chartFault.failures.length===2&&__chartFault.failures.every(phase=>phase===mode),mode),
+        `The ${mode} test did not fail in its own rendering phase`);
       check(await retry().evaluate(n=>document.activeElement===n),'A second failure loses keyboard focus');
       check((await p.locator('#announcement').innerText()).includes('仍无法显示'),'A failed retry announces success');
       const failedCalls=await p.evaluate(()=>__chartFault.count);
@@ -85,10 +90,11 @@ async(parent)=>{
       });
       check(values.every((value,i)=>Math.abs(value-expected[i])<1e-9),'Recovered chart differs from the independent source counts');
       await p.getByRole('navigation',{name:'分组证据定位',exact:true}).getByRole('button',{name:'设备型号 · 模拟分组对比',exact:true}).click();
+      await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r)))));
       const point=await model().evaluate(n=>{const e=echarts.getInstanceByDom(n),r=n.getBoundingClientRect(),xy=e.convertToPixel({seriesIndex:0},[0,41]);return {x:r.left+xy[0],y:r.top+xy[1]};});
       await p.mouse.click(point.x,point.y);await calculation.locator('.chart-selected').waitFor();
       check((await calculation.locator('.chart-selected').innerText()).includes('K6'),'Recovered chart loses its data-point binding');
-      await verifyState(initial,baseline,url);results.push({mode,width,font,restored:values});
+      await verifyState(initial,baseline,url);results.push({mode,width,font,verifiedFailurePhase:mode,restored:values});
     }
     await p.setViewportSize({width:1600,height:1000});await open();await p.locator('#C-tab-groups').click();
     await technical().locator('svg').waitFor();
