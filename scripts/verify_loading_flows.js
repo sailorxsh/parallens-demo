@@ -20,7 +20,7 @@ async(page)=>{
    // DOMContentLoaded waits for deferred scripts, so inspect this intentional gap before it.
    await p.goto(base,{waitUntil:'commit'});
    // WebKit can withhold animation frames while this deferred script is deliberately gated.
-   await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===17,{},{timeout:10000,polling:50});
+   await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===18,{},{timeout:10000,polling:50});
    check(await p.locator('#main').getAttribute('aria-busy')==='true','Waiting for the chart library falsely presents a ready dashboard');
    check((await p.locator('#load-status').innerText()).includes('正在准备图表'),'Completed data leaves an unexplained wait');
    check(!await p.locator('.home-results').count(),'Data alone presents a partially initialized dashboard');
@@ -50,7 +50,7 @@ async(page)=>{
   const slowGate=new Promise(resolve=>{releaseSlow=resolve;}),lastStarted=new Promise(resolve=>{notifyLast=resolve;});
   await p.route('**/data/*.json',async route=>{
    if(route.request().url().endsWith('/trial-facts.json'))await slowGate;
-   if(route.request().url().endsWith('/subscription-flow.json'))notifyLast();
+   if(route.request().url().endsWith('/binding-device-facts.json'))notifyLast();
    await route.continue();
   });
   try {
@@ -59,7 +59,7 @@ async(page)=>{
    try {await Promise.race([lastStarted,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('Slow file blocks later datasets')),10000);})]);}
    finally {clearTimeout(timer);}
    check(await p.locator('#main').getAttribute('aria-busy')==='true','Partial data presents a ready dashboard');
-   check(await p.locator('#load-meter').evaluate(node=>node.value<17),'Progress falsely completes while a required file is pending');
+   check(await p.locator('#load-meter').evaluate(node=>node.value<18),'Progress falsely completes while a required file is pending');
   } finally {releaseSlow();}
   await p.locator('#statusChart svg').waitFor();
   await p.unroute('**/data/*.json');

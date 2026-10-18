@@ -11,7 +11,7 @@ const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
 const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
 const findingRuleVersion='demo-2026-10-18-v5';
-const findingSource=id=>({18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
+const findingSource=id=>({15:'合成设备台账逐台计数',18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 main?.addEventListener('toggle',()=>updateScrollableTables(),true);
 document.querySelector('.skip-link')?.addEventListener('click',event=>{
@@ -872,6 +872,56 @@ function projectActivityComposition(raw,filters,shares) {
   if(!best)return pending('当前模拟分片取整后无法同时核对并集与三类来源，待补可核验的同范围构成。');
   return {...raw,value:{...v,...targets,exclusiveCells:Object.fromEntries(activityCombinations.map((item,index)=>[item.key,best[index]]))}};
 }
+const bindingDeviceIndexes=new WeakMap();
+function bindingDeviceIndex() {
+  const source=sourceData.bindingDeviceFacts;
+  if(!source||typeof source!=='object')return {reason:'设备台账待补，不能用汇总数生成设备名单。'};
+  if(bindingDeviceIndexes.has(source))return bindingDeviceIndexes.get(source);
+  const invalid=()=>{const result={reason:'设备台账字段、时间、型号归属或快照数量不一致，待核对后再显示。'};bindingDeviceIndexes.set(source,result);return result;};
+  const parse=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)&&
+    Number.isFinite(Date.parse(value))&&new Date(value).toISOString().replace('.000Z','Z')===value?Date.parse(value):NaN;
+  const at=parse(source.asOf),seen=new Set();
+  if(source.version!=='synthetic-binding-devices-v1'||source.thresholdHours!==72||!Number.isFinite(at)||
+    source.asOf.slice(0,10)!==sourceData.snapshot.asOf||!Array.isArray(source.records)||!Array.isArray(source.snapshots)||!source.snapshots.length)return invalid();
+  const records=[];
+  for(const row of source.records) {
+    if(!row||typeof row!=='object'||Array.isArray(row))return invalid();
+    const bound=parse(row.boundAt),first=row.firstImageAt===null?null:parse(row.firstImageAt);
+    if(typeof row.id!=='string'||!row.id||seen.has(row.id)||!Number.isFinite(bound)||bound>at||
+      first!==null&&(!Number.isFinite(first)||first<bound||first>at)||
+      !sourceData.filterPolicy.controls.country.options.includes(row.country)||
+      !sourceData.filterPolicy.controls.deviceModel.options.includes(row.deviceModel)||
+      row.productLine!==(row.deviceModel==='Hunt Pro'?'Hunting':'Bird')||row.deviceStatus!=='Effective'||
+      !['appVersion','handlingStatus','owner'].every(key=>typeof row[key]==='string'&&row[key].trim()))return invalid();
+    seen.add(row.id);records.push({...row,boundMs:bound,firstImageMs:first});
+  }
+  let previous=-Infinity;
+  const snapshots=[];
+  for(const point of source.snapshots) {
+    if(!point||typeof point!=='object'||Array.isArray(point))return invalid();
+    const time=parse(point.at);
+    if(!Number.isFinite(time)||time<=previous||time>at||!Number.isSafeInteger(point.count)||point.count<0)return invalid();
+    const count=records.filter(row=>row.boundMs<time-72*3600000&&(row.firstImageMs===null||row.firstImageMs>time)).length;
+    if(count!==point.count)return invalid();
+    snapshots.push({...point,time});previous=time;
+  }
+  const legacy=sourceData.metricTrends?.m15;
+  if(previous!==at||snapshots.at(-1).count!==sourceData.metrics.m15.value||snapshots.length!==legacy?.points?.length||
+    snapshots.some((point,index)=>point.count!==legacy.points[index].value||
+      `${new Date(point.time).getUTCMonth()+1}/${new Date(point.time).getUTCDate()}`!==legacy.labels[index]))return invalid();
+  const result={records,snapshots,at,asOf:source.asOf};bindingDeviceIndexes.set(source,result);return result;
+}
+function bindingDeviceRows(state=filterState,time) {
+  const index=bindingDeviceIndex();if(index.reason)return index;
+  const at=time??index.at;
+  if(!index.snapshots.some(point=>point.time===at))return {reason:'该快照没有完整设备台账，不能反推历史名单。'};
+  const filters=effectiveFor(15,state);
+  const rows=index.records.filter(row=>row.boundMs<at-72*3600000&&(row.firstImageMs===null||row.firstImageMs>at)&&
+    filters.every(([key,value])=>row[key]===value));
+  return {rows,at,asOf:new Date(at).toISOString()};
+}
+function bindingWaitDays(row,at=bindingDeviceIndex().at) {return Math.floor((at-row.boundMs)/86400000);}
+function bindingWaitBand(row,at) {const days=bindingWaitDays(row,at);return days>=14?'14天及以上':days>=7?'7–13天':'超过3天、未满7天';}
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -918,6 +968,7 @@ function projectMetric(id,state=filterState) {
   if(id===18)return trialMetric(scoped);
   if(id===42)return deviceEventMetric(scoped);
   if(id===30)return projectActivityComposition(sourceData.metrics.m30,filters,sharesFor(filters,30));
+  if(id===15){const result=bindingDeviceRows(state);return result.rows?{kind:'count',value:result.rows.length}:pending(result.reason);}
   let raw=sourceData.metrics[`m${String(id).padStart(2,'0')}`];
   if(scoped.week&&contract.dimensions.includes('week')) {
     const weekly=sourceData.weekly.find(w=>String(w.week)===scoped.week);
@@ -1135,6 +1186,10 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   return article;
 }
 function trendValues(id) {
+  if(id===15) {
+    const index=bindingDeviceIndex();if(index.reason)return null;
+    return index.snapshots.map(point=>bindingDeviceRows(filterState,point.time).rows.length);
+  }
   if(id===27&&filterState.functionType)return null;
   if(id===42) {
     const values=sourceData.weekly.map(week=>{const value=deviceEventMetric(filterState,week.week);return value.kind==='rate'?value.value*100:null;});
@@ -1178,6 +1233,12 @@ function trendValues(id) {
 const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,27,34,35,41,42,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
+  if(id===15) {
+    const index=bindingDeviceIndex();if(index.reason)return null;
+    return {labels:index.snapshots.map(point=>`${new Date(point.time).getUTCMonth()+1}/${new Date(point.time).getUTCDate()}`),
+      values:trendValues(id),unit:'台',title:metricCardLabels[id],
+      note:'每7天一个UTC零时快照；按同一合成设备台账重算绑定超过72小时且截至当时未产首图的设备，筛选后历史与当前清单同源。型号、国家及有效状态在样本中固定，非真实运营数据。'};
+  }
   if(id===35) {
     const counts=sourceData.diagnostics.E.chart.series[0].values;
     const arppus=sourceData.diagnostics.E.extraCharts[0].series[0].values;
@@ -1654,7 +1715,7 @@ function miniCard({id,label,page,value,unit='',note='',critical=false,alert=fals
     scope+=`；未应用：${filterContext.ignoredText}`;
   }
   const source=measure.kind!=='na'&&filterContext.applied.length?
-    (id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
+    (id===15?'合成设备台账逐台计数':id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
   const context=[scope,source].filter(Boolean).join('；');
   if(context)link.append(element('p','metric-filter-scope',context));
   body.append(link);
@@ -2815,6 +2876,66 @@ function compactMetricValueTable(spec) {
   return {...spec,columns,rows:spec.rows.map(row=>keep.map(index=>row[index])),
     note:`${spec.note}${partialRatios?' 仅有结果的比例项未提供同口径分子、分母明细。':''}`};
 }
+function bindingDeviceList(code) {
+  const section=element('section','binding-device-list');section.dataset.evidenceKind='data';
+  section.append(element('h3','','待核查设备清单'));
+  const result=bindingDeviceRows();if(!result.rows){section.append(element('p','na-note',result.reason));return section;}
+  const all=[...result.rows].sort((a,b)=>a.boundMs-b.boundMs||a.id.localeCompare(b.id));
+  section.append(element('p','table-note',`${sourceData.snapshot.asOf} 00:00 UTC · 当前计算范围 ${number(all.length)} 台。合成设备台账；绑定已超过72小时，且截至快照仍无首图。`));
+  const tools=element('div','binding-list-controls'),label=element('label','','查找设备');
+  const search=element('input','');search.type='search';search.placeholder='设备编号、型号或App版本';search.setAttribute('aria-label','查找清单中的设备');label.append(search);
+  const bandLabel=element('label','','等待分层（仅清单）'),band=element('select','');
+  band.setAttribute('aria-label','等待分层（仅清单）');
+  for(const text of ['全部','超过3天、未满7天','7–13天','14天及以上']){const option=element('option','',text);option.value=text;band.append(option);}
+  bandLabel.append(band);tools.append(label,bandLabel);section.append(tools);
+  const status=element('p','binding-list-status');status.setAttribute('role','status');
+  const tableBox=element('div','binding-list-table'),pagination=element('div','binding-list-pagination');
+  const previous=element('button','','上一页'),next=element('button','','下一页');previous.type=next.type='button';
+  const pageText=element('span','');pageText.setAttribute('aria-live','polite');pagination.append(previous,pageText,next);
+  section.append(status,tableBox,pagination,element('p','table-note','搜索、等待分层和翻页只改变清单，不改变上方指标总数。等待分层是演示处理优先级，不是预测风险；源处理状态不随本地问题单自动改变。'));
+  let page=0,selected=null;const pageSize=10;
+  const render=()=>{
+    const query=search.value.trim().toLocaleLowerCase('zh-CN');
+    const rows=all.filter(row=>(band.value==='全部'||bindingWaitBand(row,result.at)===band.value)&&
+      [row.id,row.deviceModel,row.appVersion].some(value=>value.toLocaleLowerCase('zh-CN').includes(query)));
+    const pages=Math.max(1,Math.ceil(rows.length/pageSize));page=Math.min(page,pages-1);
+    if(selected&&!rows.some(row=>row.id===selected)) {selected=null;section.dispatchEvent(new CustomEvent('binding-device-select',{bubbles:true,detail:null}));}
+    status.textContent=`当前范围 ${number(all.length)} 台 · 匹配 ${number(rows.length)} 台`;
+    pageText.textContent=`第 ${page+1} / ${pages} 页`;previous.disabled=page===0;next.disabled=page===pages-1;
+    const visible=rows.slice(page*pageSize,(page+1)*pageSize);
+    const table=dataTable({title:'设备名单 · 等待时间较长者优先',columns:['设备编号','设备型号','绑定日期（UTC）','等待天数','App版本','等待分层','源处理状态'],
+      rows:visible.map(row=>[row.id,row.deviceModel,row.boundAt.slice(0,10),bindingWaitDays(row,result.at),row.appVersion,bindingWaitBand(row,result.at),row.handlingStatus])});
+    if(!rows.length)table.append(element('p','na-note','没有匹配设备；请核对清单搜索条件，不能据此将当前范围总数记为0。'));
+    table.querySelectorAll('tbody tr').forEach((tr,index)=>{
+      const row=visible[index],cell=tr.firstElementChild,button=element('button','binding-device-link',row.id);button.type='button';
+      button.setAttribute('aria-label',`查看设备 ${row.id} 详情`);button.setAttribute('aria-controls',`${code}-workspace-device`);
+      button.setAttribute('aria-pressed',String(selected===row.id));tr.classList.toggle('binding-device-selected',selected===row.id);
+      button.addEventListener('click',()=>{
+        selected=row.id;
+        table.querySelectorAll('tbody tr').forEach(line=>{const active=line===tr;line.classList.toggle('binding-device-selected',active);line.querySelector('button').setAttribute('aria-pressed',String(active));});
+        section.dispatchEvent(new CustomEvent('binding-device-select',{bubbles:true,detail:{record:row,trigger:button}}));
+        document.querySelector('#announcement').textContent=`已选择设备 ${row.id}，右侧设备详情已更新；问题单保持不变。`;
+      });cell.replaceChildren(button);
+    });
+    tableBox.replaceChildren(table);requestAnimationFrame(updateScrollableTables);
+  };
+  search.addEventListener('input',()=>{page=0;render();});band.addEventListener('change',()=>{page=0;render();});
+  previous.addEventListener('click',()=>{page--;render();});next.addEventListener('click',()=>{page++;render();});render();return section;
+}
+function bindingDeviceDetail(row,onLink,onBack) {
+  const box=element('div','binding-device-detail-content');
+  const back=element('button','binding-device-back','返回设备清单');back.type='button';back.addEventListener('click',onBack);
+  box.append(back,element('span','insight-tag','合成设备记录'),element('h3','',row.id));
+  const facts=element('dl','inspector-facts');
+  for(const [name,value] of [['国家/市场',optionLabel('country',row.country)],['产品线',optionLabel('productLine',row.productLine)],['设备型号',row.deviceModel],
+    ['绑定时间（UTC）',row.boundAt.replace('T',' ').replace('Z','')],['等待天数',`${bindingWaitDays(row)}天`],['App版本',row.appVersion],
+    ['等待分层',bindingWaitBand(row)],['源处理状态',`${row.handlingStatus}（演示）`],['源负责人',row.owner]]) {
+    const line=element('div','');line.append(element('dt','',name),element('dd','',value));facts.append(line);
+  }
+  const button=element('button','issue-register','将编号填入#15关联样本');button.type='button';
+  const feedback=element('p','table-note');feedback.setAttribute('role','status');button.addEventListener('click',()=>{feedback.textContent=onLink(row);});
+  box.append(facts,element('p','table-note','截至快照仍无首图。该记录不代表已确认故障，等待分层不是预测模型；填写问题单不会自动更新设备源处理状态。'),button,feedback);return box;
+}
 function bindingFailureEvidence() {
   const filters=effectiveFor(11),week=filterState.week?Number(filterState.week):sourceData.weekly.at(-1)?.week;
   if(week!==12||filters.some(([key])=>key!=='week'))
@@ -2843,7 +2964,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    id===15?'合成设备台账 · 逐台计数':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${contract.window} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
@@ -2855,6 +2976,7 @@ function metricEvidence(id,page) {
   panel.append(registerIssueButton(page,id,{compact:true}));
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
   const specs=[];
+  if(id===15)panel.append(bindingDeviceList(page));
   const appendEvidencePair=(spec,tableSpec,kind='groups')=>{
     const pair=element('div','evidence-pair');
     pair.dataset.evidenceKind=kind;
@@ -3072,7 +3194,7 @@ function metricEvidence(id,page) {
       const countUnit=metricCountUnits[id]??'';
       const comparison=filteredBreakdown(page);
       const comparisonNote=comparison?.metricId===id&&comparison.dimension===dimension?comparison.comparisonScope:'';
-      const groupNote=[id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。',comparisonNote].filter(Boolean).join(' ');
+      const groupNote=[id===15?'按同一合成设备台账逐台计数；产品线由设备型号确定，各分组合计回到同范围总数。':id===42?'保留当前其他条件，按周×型号×固件合成计数重算；型号分配为构造样本，不证明真实业务原因。':'按演示分片分配分子和分母；跨维度交叉采用独立分布假设。',comparisonNote].filter(Boolean).join(' ');
       const spec={title:`${filterLabels[dimension]} · 模拟分组对比`,groupDimension:dimension,unit:value.kind==='rate'?'%':value.kind==='usd'?'美元':countUnit,labels,details:projected,series:[{name:item.name,values:vals}],note:groupNote,
         scopeNote:`${actionBaselineWindow(id)} · 比较当前分组水平，不表示跨期变化贡献。${groupNote}`};
       appendEvidencePair(spec,{title:`${filterLabels[dimension]}分组验算`,columns:['分组','分子 / 数量','分母','结果'],rows:projected.map((part,index)=>{
@@ -3081,7 +3203,7 @@ function metricEvidence(id,page) {
     }
   }
   const fullValue=dataTable(id===39?modelCalculationTable():compactMetricValueTable({title:`${item.name} · 当前筛选完整值`,columns:['子项',id===5?'主账号人数（人）':'分子 / 数量','分母','结果 / 说明'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
-    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===39?'model-calculation':'');
+    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${id===15?'本表、趋势和清单由同一合成设备台账计数。':id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===39?'model-calculation':'');
   fullValue.dataset.evidenceKind='data';panel.append(fullValue);
   return {node:panel,specs};
 }
@@ -3709,6 +3831,7 @@ function metricInspector(id,page) {
   if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
+    id===15?'按同一合成设备台账逐台筛选和回算历史；不是独立分片估算，仍不代表真实运营数据。':
     id===42?'周×型号×固件合成触发计数重算；缺少维度明细时显示待补数据。':id===18?'合成试用明细按当前条件交集重算；完整批次见下方证据。':
       id===46?`${technicalRequestSource(id)}按当前条件重算；各链路使用自身请求数。`:
       scope.applied.length?'当前适用筛选结果含模拟分片估算；请结合左侧数据核对。':'结果来自演示底表；趋势中的构造数据在图注中说明。'));
@@ -4004,11 +4127,37 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const record=element('div','income-record');record.id=`${page}-workspace-record`;
   record.append(element('p','workspace-record-hint','本地问题单 · 保存仅保留在此浏览器'),form);
   right.append(rightControls,finding,record);
+  const device=selectedMetric===15?element('div','binding-device-detail'):null;
+  const deviceButton=device?element('button','','当前设备'):null;
+  let currentRightMode='observation';
+  if(device){device.id=`${page}-workspace-device`;deviceButton.type='button';deviceButton.disabled=true;deviceButton.setAttribute('aria-controls',device.id);rightControls.append(deviceButton);right.append(device);}
   const showRight=mode=>{
-    finding.hidden=mode==='record';record.hidden=mode!=='record';
-    observationButton.setAttribute('aria-pressed',String(mode!=='record'));
+    currentRightMode=mode;finding.hidden=mode!=='observation';record.hidden=mode!=='record';
+    if(device){device.hidden=mode!=='device';deviceButton.setAttribute('aria-pressed',String(mode==='device'));}
+    observationButton.setAttribute('aria-pressed',String(mode==='observation'));
     recordButton.setAttribute('aria-pressed',String(mode==='record'));
   };
+  if(device) {
+    deviceButton.addEventListener('click',()=>showRight('device'));
+    workspace.addEventListener('binding-device-select',event=>{
+      const row=event.detail?.record,trigger=event.detail?.trigger,viewport={left:scrollX,top:scrollY,behavior:'instant'};deviceButton.disabled=!row;
+      if(!row){device.replaceChildren();if(currentRightMode==='device')showRight('observation');return;}
+      device.replaceChildren(bindingDeviceDetail(row,chosen=>{
+        const subject=form.querySelector('[name="issueMetric"]'),sample=form.querySelector('[name="linkedSample"]');
+        if(subject.value!=='15')return '当前问题单属于其他指标，已保留其草稿；请先点击“登记#15”再关联设备。';
+        if(sample.value.trim()&&sample.value.trim()!==chosen.id)return '已有其他关联样本，未覆盖；可在问题登记中人工核对后修改。';
+        if(sample.value!==chosen.id){sample.value=chosen.id;sample.dispatchEvent(new Event('input',{bubbles:true}));}
+        showRight('record');sample.focus({preventScroll:true});return '设备编号已填入草稿，尚未保存；原基线和源设备状态保持不变。';
+      },()=>{
+        const target=trigger?.isConnected?trigger:left.querySelector('.binding-list-controls input');
+        target?.focus({preventScroll:true});scrollTo(viewport);
+      }));showRight('device');
+      requestAnimationFrame(()=>{
+        const bounds=device.getBoundingClientRect();
+        if(bounds.top>=innerHeight-80||bounds.bottom<=0){right.scrollIntoView({block:'start',behavior:'instant'});device.querySelector('.binding-device-back').focus({preventScroll:true});}
+      });
+    });
+  }
   observationButton.addEventListener('click',()=>showRight('observation'));
   recordButton.disabled=metric(selectedMetric).kind==='na'&&!activeIssueMetrics.get(issueScopeKey(page));
   recordButton.addEventListener('click',()=>{
@@ -4030,7 +4179,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const hasSelectedGroupChart=[...panels.get('groups').querySelectorAll(
     `.evidence-pair[data-evidence-metric="${selectedMetric}"],.detail-chart-panel[data-evidence-metric="${selectedMetric}"]`)]
     .some(node=>!node.closest('details:not([open])'));
-  const initialView=routeParams.has('panel')?diagnosticWorkspaceView:
+  const initialView=routeParams.has('panel')?diagnosticWorkspaceView:selectedMetric===15?'data':
     panels.get('change').querySelector(':scope > .evidence-pair,:scope > .na-note,:scope > .analysis-main')?'change':
       hasSelectedGroupChart?'groups':'data';
   function syncWorkspaceLinks() {
@@ -4073,7 +4222,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     }
     if(push) {
       const params=new URLSearchParams(location.hash.split('?')[1]??'');
-      if(key==='change')params.delete('panel');else params.set('panel',key);
+      if(key==='change'&&selectedMetric!==15)params.delete('panel');else params.set('panel',key);
       pushRoute(`#/${page}${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
     }
     if(focus)buttons.get(key).focus({preventScroll:true});
@@ -4413,7 +4562,7 @@ function handleRouteChange(event) {
   if(changed)renderRoute({preserveScroll:Boolean(restore)});
   if(restore)restoreReadingView(restore);
 }
-const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow'];
+const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow','binding-device-facts'];
 const dataBatchSize=6;
 let chartLibraryReady;
 function waitForChartLibrary() {
@@ -4570,7 +4719,7 @@ async function start() {
       document.querySelector('#load-meter').value=ready;
       document.querySelector('#load-status').textContent=`已准备 ${ready} / ${dataParts.length} 组数据`;
     });
-    sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name,parts[index]]));
+    sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name==='binding-device-facts'?'bindingDeviceFacts':name,parts[index]]));
     dataLoaded=true;
     if(!window.echarts) {
       document.querySelector('#load-title').textContent='经营数据已准备好';

@@ -10,7 +10,7 @@ const fixtures={
   stories:file('stories'),diagnostics:file('diagnostics'),contract:file('filter-contract'),filterPolicy:file('filter-policy'),slices:file('filter-slices'),
   trialFacts:file('trial-facts'),modelMarket:file('model-market'),metricTrends:file('metric-trends'),entitySamples:file('entity-samples'),
   functionUsage:file('function-usage'),inactivityCohorts:file('inactivity-cohorts'),technicalFacts:file('technical-facts'),
-  subscriptionFlow:file('subscription-flow'),
+  subscriptionFlow:file('subscription-flow'),bindingDeviceFacts:file('binding-device-facts'),
 };
 const context=vm.createContext({
   __fixtures:fixtures,document:{documentElement:{},querySelector:()=>null},getComputedStyle:()=>({fontSize:'16px'}),window:{addEventListener:()=>{},removeEventListener:()=>{}},
@@ -22,6 +22,45 @@ vm.runInContext('sourceData=__fixtures',context);
 const project=filters=>vm.runInContext(`filterState=${JSON.stringify(filters)};projectDataset();dataset.metrics`,context);
 const evaluate=expression=>vm.runInContext(expression,context);
 project({});
+// Device counts, the enumerable list and all historical snapshots share event facts.
+const deviceFacts=fixtures.bindingDeviceFacts;
+const expectedDevices=(filters={},at=Date.parse(deviceFacts.asOf))=>deviceFacts.records.filter(row=>
+  Date.parse(row.boundAt)<at-72*3600000&&(!row.firstImageAt||Date.parse(row.firstImageAt)>at)&&
+  Object.entries(filters).every(([key,value])=>row[key]===value));
+for(const country of ['', 'US','UK','DE','Other'])for(const productLine of ['', 'Bird','Hunting']) {
+  const filters=Object.fromEntries(Object.entries({country,productLine}).filter(([,value])=>value));
+  const values=project(filters);assert.equal(values.m15.value,expectedDevices(filters).length);
+  const history=evaluate('metricHistory(15)');
+  assert.deepEqual(JSON.parse(JSON.stringify(history.values)),deviceFacts.snapshots.map(point=>expectedDevices(filters,Date.parse(point.at)).length));
+  const models=['K6','Bird Lite','Bird Pro','Hunt Pro'].filter(model=>!productLine||(model==='Hunt Pro')===(productLine==='Hunting'));
+  assert.equal(models.reduce((sum,model)=>sum+project({...filters,deviceModel:model}).m15.value,0),values.m15.value);
+}
+assert.equal(project({productLine:'Hunting'}).m15.value,29);
+assert.equal(project({productLine:'Bird'}).m15.value,99);
+project({});assert.equal(evaluate('metric(15).value'),128);
+assert.deepEqual(JSON.parse(evaluate('JSON.stringify(trendValues(15))')),fixtures.metricTrends.m15.points.map(p=>p.value));
+for(const corrupt of [
+ 'sourceData.bindingDeviceFacts.records[0].id=sourceData.bindingDeviceFacts.records[1].id',
+ 'sourceData.bindingDeviceFacts.records.pop()',
+ 'sourceData.bindingDeviceFacts.records[0].productLine="Hunting"',
+ 'sourceData.bindingDeviceFacts.records[0].boundAt="2026-02-30T00:00:00Z"',
+]){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));${corrupt}`);project({});
+ assert.equal(evaluate('metric(15).availability'),'pending','Invalid device facts were replaced with aggregate counts');
+}
+evaluate('sourceData=__fixtures');project({});
+// A device becomes eligible strictly after 72 hours; first image at the snapshot excludes it.
+for(const [kind,expected] of [['exact72',127],['over72',128],['imageAtSnapshot',127]]) {
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));
+  {const source=sourceData.bindingDeviceFacts,row=source.records.at(-1),at=Date.parse(source.asOf);
+   if(${JSON.stringify(kind)}==='imageAtSnapshot')row.firstImageAt=source.asOf;
+   else row.boundAt=new Date(at-72*3600000-(${JSON.stringify(kind)}==='over72'?1000:0)).toISOString().replace('.000Z','Z');
+   source.snapshots.forEach((point,index)=>{const time=Date.parse(point.at);point.count=source.records.filter(r=>Date.parse(r.boundAt)<time-72*3600000&&(!r.firstImageAt||Date.parse(r.firstImageAt)>time)).length;sourceData.metricTrends.m15.points[index].value=point.count;});sourceData.metrics.m15.value=source.snapshots.at(-1).count;}`);
+ project({});assert.equal(evaluate('metric(15).value'),expected,`Incorrect device event boundary ${kind}`);
+}
+evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.bindingDeviceFacts.records=[];sourceData.bindingDeviceFacts.snapshots.forEach(p=>p.count=0);sourceData.metricTrends.m15.points.forEach(p=>p.value=0);sourceData.metrics.m15.value=0');
+project({});assert.equal(evaluate('metric(15).value'),0,'Known empty complete facts are not missing data');
+evaluate('sourceData=__fixtures');project({});
 // Failure categories are exact W12 attempts, never estimates borrowed for another scope.
 const binding=evaluate('bindingFailureEvidence()');
 assert.deepEqual(JSON.parse(JSON.stringify(binding.spec.series[0].values)),[85,70,45]);

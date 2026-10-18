@@ -1,6 +1,6 @@
 {
-  "passed": 40,
-  "total": 40,
+  "passed": 41,
+  "total": 41,
   "checks": [
     {
       "rule": "catalog",
@@ -201,6 +201,11 @@
       "rule": "D18-key-metric-trends",
       "passed": true,
       "detail": "四项新增关键趋势有12期，末点与底表当前值及分子分母一致"
+    },
+    {
+      "rule": "D19-binding-device-ledger",
+      "passed": true,
+      "detail": "128台当前候选设备及12期总体数量由同一绑定/首图台账回算；型号归属、时间、唯一性和源字段有效"
     }
   ]
 }

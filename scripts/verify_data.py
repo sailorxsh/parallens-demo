@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +23,7 @@ function_usage = load("function-usage.json")
 inactivity = load("inactivity-cohorts.json")
 technical = load("technical-facts.json")
 subscription_flow = load("subscription-flow.json")
+binding_devices = load("binding-device-facts.json")
 filter_policy = load("filter-policy.json")
 model_market = load("model-market.json")
 checks = []
@@ -402,6 +403,28 @@ check("D18-key-metric-trends", all(
        metric_trends[f"m{identifier:02d}"]["points"][-1]["denominator"] == metrics[f"m{identifier:02d}"]["denominator"])
       for identifier in (15, 27, 34, 52)),
       "四项新增关键趋势有12期，末点与底表当前值及分子分母一致")
+# Device-level facts reconcile current and all declared historical backlog snapshots.
+def device_time(value):
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+binding_asof = device_time(binding_devices["asOf"])
+binding_rows = binding_devices["records"]
+def device_pool(at):
+    return [r for r in binding_rows if device_time(r["boundAt"]) < at-timedelta(hours=72) and
+            (r["firstImageAt"] is None or device_time(r["firstImageAt"]) > at)]
+check("D19-binding-device-ledger", binding_devices["thresholdHours"] == 72 and
+      binding_asof.date().isoformat() == snapshot["asOf"] and
+      len({r["id"] for r in binding_rows}) == len(binding_rows) and
+      all(r["productLine"] == ("Hunting" if r["deviceModel"] == "Hunt Pro" else "Bird") and
+          r["country"] in slices["country"] and r["deviceModel"] in slices["deviceModel"] and
+          r["deviceStatus"] == "Effective" and r["appVersion"] and r["handlingStatus"] and r["owner"] and
+          device_time(r["boundAt"]) <= binding_asof and
+          (r["firstImageAt"] is None or device_time(r["boundAt"]) <= device_time(r["firstImageAt"]) <= binding_asof)
+          for r in binding_rows) and
+      len(device_pool(binding_asof)) == metrics["m15"]["value"] == 128 and
+      [len(device_pool(device_time(p["at"]))) for p in binding_devices["snapshots"]] ==
+      [p["count"] for p in binding_devices["snapshots"]] == [p["value"] for p in metric_trends["m15"]["points"]] and
+      [f"{device_time(p['at']).month}/{device_time(p['at']).day}" for p in binding_devices["snapshots"]] == metric_trends["m15"]["labels"],
+      "128台当前候选设备及12期总体数量由同一绑定/首图台账回算；型号归属、时间、唯一性和源字段有效")
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:
