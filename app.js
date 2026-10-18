@@ -1643,6 +1643,18 @@ function renewalMonthTable(part=renewalProjection()) {
   const text=rate=>rate.kind==='rate'?percent(rate.value):rate.reason;
   return {title:'12个月 · 同源续订、权益流失与取消',selectedPeriod:part.month,columns:['完整月','期初有效主订阅（人）','当月到期（人）','成功续订（人）','续订率','发生权益流失（人）','流失率','主动取消（人）','取消率','最晚观察日（UTC）'],rows:part.rows.map(r=>[r.month,r.opening,r.due,r.mature?r.renewed:'—',text(r.renewal),r.lostDuring,text(r.loss),r.cancelled,text(r.cancel),new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)]),note:'全部为独立月份合成频数，归属按月初冻结；不提供跨月用户身份，不相加为年度独立人数。续订、流失与取消分母不同；取消与流失可重叠，恢复后仍记发生过流失。'};
 }
+function renewalContextTable(spec) {
+  if(spec.title!=='转化与续费环节')return spec;
+  const part=renewalProjection(),r=part.current,rate=r?.renewal,flow=metric(21);
+  const period=r?`${r.month}到期人群，观察至${new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)}（UTC）`:'月度到期续订待核验，未沿用原周度样例';
+  return {...spec,rows:spec.rows.map(row=>{
+    if(row[0]==='到期续订')return [`月度到期续订${r?`（${r.month}）`:''}`,
+      rate?.numerator??'—',rate?.denominator??'—',rate?.kind==='rate'?percent(rate.value):part.reason??rate?.reason??'待核验'];
+    if(row[0]==='期初有效订阅退出')return ['本期权益退出（#21）',flow.kind==='group'?flow.value.lost:'—',
+      flow.kind==='group'?flow.value.opening:'—',flow.kind==='group'&&flow.value.opening>=30?percent(flow.value.lost/flow.value.opening):'无可靠比例'];
+    return row;
+  }),note:`到期续订：${period}；其余环节各按自身批次。权益退出仍为${sourceData.snapshot.asOf.slice(0,7)}-01—${sourceData.snapshot.asOf}订阅流转（#21），不等于同月到期未续订，也不等于离开产品。`};
+}
 function renewalEvidence(panel,appendPair) {
   const part=renewalProjection();if(part.reason){const warning=element('p','na-note',part.reason);warning.dataset.evidenceKind='change';panel.append(warning);return;}
   if(metric(23).kind==='na'&&metric(23).availability!=='pending'&&part.current.opening===0){const warning=element('p','na-note',metric(23).reason);warning.dataset.evidenceKind='change';panel.append(warning);}
@@ -5500,7 +5512,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(explorer.node);
     }
     const grids=element('div','evidence-grid');
-    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):spec));});
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):spec));});
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));
