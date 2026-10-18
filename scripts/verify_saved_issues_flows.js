@@ -1,6 +1,6 @@
 // Cross-page discovery of actual saved records; original keys, baselines and drafts survive.
 async(parent)=>{
-  const base=new URL('.',parent.url()).href,states=[];
+  const base=new URL('.',parent.url()).href,states=[],rapidNavigation=[];
   const context=await parent.context().browser().newContext({viewport:{width:1600,height:900},locale:'zh-CN',reducedMotion:'reduce'});
   const p=await context.newPage(),errors=[],dialogs=[];
   const check=(ok,message)=>{if(!ok)throw new Error(message);};
@@ -18,7 +18,8 @@ async(parent)=>{
   const saved=[];
   try {
     await open('');await trigger().focus();await p.keyboard.press('Enter');
-    check((await dialog().innerText()).includes('还没有已保存的问题单'),'Empty state gives no next step');
+    const emptyText=await dialog().innerText();
+    check(emptyText.includes('还没有已保存的问题单'),`Empty state gives no next step: ${JSON.stringify({text:emptyText,stored:await stored()})}`);
     await p.keyboard.press('Control+k');
     check(await dialog().isVisible()&&!await p.locator('#metric-search').isVisible(),'Metric shortcut opens a second modal above the issue list');
     await p.keyboard.press('Escape');check(await trigger().evaluate(n=>document.activeElement===n),'Escape loses original trigger');
@@ -61,6 +62,56 @@ async(parent)=>{
       check(state.focus==='owner','Opened issue has no keyboard destination');
       check(await stored()===original,'Opening a saved record changes persisted data');states.push({key,...state});
     }
+    const rapidRecord=saved.find(([,r])=>r.page==='D'&&r.filters.country==='US')[1];
+    for(const motion of ['reduce','no-preference'])for(const width of [1366,1600,1920]) {
+      await p.emulateMedia({reducedMotion:motion});await p.setViewportSize({width,height:900});await p.reload();await ready();
+      for(const next of ['', 'A','B','C','E','F','G','metric-search','saved-issues','filter','metric-search-close']) {
+        await open('A');await list();await query().fill(rapidRecord.issueId);
+        const sample=await p.evaluate(next=>{
+          const snapshot=()=>({hash:location.hash,top:scrollY,focus:document.activeElement.id||document.activeElement.name,
+            announcement:document.querySelector('#announcement').textContent,
+            modal:document.querySelector('dialog:modal')?.id??null});
+          // Deliver two UI actions before the next paint to expose stale deferred work.
+          document.querySelector('.saved-issue-open').click();
+          if(next==='metric-search')document.querySelector('#open-metric-search').click();
+          else if(next==='metric-search-close') {
+            document.querySelector('#open-metric-search').click();document.querySelector('#metric-search').close();
+          }
+          else if(next==='saved-issues')document.querySelector('#open-saved-issues').click();
+          else if(next==='filter') {
+            document.querySelector('.filter-bar').open=true;
+            const select=document.querySelector('.filter-field select[name="country"]');
+            select.value='UK';select.dispatchEvent(new Event('change',{bubbles:true}));
+          } else document.querySelector(`.sidebar-nav .nav-link[data-page="${next}"]`).click();
+          const immediate=snapshot(),frames=[];
+          return new Promise(resolve=>{
+            const paint=()=>{frames.push(snapshot());if(frames.length<3)requestAnimationFrame(paint);else resolve({immediate,frames});};
+            requestAnimationFrame(paint);
+          });
+        },next);
+        const final=sample.frames.at(-1);
+        check(sample.frames.every(frame=>frame.hash===sample.immediate.hash&&Math.abs(frame.top-sample.immediate.top)<1.5),
+          `Old issue navigation moves the newer view: ${width} ${next} ${JSON.stringify(sample)}`);
+        check(sample.frames.every(frame=>frame.focus===sample.immediate.focus&&frame.announcement===sample.immediate.announcement),
+          `Old issue navigation steals focus or announces a stale scope: ${JSON.stringify(sample)}`);
+        if(next==='metric-search'||next==='saved-issues') {
+          check(final.modal===next,'New modal was displaced by the previous record opening');
+          await p.keyboard.press('Escape');await settle();
+          check(Math.abs(await p.evaluate(()=>scrollY)-final.top)<1.5,'Closing the new modal exposes a moved background');
+        } else if(next==='filter') {
+          check(final.hash.includes('country=UK')&&final.focus==='country','New filter loses its scope or focus');
+        } else if(next==='metric-search-close') {
+          check(!final.modal&&final.focus==='open-metric-search','Closing the new modal loses its own return focus');
+        } else {
+          check(final.hash.startsWith(`#/${next}?`)&&Math.abs(final.top)<1.5,
+            `Sidebar does not keep its requested page entry: ${JSON.stringify(sample)}`);
+        }
+        check(await stored()===original,'Rapid navigation writes the historical issue');
+        rapidNavigation.push({motion,width,next,...sample});
+        if(width===1600&&next==='E')await p.screenshot({path:`output/playwright/v110-${parent.context().browser().browserType().name()}-${motion}-following-page.png`});
+      }
+    }
+    await p.emulateMedia({reducedMotion:'reduce'});
     const [sourceKey,sourceRecord]=saved.find(([,r])=>r.page==='A'&&!Object.keys(r.filters).length);
     const [targetKey,targetRecord]=saved.find(([,r])=>r.page==='D'&&r.filters.country==='US');
     await open(`A?metric=13&issue=13`);await p.locator('[name="note"]').fill('A页尚未保存的跨页草稿');
@@ -143,8 +194,16 @@ async(parent)=>{
     check(await p.evaluate(view=>scrollX===view.left&&scrollY===view.top,reading),'Closing the list moves the underlying reading position');
     check(await stored()===beforeReadOnly,'Read-only inspection modifies old data');
     check(!errors.length,errors.join('; '));
-    return {status:'PASS',records:states,dialogs,checks:['empty and unmatched search','ten real saves across A–G and multiple scopes','exact filter replacement and original IDs/baselines',
+    return {status:'PASS',records:states,rapidNavigation,dialogs,checks:['empty and unmatched search','ten real saves across A–G and multiple scopes','exact filter replacement and original IDs/baselines',
+      'sixty-six rapid sidebar, modal and filter actions preserve the newest view, focus and announcement with both motion preferences',
       'cross-page source/target drafts and back/forward','six unsupported legacy records remain read-only','separate action marks excluded',
       'four desktop widths at 100/150/200% text','scrolling retains close action','keyboard open/Tab/Escape and focus restoration','no stacked metric-search shortcut','unchanged stored JSON on inspection']};
+  }catch(error){
+    const state=await p.evaluate(()=>({hash:location.hash,focus:document.activeElement.id||document.activeElement.name,
+      modal:document.querySelector('dialog:modal')?.id,content:document.querySelector('#saved-issues')?.innerText,
+      stored:localStorage.getItem('parallens-demo-actions-v1')}));
+    try{await p.screenshot({path:`output/playwright/v110-${parent.context().browser().browserType().name()}-saved-failure.png`,timeout:5000});}
+    catch(captureError){state.captureFailure=captureError.message;}
+    throw Error(`${error.message}; state=${JSON.stringify(state)}`);
   }finally{await context.close();}
 }

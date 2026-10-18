@@ -201,7 +201,9 @@ function renderSavedIssues() {
         const current=savedIssueTarget(key,simulatedActionState[key]);
         if(!current.href){renderSavedIssues();return;}
         document.querySelector('#saved-issues').close('record');pushRoute(current.href);renderRoute();
+        const entry=currentReadingEntry;
         requestAnimationFrame(()=>{
+          if(entry!==currentReadingEntry||location.hash!==current.href||document.activeElement!==main||document.querySelector('dialog:modal'))return;
           main.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
           main.querySelector('.action-record [name="owner"]')?.focus({preventScroll:true});
           document.querySelector('#announcement').textContent=`已打开${title}的原范围问题单；登记基线和会话草稿保留。`;
@@ -3877,7 +3879,13 @@ function renderRoute({preserveScroll=false}={}) {
   });
   updateScrollableTables();
   if(!preserveScroll)main.focus({preventScroll:true});
-  if(metricId&&route&&!preserveScroll) requestAnimationFrame(()=>document.querySelector(`#metric-evidence-${metricId}`)?.scrollIntoView({block:'start'}));
+  if(metricId&&route&&!preserveScroll) {
+    const entry=currentReadingEntry,hash=location.hash;
+    requestAnimationFrame(()=>{
+      if(entry!==currentReadingEntry||hash!==location.hash||document.activeElement!==main||document.querySelector('dialog:modal'))return;
+      document.querySelector(`#metric-evidence-${metricId}`)?.scrollIntoView({block:'start'});
+    });
+  }
   else if(!preserveScroll)scrollTo({top:0,behavior:'instant'});
   requestAnimationFrame(updateSectionNavigation);
   document.querySelector('#announcement').textContent=filterErrors.length?'筛选条件无效，经营数据暂停展示。请修正或主动清除。':route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
