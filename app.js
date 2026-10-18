@@ -4519,7 +4519,11 @@ function filteredFinding(page,requestedId) {
     return {id:29,text:`按${optionLabel('season',filterState.season)}${m(29).thresholdDays}天规则，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。这是判定阈值变化，不是切换季节人群。`};
   if(page==='B'&&isTarget(25)&&m(25).kind==='group') {
     const v=m(25).value;
-    return {id:25,text:`当前DAU ${number(v.DAU)}、WAU ${number(v.WAU)}、MAU ${number(v.MAU)}${changeText(recentChange(4),0)}；DAU/MAU 为 ${(v.DAU/v.MAU*100).toFixed(1)}%。三个时间窗人数不可相加。`};
+    const history=metricHistory(4),matches=m(4).kind==='count'&&m(4).value===v.MAU&&history?.values.at(-1)===v.MAU;
+    const change=matches?recentChange(4):null;
+    const movement=change?`滚动30天复合MAU：${changeText(change,0).slice(1)}。`:
+      '当前MAU与可比趋势尚未核对一致，暂不生成变化判断。';
+    return {id:25,rule:'activity-summary-2026-10-18-v1',text:`复合活跃：日活 ${number(v.DAU)} 人、滚动7日 ${number(v.WAU)} 人、滚动30日 ${number(v.MAU)} 人。${movement}App滚动30日活跃 ${number(v.appMAU)} 人，是复合活跃的子集。当前DAU/MAU为 ${(v.DAU/v.MAU*100).toFixed(1)}%，是窗口规模比，不是留存率。日活、7日活跃的历史待补，不将MAU变化当作它们的变化；三个窗口人数不可相加。`};
   }
   if(page==='B'&&isTarget(29)&&m(29).kind==='rate')
     return {id:29,text:`按当前${m(29).thresholdDays}天阈值，${number(m(29).numerator)}/${number(m(29).denominator)}名可观察主账号未使用（${percent(m(29).value)}）。迁徙季与淡季规则不可当作两个互斥人群相加。`};
@@ -4739,7 +4743,7 @@ function diagnosticFinding(page,id,observation,{current=true}={}) {
     if(observation.comparison)basis.append(findingCalculation(observation.comparison));
     if(observation.incomeChange)basis.append(subscriptionIncomeCalculation(observation.incomeChange));
     basis.append(element('p','finding-meta',
-      `演示文案规则 ${findingRuleVersion} · 证据指标 ${name} · ${observation.incomeChange?.source??observation.comparison?.source??(id===54?'事件及ID映射合成汇总':findingSource(id))}。不作因果归因。`));
+      `演示文案规则 ${observation.rule??findingRuleVersion} · 证据指标 ${name} · ${observation.incomeChange?.source??observation.comparison?.source??(id===54?'事件及ID映射合成汇总':findingSource(id))}。不作因果归因。`));
     finding.append(basis);
   } else {
     const facts=metricInspector(id,page);
@@ -5240,7 +5244,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
     if(id===21){const flow=netAddComparison();if(flow)card.append(flow);}
     if(metric(id).kind==='na')card.append(element('p','metric-na-reason',metric(id).reason));
     else if(!trend&&id!==21)card.append(element('p','metric-compare-unavailable',
-      id===46?'无可比历史':metric(id).kind==='group'?'当前结构 · 无可比历史':
+      id===46?'无可比历史':id===25?'日活／7日活跃历史待补；MAU见证据':metric(id).kind==='group'?'当前结构 · 无可比历史':
         selectedFilters().length?'筛后无可比历史':'当前快照 · 无可比历史'));
     hero.append(card);
   });
