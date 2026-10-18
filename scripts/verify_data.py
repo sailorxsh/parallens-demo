@@ -265,8 +265,7 @@ check("D5-business-reconciliation", diagnostics["B"]["chart"]["series"][0]["valu
 months = diagnostics["E"]["tables"][1]["rows"]
 check("D7-arppu", len(diagnostics["E"]["extraCharts"]) >= 1 and
       diagnostics["E"]["chart"]["labels"] == diagnostics["E"]["extraCharts"][0]["labels"] and
-      all(int(row[2].replace("$","").replace(",","")) / row[1] ==
-          float(row[3].replace("$","")) for row in months) and
+      all(f"${int(row[2].replace('$','').replace(',','')) / row[1]:.2f}" == row[3] for row in months) and
       diagnostics["E"]["extraCharts"][0]["series"][0]["values"][-1] == metrics["m35"]["value"]["ARPPU"],
       "付费人数与ARPPU使用相同完整月份轴，收入可回算，不使用双Y轴")
 activation_30d = metrics["m12"]["value"]["D30"]
@@ -470,6 +469,25 @@ for cohort in device_activity['returnCohorts']:
                    sum(r['returned'] for r in cohort['records']) == cohort['returnedDevices'])
 check('D21-independent-device-return', returns_ok,
       '设备回流有独立历史入组、完整7天观察日期及同范围分母，不用当前未使用池计算')
+
+# Canonical full-month source; chart arrays and the table must use exactly these rows.
+payment = diagnostics['E']['paymentMonths']
+months = [f'{year}-{month:02d}' for year, month in [(2025,9),(2025,10),(2025,11),(2025,12),*[(2026,m) for m in range(1,9)]]]
+payment_rows = payment['rows']
+payment_arppu = [r['netIncome']/r['payers'] for r in payment_rows]
+payment_table = next(t for t in diagnostics['E']['tables'] if t['title']=='完整月付款与人均收入')
+check('D22-complete-payment-months', payment['version']=='synthetic-payment-months-v1' and
+      payment['asOf']==snapshot['asOf'] and [r['month'] for r in payment_rows]==months and
+      all(type(r['payers']) is int and r['payers']>0 and type(r['netIncome']) is int and r['netIncome']>=0 and
+          r['provenance']==('constructed-simulation' if i<9 else 'existing-demo-summary') for i,r in enumerate(payment_rows)) and
+      [[r['payers'],r['netIncome']] for r in payment_rows[-3:]]==[[9600,48000],[9800,49980],[10000,52000]] and
+      diagnostics['E']['chart']['labels']==diagnostics['E']['extraCharts'][0]['labels']==months and
+      diagnostics['E']['chart']['series'][0]['values']==[r['payers'] for r in payment_rows] and
+      diagnostics['E']['extraCharts'][0]['series'][0]['values']==payment_arppu and
+      payment_table['rows']==[[r['month'],r['payers'],f"${r['netIncome']:,}",f"${r['netIncome']/r['payers']:.2f}"] for r in payment_rows] and
+      [payment_rows[-1]['payers'],payment_rows[-1]['netIncome'],payment_arppu[-1]]==
+      [metrics['m35']['value']['monthlySubscriptionPayers'],metrics['m35']['value']['subscriptionNetIncome'],metrics['m35']['value']['ARPPU']],
+      '12个连续完整自然月、合成来源及原6–8月锚点一致；人数、净收入、ARPPU及两图/完整表闭合')
 
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

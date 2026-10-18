@@ -14,7 +14,7 @@ scratch = Path(tempfile.mkdtemp(prefix="parallens-event-generation-"))
 shutil.copytree(PROTOTYPE / "data", scratch / "prototype" / "data")
 book = "用户与设备经营看板-修订数据底表.xlsx"
 shutil.copy2(ROOT / "revised" / book, scratch / "revised" / book)
-for name in ["generate_data.py", "generate_filter_policy.py", "generate_device_activity.py", "generate_metric_trends.py"]:
+for name in ["generate_data.py", "generate_filter_policy.py", "generate_device_activity.py", "generate_metric_trends.py", "generate_payment_months.py"]:
     shutil.copy2(PROTOTYPE / "scripts" / name, scratch / "prototype" / "scripts" / name)
 
 read = lambda folder, name: json.loads((folder / name).read_text())
@@ -29,6 +29,8 @@ for name, content in protected.items():
 subprocess.run([sys.executable, str(scratch / "prototype" / "scripts" / "generate_filter_policy.py")], check=True, capture_output=True)
 subprocess.run([sys.executable, str(scratch / "prototype" / "scripts" / "generate_device_activity.py")], check=True, capture_output=True)
 subprocess.run([sys.executable, str(scratch / "prototype" / "scripts" / "generate_metric_trends.py")], check=True, capture_output=True)
+subprocess.run([sys.executable, str(scratch / "prototype" / "scripts" / "generate_payment_months.py")], check=True, capture_output=True)
+assert read(data, "diagnostics.json") == read(PROTOTYPE / "data", "diagnostics.json"), "Monthly source/presentation do not rebuild deterministically"
 for key in ['m41', 'm44']:
     assert read(data, 'metric-trends.json')[key] == read(PROTOTYPE / 'data', 'metric-trends.json')[key], f"Rebuilding changed approved device window history {key}"
 assert read(data, 'device-activity-facts.json') == read(PROTOTYPE / 'data', 'device-activity-facts.json'), 'Device age source does not rebuild deterministically'
@@ -45,5 +47,5 @@ for week in read(data, "weekly.json"):
     k6 = next(row for row in events["records"] if row["model"] == "K6" and row["firmware"] == "2.8")
     assert k6["empty"] == events["k6Firmware28"]["empty"]
     assert k6["triggers"] == events["k6Firmware28"]["triggers"]
-print("PASS 10 base/policy artifacts plus device-age source and two window histories match reviewed data; 12 weekly event facts and filter capability rebuild correctly; catalog, contract and diagnostics preserved")
+print("PASS 10 base/policy artifacts plus 12 monthly aggregates, device-age source and two window histories match reviewed data; 12 weekly event facts and filter capability rebuild correctly; catalog, contract and diagnostics preserved")
 print(f"Temporary output: {scratch}")

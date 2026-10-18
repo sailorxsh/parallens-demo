@@ -1,6 +1,6 @@
 {
-  "passed": 43,
-  "total": 43,
+  "passed": 44,
+  "total": 44,
   "checks": [
     {
       "rule": "catalog",
@@ -216,6 +216,11 @@
       "rule": "D21-independent-device-return",
       "passed": true,
       "detail": "设备回流有独立历史入组、完整7天观察日期及同范围分母，不用当前未使用池计算"
+    },
+    {
+      "rule": "D22-complete-payment-months",
+      "passed": true,
+      "detail": "12个连续完整自然月、合成来源及原6–8月锚点一致；人数、净收入、ARPPU及两图/完整表闭合"
     }
   ]
 }

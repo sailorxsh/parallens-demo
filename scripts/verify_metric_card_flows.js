@@ -82,7 +82,7 @@ async (page) => {
     await inspect('E');
     check(await card(35).locator('.detail-select').innerText()==='$5.20/人','ARPPU is presented without a per-payer unit');
     check((await card(35).locator('.metric-secondary-values').innerText()).includes('10,000人'),'Monthly subscription payers were hidden');
-    check((await card(35).locator('.metric-value-context').innerText()).startsWith('8月'),'ARPPU comparison month is missing');
+    check((await card(35).locator('.metric-value-context').innerText()).startsWith('2026-08'),'ARPPU comparison month is missing');
     await card(35).locator('.detail-select').click();
     check((await p.locator('.metric-inspector').innerText()).includes('月内订阅付款主账号\n10,000人'),'Inspector and payment card disagree');
     await inspect('E','country=US');

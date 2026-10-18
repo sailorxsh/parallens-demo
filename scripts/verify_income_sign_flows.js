@@ -24,8 +24,9 @@ async(parent)=>{
   await p.route('**/data/metric-values.json',r=>{const data=structuredClone(metrics),v=data.m35.value;
    v.subscriptionNetIncome=fixture.after[0];v.monthlySubscriptionPayers=fixture.after[1];v.ARPPU=fixture.after[0]/fixture.after[1];return r.fulfill({json:data});});
   await p.route('**/data/diagnostics.json',r=>{const data=structuredClone(diagnostics);
-   data.E.chart.series[0].values[1]=fixture.before[1];data.E.chart.series[0].values[2]=fixture.after[1];
-   data.E.extraCharts[0].series[0].values[1]=fixture.before[0]/fixture.before[1];data.E.extraCharts[0].series[0].values[2]=fixture.after[0]/fixture.after[1];return r.fulfill({json:data});});
+   const rows=data.E.paymentMonths.rows;
+   Object.assign(rows.at(-2),{netIncome:fixture.before[0],payers:fixture.before[1]});
+   Object.assign(rows.at(-1),{netIncome:fixture.after[0],payers:fixture.after[1]});return r.fulfill({json:data});});
   for(const [width,size] of [[1366,16],[1600,16],[1920,16],[1366,32]]){
    await p.setViewportSize({width,height:1000});
    for(fixture of cases){

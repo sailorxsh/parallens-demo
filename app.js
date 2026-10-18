@@ -218,6 +218,7 @@ function renderSavedIssues() {
 }
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
+  if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
   const history=metricHistory(id),last=history?.labels.at(-1);
   if([41,44].includes(id))return `快照 ${sourceData.snapshot.asOf} · 设备行为口径v1 · ${id===41?'近30天活跃':`${metric(id).thresholdDays}天未使用`}`;
   if(last&&/^W\d+$/.test(last)) {
@@ -1309,6 +1310,52 @@ function trendValues(id) {
     return value.kind==='rate'?value.value*100:value.value;
   });
 }
+function monthOrdinal(value) {
+  const match=typeof value==='string'&&/^([1-9]\d{3})-(0[1-9]|1[0-2])$/.exec(value);
+  return match?Number(match[1])*12+Number(match[2])-1:null;
+}
+function ordinalMonth(value) {return `${Math.floor(value/12)}-${String(value%12+1).padStart(2,'0')}`;}
+function currentPaymentMonth() {
+  const asOf=sourceData.snapshot.asOf,ordinal=monthOrdinal(asOf?.slice(0,7));
+  return baselineWindowEnd(`快照 ${asOf}`)&&ordinal!==null?ordinalMonth(ordinal-1):null;
+}
+function paymentMonthRows() {
+  const source=sourceData.diagnostics.E.paymentMonths,current=currentPaymentMonth();
+  const invalid=()=>({reason:'完整月付款历史缺失、月份不连续或人数／收入未闭合；当前单月值保留，暂停历史与收入变化比较。'});
+  if(!source||source.version!=='synthetic-payment-months-v1'||source.asOf!==sourceData.snapshot.asOf||
+    !current||!Array.isArray(source.rows)||source.rows.length!==12)return invalid();
+  const last=monthOrdinal(current);
+  for(const [i,row] of source.rows.entries())if(!row||monthOrdinal(row.month)!==last-11+i||
+    !Number.isSafeInteger(row.payers)||row.payers<0||!Number.isSafeInteger(row.netIncome)||row.netIncome<0||
+    row.payers===0&&row.netIncome!==0||!['constructed-simulation','existing-demo-summary'].includes(row.provenance))return invalid();
+  const point=source.rows.at(-1),raw=sourceData.metrics.m35.value;
+  if(point.payers!==raw.monthlySubscriptionPayers||point.netIncome!==raw.subscriptionNetIncome||
+    point.payers<=0||!Number.isFinite(raw.ARPPU)||Math.abs(point.netIncome/point.payers-raw.ARPPU)>1e-9)return invalid();
+  return {rows:source.rows,note:source.note};
+}
+function paymentMonthProjection(state=filterState) {
+  const source=paymentMonthRows();if(source.reason)return source;
+  const filters=effectiveFor(35,state);
+  if(filters.some(([key])=>!policyFor(35).demonstrableDimensions.includes(key)))return {reason:'当前范围缺少完整月付款明细。'};
+  const shares=sharesFor(filters,35);
+  const rows=source.rows.map(row=>{
+    const denominator=allocatedCount(row.payers,filters,35,'denominator',shares),numerator=allocatedCount(row.netIncome,filters,35,'numerator',shares);
+    return {month:row.month,denominator,numerator,value:denominator>=30?numerator/denominator:null,
+      ...(denominator<30?{reason:denominator?'样本不足（少于30人）':'该月无付款样本'}:{})};
+  });
+  return {rows,note:`${source.note}${filters.length?' 当前筛选历史按原型既有独立分片估算，不是实测交叉分组。':''}`};
+}
+function paymentMonthTable() {
+  const source=paymentMonthProjection();
+  return source.reason?{title:'完整月付款历史 · 待核验',columns:['状态'],rows:[[source.reason]]}:
+    {title:'完整月付款与人均收入 · 12个月',columns:['完整自然月','订阅付款主账号（人）','订阅净收入（美元）','ARPPU（美元/人）'],
+      rows:source.rows.map(row=>[row.month,number(row.denominator),`$${number(row.numerator)}`,row.value===null?row.reason:`$${row.value.toFixed(2)}`]),note:source.note};
+}
+function savedMonthLabel(period) {
+  return monthOrdinal(period)!==null?`完整月 ${period.slice(0,4)}年${Number(period.slice(5))}月`:
+    `完整月 ${sourceData.snapshot.asOf.slice(0,4)}年${period}`;
+}
+
 const headlineTrendIds=new Set([2,3,4,9,10,11,13,15,17,18,23,24,27,34,35,41,42,44,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
@@ -1327,21 +1374,10 @@ function metricHistory(id) {
       note:'每7天一个UTC零时快照；按同一合成设备台账重算绑定超过72小时且截至当时未产首图的设备，筛选后历史与当前清单同源。型号、国家及有效状态在样本中固定，非真实运营数据。'};
   }
   if(id===35) {
-    const counts=sourceData.diagnostics.E.chart.series[0].values;
-    const arppus=sourceData.diagnostics.E.extraCharts[0].series[0].values;
-    const filters=effectiveFor(id);
-    if(filters.some(([key])=>!policyFor(id).demonstrableDimensions.includes(key)))return null;
-    const shares=sharesFor(filters,id);
-    const values=counts.map((count,index)=>{
-      const payers=allocatedCount(count,filters,id,'denominator',shares);
-      const revenue=allocatedCount(Math.round(count*arppus[index]),filters,id,'numerator',shares);
-      return payers>=30?revenue/payers:null;
-    });
-    values[values.length-1]=metric(id).value.ARPPU;
-    const details=counts.map((count,index)=>({numerator:allocatedCount(Math.round(count*arppus[index]),filters,id,'numerator',shares),
-      denominator:allocatedCount(count,filters,id,'denominator',shares),basisLabel:'订阅净收入 / 付款主账号',numeratorUnit:'美元',denominatorUnit:'人'}));
-    return {labels:['6月','7月','8月'],values,details,unit:'美元/人',title:'订阅ARPPU',
-      note:`按同月订阅净收入÷月内付款主账号重算；月份为完整自然月。${filters.length?'筛后历史为模拟分片估算。':''}`};
+    const source=paymentMonthProjection();if(source.reason)return null;
+    return {labels:source.rows.map(row=>row.month),values:source.rows.map(row=>row.value),
+      details:source.rows.map(row=>({...row,basisLabel:'订阅净收入 / 付款主账号',numeratorUnit:'美元',denominatorUnit:'人'})),
+      unit:'美元/人',title:'订阅ARPPU',note:source.note};
   }
   const history=sourceData.metricTrends?.[`m${String(id).padStart(2,'0')}`];
   const labels=history?.labels??sourceData.weekly.map(w=>`W${w.week}`);
@@ -1403,15 +1439,11 @@ function weeklyRateComparison(id,split=id===18?9:8,respectWeek=true) {
     source:estimated?'模拟分片估算':id===18?'合成试用明细汇总':id===42?'周×型号×固件合成触发汇总':'合成周度注册批次'};
 }
 function paidPayersHistory() {
-  const id=35,filters=effectiveFor(id),value=metric(id);
-  if(value.kind!=='group'||filters.some(([key])=>!policyFor(id).demonstrableDimensions.includes(key)))return null;
-  const shares=sharesFor(filters,id);
-  const counts=sourceData.diagnostics.E.chart.series[0].values;
-  const values=counts.map(count=>allocatedCount(count,filters,id,'denominator',shares));
-  values[values.length-1]=value.value.monthlySubscriptionPayers;
-  return {labels:['6月','7月','8月'],values,unit:'人',title:'月内订阅付款主账号',
-    note:`完整自然月去重付款人数；与期末有效订阅人数不同。${filters.length?'筛后历史按模拟分片估算。':''}`};
+  if(metric(35).kind!=='group')return null;
+  const source=paymentMonthProjection();if(source.reason)return null;
+  return {labels:source.rows.map(row=>row.month),values:source.rows.map(row=>row.denominator),unit:'人',title:'月内订阅付款主账号',note:source.note};
 }
+
 function subscriptionIncomeChange(history=metricHistory(35)) {
   if(!history||history.details.length<2)return null;
   const [before,after]=history.details.slice(-2);
@@ -1422,7 +1454,9 @@ function subscriptionIncomeChange(history=metricHistory(35)) {
   const payersContribution=Math.round((after.denominator-before.denominator)*(beforeARPPU+afterARPPU)/2*100)/100;
   const arppuContribution=Math.round((delta-payersContribution)*100)/100;
   return {before,after,beforeARPPU,afterARPPU,delta,payersContribution,arppuContribution,
-    beforeLabel:history.labels.at(-2),afterLabel:history.labels.at(-1),
+    beforePeriod:history.labels.at(-2),afterPeriod:history.labels.at(-1),
+    beforeLabel:monthOrdinal(history.labels.at(-2))!==null?`${Number(history.labels.at(-2).slice(5))}月`:history.labels.at(-2),
+    afterLabel:monthOrdinal(history.labels.at(-1))!==null?`${Number(history.labels.at(-1).slice(5))}月`:history.labels.at(-1),
     source:effectiveFor(35).length?'模拟分片估算':'完整月演示汇总'};
 }
 function subscriptionIncomeSpec(change) {
@@ -2111,7 +2145,7 @@ function createTrendTable() {
   table.append(body); wrap.append(table); return wrap;
 }
 function isTimelineSpec(spec) {
-  return spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label));
+  return spec.labels.every(label=>/^W\d+$/.test(label)||/^\d+月$/.test(label)||/^\d+\/\d+$/.test(label)||monthOrdinal(label)!==null);
 }
 function chartNiceStep(roughStep) {
   const magnitude=10**Math.floor(Math.log10(roughStep)),relative=roughStep/magnitude;
@@ -2526,7 +2560,7 @@ function diagnosticChartFacts(page,spec) {
 function chartTable(spec) {
   const rows=spec.labels.map((label,index)=>[periodLabel(label),...spec.series.map(line=>{
     const value=line.values[index];
-    if(value===null||value===undefined||!Number.isFinite(Number(value)))return '不适用';
+    if(value===null||value===undefined||!Number.isFinite(Number(value)))return line.details?.[index]?.reason??spec.details?.[index]?.reason??'不适用';
     return chartValue(value,spec.unit);
   })]);
   let columns=['周期 / 分组',...spec.series.map(s=>s.name)];
@@ -3276,6 +3310,8 @@ function metricEvidence(id,page) {
     const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
     panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
   } else if(id===35&&value.kind==='group') {
+    const monthlyTable=dataTable(paymentMonthTable(),'payment-month-table');monthlyTable.dataset.evidenceKind='data';panel.append(monthlyTable);
+    const monthly=paymentMonthRows();if(monthly.reason){const warning=element('p','na-note payment-history-unavailable',monthly.reason);warning.dataset.evidenceKind='change';panel.append(warning);}
     const incomeChange=subscriptionIncomeChange();
     if(incomeChange)appendEvidencePair(subscriptionIncomeSpec(incomeChange),subscriptionIncomeCalculationSpec(incomeChange),'change');
     const dimension=selectedFilters().map(([key])=>key).find(key=>key!=='week'&&contract.dimensions.includes(key)&&sourceData.slices[key])
@@ -3446,7 +3482,7 @@ function currentComparisonEvidence(id) {
   if(id===35) {
     const change=subscriptionIncomeChange();if(!change)return null;
     return {...base,kind:'income',source:change.source,
-      periods:[change.before,change.after].map((part,index)=>({label:`完整月 ${base.asOf.slice(0,4)}年${index?change.afterLabel:change.beforeLabel}`,
+      periods:[change.before,change.after].map((part,index)=>({label:savedMonthLabel(index?change.afterPeriod:change.beforePeriod),
         numerator:part.numerator,denominator:part.denominator})),
       contributions:[{name:'付款人数变化',value:change.payersContribution},{name:'ARPPU变化',value:change.arppuContribution}]};
   }
@@ -4204,10 +4240,10 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     const histories=[paidPayersHistory(),metricHistory(35)].filter(Boolean);
     if(histories.length) {
       const trends=element('details','workspace-context monthly-comparison');
-      trends.append(element('summary','','查看付款人数与ARPPU趋势'));
+      trends.append(element('summary','','查看12个月付款人数与ARPPU趋势'));
       trends.append(element('p','table-note','按同一完整自然月对照：付款人数（人）与订阅ARPPU（美元/人）。两图纵轴独立取值，不能直接比较线条高低或斜率。'));
       const pair=element('div','monthly-trend-pair');
-      for(const history of histories)addChart(pair,{title:`${history.title} · 最近3个完整月`,unit:history.unit,
+      for(const history of histories)addChart(pair,{title:`${history.title} · 最近${history.labels.length}个完整月`,unit:history.unit,
         labels:history.labels,details:history.details,series:[{name:history.title,values:history.values}],note:history.note});
       trends.append(pair);
       panels.get('change').append(trends);
@@ -4225,7 +4261,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
         context.addEventListener('toggle',()=>{if(context.open&&!explorer.node.dataset.initialized){explorer.init();explorer.node.dataset.initialized='true';}});
       }
       const tables=element('details','workspace-context');tables.append(element('summary','','查看付费专题其他完整数据'));
-      info.tables.forEach(spec=>tables.append(dataTable(spec)));panels.get('data').append(tables);
+      info.tables.filter(spec=>!(selectedMetric===35&&spec.title==='完整月付款与人均收入')).forEach(spec=>tables.append(dataTable(spec.title==='完整月付款与人均收入'?paymentMonthTable():spec)));panels.get('data').append(tables);
     }
     if(context.children.length>1)panels.get('groups').append(context);
   }

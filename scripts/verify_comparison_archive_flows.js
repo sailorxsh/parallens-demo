@@ -14,8 +14,7 @@ async(parent)=>{
  const fresh=async id=>{await p.goto('about:blank');await p.goto(base);await p.evaluate(()=>localStorage.clear());await p.goto('about:blank');await open(id);};
  const sum=(rows,key)=>rows.reduce((n,r)=>n+r[key],0);
  const expected=id=>{
-  if(id===35){const counts=diagnostics.E.chart.series[0].values,arppu=diagnostics.E.extraCharts[0].series[0].values;
-   return [1,2].map(i=>[Math.round(counts[i]*arppu[i]),counts[i]]);}
+  if(id===35)return diagnostics.E.paymentMonths.rows.slice(-2).map(r=>[r.netIncome,r.payers]);
   const sets=id===18?['previous','current'].map(period=>trial.records.filter(r=>r.period===period)):[weekly.slice(0,8),weekly.slice(8)];
   return sets.map(rows=>id===18?[rows.filter(r=>r.converted).length,rows.length]:id===13?
    [rows.reduce((n,w)=>n+w.registrationCohort.valueActivated7dBird,0),rows.reduce((n,w)=>n+w.registrationCohort.birdEligible,0)]:
@@ -46,7 +45,7 @@ async(parent)=>{
   for(const id of [13,18,35,42]){
    await fresh(id);await input('owner').fill('回填对照');await save().click();const before=await record(id),bytes=await stored();
    let path,data;
-   if(id===35){path='diagnostics';data=structuredClone(diagnostics);data.E.extraCharts[0].series[0].values[1]=4.8;}
+   if(id===35){path='diagnostics';data=structuredClone(diagnostics);data.E.paymentMonths.rows.at(-2).netIncome=47040;}
    else if(id===18){path='trial-facts';data=structuredClone(trial);let left=36;for(const row of data.records)if(left&&row.period==='previous'&&row.converted){row.converted=false;left--;}}
    else {path='weekly';data=structuredClone(weekly);data.slice(0,8).forEach(w=>{
     if(id===13)w.registrationCohort.valueActivated7dBird-=10;

@@ -21,14 +21,14 @@ async(parent)=>{
     data.m35.value.ARPPU=revenue/10000;await r.fulfill({response,json:data});
    });
    await p.route('**/data/diagnostics.json',async r=>{
-    const response=await r.fetch(),data=await response.json();data.E.chart.series[0].values[1]=priorCount;
-    data.E.extraCharts[0].series[0].values[2]=revenue/10000;
+    const response=await r.fetch(),data=await response.json();const prior=data.E.paymentMonths.rows.at(-2),latest=data.E.paymentMonths.rows.at(-1);
+    prior.payers=priorCount;if(!priorCount)prior.netIncome=0;latest.netIncome=revenue;
     await r.fulfill({response,json:data});
    });
    await p.goto(`${base}#/E?metric=35`);await ready();
    for(const [amount,label] of fixtures){
     revenue=amount;await p.reload();await ready();await card().locator('.metric-delta').waitFor();
-    const expected=label==='持平'?'8月 · 与上期持平':`8月 · ${label}（较上期）`;
+    const expected=label==='持平'?'2026-08 · 与上期持平':`2026-08 · ${label}（较上期）`;
     check(await card().locator('.metric-delta').innerText()===expected,`Wrong monetary change at ${width}: ${amount}`);
     await card().locator('.detail-select').click();
     const inspectorChange=p.locator('.metric-inspector .inspector-facts > div').filter({has:p.locator('dt', {hasText:'较上一期'})}).locator('dd');
@@ -37,7 +37,7 @@ async(parent)=>{
     const current=`$${(amount/10000).toFixed(2)}/人`;
     check(await card().locator('.detail-select').innerText()===current,'KPI does not show its actual revenue / payers');
     const aria=await card().locator('.headline-sparkline').getAttribute('aria-label');
-    check(aria.includes(`8月${current}；`)&&aria.includes(expected.slice(5)),'Trend accessible text loses cents, direction or its period');
+    check(aria.includes(`2026-08${current}；`)&&aria.includes(expected.slice('2026-08 · '.length)),'Trend accessible text loses cents, direction or its period');
     check(await p.locator('[data-driver="arppu"] .income-driver-delta').innerText()===label,'KPI and income analysis disagree on monetary direction or rounding');
     const evidence=await p.evaluate(()=>{
      const history=metricHistory(35),change=subscriptionIncomeChange(history);
@@ -46,7 +46,7 @@ async(parent)=>{
       storage:localStorage.getItem('parallens-demo-actions-v1')};
     });
     check(evidence.current.numerator===amount&&evidence.current.denominator===10000&&
-     evidence.history[1]===5.1&&evidence.history[2]===amount/10000&&evidence.delta===amount-49980&&
+     evidence.history.at(-2)===5.1&&evidence.history.at(-1)===amount/10000&&evidence.delta===amount-49980&&
      Math.abs(evidence.reconciled-evidence.delta)<.01&&evidence.month==='8月','Formatting changes source arithmetic, denominator or month');
     check(evidence.storage===null,'Viewing monetary labels creates an issue record');
     await p.getByRole('button',{name:'关键指标',exact:true}).click();
@@ -65,8 +65,8 @@ async(parent)=>{
    revenue=52000;
    for(const count of [0,29]){
     priorCount=count;await p.reload();await ready();
-    check(await card().locator('.metric-delta').innerText()==='8月 · 暂无可比值','Missing or insufficient prior payers fabricate a tie or monetary change');
-    check((await card().locator('.headline-sparkline').getAttribute('aria-label')).includes('8月$5.20/人；暂无可比值'),
+    check(await card().locator('.metric-delta').innerText()==='2026-08 · 暂无可比值','Missing or insufficient prior payers fabricate a tie or monetary change');
+    check((await card().locator('.headline-sparkline').getAttribute('aria-label')).includes('2026-08$5.20/人；暂无可比值'),
      'Unavailable comparison loses its current monetary value or lack of baseline');
     check(await p.locator('[data-driver="arppu"] .income-driver-delta').count()===0,'Unavailable baseline fabricates an income driver');
     results.push({kind:'unavailable-baseline',width,priorPayers:count});
@@ -75,7 +75,7 @@ async(parent)=>{
    for(const query of ['','country=US','country=UK','country=DE','country=Other']){
     await p.goto(`${base}#/E?metric=35${query?'&'+query:''}`);await ready();
     const current=await card().locator('.detail-select').innerText(),aria=await card().locator('.headline-sparkline').getAttribute('aria-label');
-    check(aria.includes(`8月${current}；`),'Current market loses displayed cents in its trend description');
+    check(aria.includes(`2026-08${current}；`),'Current market loses displayed cents in its trend description');
     results.push({kind:'source-market',width,query,current});
    }
   }catch(e){await p.screenshot({path:`output/playwright/v91-cents-failure-${browser.browserType().name()}-${width}.png`});throw e;}

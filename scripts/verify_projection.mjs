@@ -462,6 +462,38 @@ for(const filters of [{},{country:'US'},{country:'UK',productLine:'Bird'}]) {
     assert.ok(Math.abs(revenueHistory.values[index]-detail.numerator/detail.denominator)<.005,`ARPPU point evidence contradicts the displayed value: ${JSON.stringify(filters)}`);
 }
 project({});
+// Calendar-month evidence must not mix incomplete months, stale charts or invalid totals.
+const paymentHistory=evaluate('metricHistory(35)');
+assert.equal(paymentHistory.labels.length,12);
+assert.deepEqual(Array.from(paymentHistory.labels),fixtures.diagnostics.E.paymentMonths.rows.map(r=>r.month));
+assert.deepEqual(Array.from(paymentHistory.values.slice(-3)),[5,5.1,5.2]);
+assert.deepEqual(Array.from(evaluate('paidPayersHistory().values.slice(-3)')),[9600,9800,10000]);
+assert.equal(evaluate('actionBaselineWindow(35)'),'完整月 2026-08');
+for(const [at,expected] of [['2026-01-01','2025-12'],['2024-03-01','2024-02'],['2026-09-24','2026-08']]){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.snapshot.asOf=${JSON.stringify(at)}`);
+ assert.equal(evaluate('currentPaymentMonth()'),expected);
+}
+for(const bad of ["delete sourceData.diagnostics.E.paymentMonths", "sourceData.diagnostics.E.paymentMonths.rows.pop()",
+ "sourceData.diagnostics.E.paymentMonths.rows[0].month='2025-10'", "sourceData.diagnostics.E.paymentMonths.rows[0].month='2025-13'",
+ "sourceData.diagnostics.E.paymentMonths.rows.at(-1).month='2026-09'", "sourceData.diagnostics.E.paymentMonths.asOf='2026-09-23'",
+ "sourceData.diagnostics.E.paymentMonths.rows[0].payers=-1", "delete sourceData.diagnostics.E.paymentMonths.rows[0].netIncome",
+ "sourceData.diagnostics.E.paymentMonths.rows.at(-1).netIncome=52001", "sourceData.diagnostics.E.paymentMonths.rows[0].provenance='observed'",
+ "Object.assign(sourceData.diagnostics.E.paymentMonths.rows[0],{payers:0,netIncome:12})"]){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));${bad}`);project({});
+ assert.ok(evaluate('paymentMonthRows().reason'),`Invalid monthly source accepted: ${bad}`);
+ assert.equal(evaluate('metricHistory(35)'),null);assert.equal(evaluate('paidPayersHistory()'),null);
+ assert.equal(evaluate('subscriptionIncomeChange()'),null);assert.equal(evaluate('currentComparisonEvidence(35)'),null);
+ assert.equal(evaluate('metric(35).value.ARPPU'),5.2,'Bad history must not erase valid current month');
+ assert.equal(evaluate('actionBaselineWindow(35)'),'完整月 2026-08');
+}
+for(const payers of [0,29]){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));Object.assign(sourceData.diagnostics.E.paymentMonths.rows[0],{payers:${payers},netIncome:${payers*5}})`);project({});
+ assert.equal(evaluate('metricHistory(35).values[0]'),null,'Zero/low-sample month must be a gap, not zero ARPPU');
+ assert.equal(evaluate('paidPayersHistory().values[0]'),payers);
+ assert.ok(evaluate('metricHistory(35).details[0].reason'));
+ assert.equal(evaluate('subscriptionIncomeChange().delta'),2020,'Earlier gap must not erase valid latest comparison');
+}
+evaluate('sourceData=__fixtures');project({});
 const comparisons=evaluate('homeComparisons()');
 assert.equal(evaluate('homeStartingPoint(homeComparisons()).id'),18,
   'Verifiable segmented decline must take precedence over the larger activation delta');

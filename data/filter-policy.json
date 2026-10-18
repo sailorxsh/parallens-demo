@@ -849,7 +849,7 @@
       "id": 35,
       "page": "E",
       "entity": "用户",
-      "window": "最近完整月或指标定义中的月窗口",
+      "window": "最新完整自然月2026-08；历史为最近12个完整自然月2025-09至2026-08，不含9月未完月",
       "businessDimensions": [
         "appPlatform",
         "billingCycle",

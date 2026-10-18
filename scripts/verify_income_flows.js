@@ -116,9 +116,7 @@ async(page)=>{
     await p.route('**/data/diagnostics.json',async route=>{
       const response=await route.fetch(),json=await response.json();
       // A same-size payer cohort with a falling ARPPU must draw a negative effect.
-      json.E.chart.series[0].values[1]=10000;
-      json.E.extraCharts[0].series[0].values[1]=5.4;
-      json.E.tables[1].rows[1]=['2026-07',10000,'$54,000','$5.40'];
+      Object.assign(json.E.paymentMonths.rows.at(-2),{payers:10000,netIncome:54000});
       await route.fulfill({response,json});
     });
     await open('E?metric=35');await p.reload();await pair().locator('svg').waitFor();
@@ -142,9 +140,7 @@ async(page)=>{
     for(const [previousPayers,previousARPPU] of [[10200,5.2],[10000,5.2],[10000,5.201]]) {
       await p.route('**/data/diagnostics.json',async route=>{
         const response=await route.fetch(),json=await response.json();
-        json.E.chart.series[0].values[1]=previousPayers;
-        json.E.extraCharts[0].series[0].values[1]=previousARPPU;
-        json.E.tables[1].rows[1]=['2026-07',previousPayers,`$${previousPayers*previousARPPU}`,`$${previousARPPU.toFixed(2)}`];
+        Object.assign(json.E.paymentMonths.rows.at(-2),{payers:previousPayers,netIncome:Math.round(previousPayers*previousARPPU)});
         await route.fulfill({response,json});
       });
       await open('E?metric=35');await p.reload();await pair().locator('svg').waitFor();
