@@ -1,6 +1,6 @@
 {
-  "passed": 45,
-  "total": 45,
+  "passed": 46,
+  "total": 46,
   "checks": [
     {
       "rule": "catalog",
@@ -226,6 +226,11 @@
       "rule": "D23-onboarding-frequency-source",
       "passed": true,
       "detail": "576个互斥合成分组；成功频数与失败/未达成闭合、24个原周度总计和完整观察窗保留"
+    },
+    {
+      "rule": "D24-historical-device-boundaries",
+      "passed": true,
+      "detail": "历史留存与解绑不按当前状态剔除流失者；未提供的入组状态和批次日期明确待补，已知解绑月份与来源一致"
     }
   ]
 }

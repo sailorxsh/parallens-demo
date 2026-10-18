@@ -1,0 +1,227 @@
+{
+  "sourceCommit": "7bda8c33ff0dc9b149633869f054c3696f7709cf",
+  "classification": "Fully synthetic record captured from the actual two-month runtime in an isolated browser",
+  "records": {
+    "record:B:默认演示范围:24": {
+      "issueId": "DEMO-B-24-1GLZ1VJ",
+      "owner": "留存历史兼容验收",
+      "status": "pending",
+      "note": "旧两个月合成样例的原始登记",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 19:58:22",
+      "page": "B",
+      "evidenceId": 24,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "77.1%",
+      "baselineAt": "完整月 2026-08",
+      "reviewMetric": 24
+    }
+  },
+  "baseline": "77.1%",
+  "window": "完整月 2026-08",
+  "history": {
+    "labels": [
+      "7月",
+      "8月"
+    ],
+    "values": [
+      72,
+      77.14285714285715
+    ],
+    "details": [
+      {
+        "kind": "rate",
+        "numerator": 25200,
+        "denominator": 35000,
+        "value": 0.72
+      },
+      {
+        "kind": "rate",
+        "numerator": 27000,
+        "denominator": 35000,
+        "value": 0.7714285714285715
+      }
+    ],
+    "unit": "%",
+    "title": "月度用户留存率",
+    "note": "按完整月成熟留存批次计算；仅有两个演示月份，不外推12周。"
+  },
+  "scopes": [
+    {
+      "filters": {},
+      "current": {
+        "kind": "rate",
+        "numerator": 27000,
+        "denominator": 35000,
+        "value": 0.7714285714285715
+      }
+    },
+    {
+      "filters": {
+        "appPlatform": "iOS"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 12751,
+        "denominator": 15750,
+        "value": 0.8095873015873016
+      }
+    },
+    {
+      "filters": {
+        "appPlatform": "Android"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 14249,
+        "denominator": 19250,
+        "value": 0.7402077922077922
+      }
+    },
+    {
+      "filters": {
+        "country": "US"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 17715,
+        "denominator": 22750,
+        "value": 0.7786813186813187
+      }
+    },
+    {
+      "filters": {
+        "country": "US",
+        "appPlatform": "iOS"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 8366,
+        "denominator": 10238,
+        "value": 0.8171517874584879
+      }
+    },
+    {
+      "filters": {
+        "country": "US",
+        "appPlatform": "Android"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 9349,
+        "denominator": 12513,
+        "value": 0.7471429713098378
+      }
+    },
+    {
+      "filters": {
+        "country": "UK"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 4760,
+        "denominator": 6300,
+        "value": 0.7555555555555555
+      }
+    },
+    {
+      "filters": {
+        "country": "UK",
+        "appPlatform": "iOS"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 2248,
+        "denominator": 2835,
+        "value": 0.7929453262786597
+      }
+    },
+    {
+      "filters": {
+        "country": "UK",
+        "appPlatform": "Android"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 2512,
+        "denominator": 3465,
+        "value": 0.7249639249639249
+      }
+    },
+    {
+      "filters": {
+        "country": "DE"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 2806,
+        "denominator": 3500,
+        "value": 0.8017142857142857
+      }
+    },
+    {
+      "filters": {
+        "country": "DE",
+        "appPlatform": "iOS"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 1325,
+        "denominator": 1575,
+        "value": 0.8412698412698413
+      }
+    },
+    {
+      "filters": {
+        "country": "DE",
+        "appPlatform": "Android"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 1481,
+        "denominator": 1925,
+        "value": 0.7693506493506493
+      }
+    },
+    {
+      "filters": {
+        "country": "Other"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 1719,
+        "denominator": 2450,
+        "value": 0.7016326530612245
+      }
+    },
+    {
+      "filters": {
+        "country": "Other",
+        "appPlatform": "iOS"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 812,
+        "denominator": 1103,
+        "value": 0.7361740707162284
+      }
+    },
+    {
+      "filters": {
+        "country": "Other",
+        "appPlatform": "Android"
+      },
+      "current": {
+        "kind": "rate",
+        "numerator": 907,
+        "denominator": 1348,
+        "value": 0.6728486646884273
+      }
+    }
+  ]
+}

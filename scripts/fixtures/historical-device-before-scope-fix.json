@@ -1,0 +1,194 @@
+{
+  "sourceCommit": "7bda8c33ff0dc9b149633869f054c3696f7709cf",
+  "synthetic": true,
+  "states": [
+    {
+      "id": 43,
+      "value": {
+        "kind": "group",
+        "value": {
+          "D7": {
+            "kind": "rate",
+            "numerator": 1600,
+            "denominator": 2000,
+            "value": 0.8
+          },
+          "D30": {
+            "kind": "rate",
+            "numerator": 1450,
+            "denominator": 2000,
+            "value": 0.725
+          }
+        }
+      },
+      "window": "快照 2026-09-24",
+      "baseline": "D7 80.0%"
+    },
+    {
+      "id": 43,
+      "value": {
+        "kind": "group",
+        "value": {
+          "D7": {
+            "kind": "rate",
+            "numerator": 1600,
+            "denominator": 2000,
+            "value": 0.8
+          },
+          "D30": {
+            "kind": "rate",
+            "numerator": 1450,
+            "denominator": 2000,
+            "value": 0.725
+          }
+        }
+      },
+      "window": "快照 2026-09-24",
+      "baseline": "D7 80.0%"
+    },
+    {
+      "id": 51,
+      "value": {
+        "kind": "group",
+        "value": {
+          "cohort": "2026-07",
+          "unboundEvents": 300,
+          "observedUnboundDevices": 250,
+          "unboundDeviceRate": {
+            "kind": "rate",
+            "numerator": 250,
+            "denominator": 142000,
+            "value": 0.0017605633802816902
+          },
+          "reboundWithin7d": {
+            "kind": "rate",
+            "numerator": 120,
+            "denominator": 250,
+            "value": 0.48
+          },
+          "reboundWithin30d": {
+            "kind": "rate",
+            "numerator": 180,
+            "denominator": 250,
+            "value": 0.72
+          }
+        }
+      },
+      "window": "快照 2026-09-24",
+      "baseline": "30日回绑 72.0%"
+    },
+    {
+      "id": 51,
+      "value": {
+        "kind": "group",
+        "value": {
+          "cohort": "2026-07",
+          "unboundEvents": 300,
+          "observedUnboundDevices": 250,
+          "unboundDeviceRate": {
+            "kind": "rate",
+            "numerator": 250,
+            "denominator": 142000,
+            "value": 0.0017605633802816902
+          },
+          "reboundWithin7d": {
+            "kind": "rate",
+            "numerator": 120,
+            "denominator": 250,
+            "value": 0.48
+          },
+          "reboundWithin30d": {
+            "kind": "rate",
+            "numerator": 180,
+            "denominator": 250,
+            "value": 0.72
+          }
+        }
+      },
+      "window": "快照 2026-09-24",
+      "baseline": "30日回绑 72.0%"
+    }
+  ],
+  "records": {
+    "record:C:默认演示范围:43": {
+      "issueId": "DEMO-C-43-MW45DP",
+      "owner": "历史模拟核查",
+      "status": "pending",
+      "note": "旧版证据基线演示，不是实际业务问题",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 20:37:05",
+      "page": "C",
+      "evidenceId": 43,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "D7 80.0%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 43
+    },
+    "record:C:设备状态：有效设备:43": {
+      "issueId": "DEMO-C-43-Q1MC1W",
+      "owner": "历史模拟核查",
+      "status": "pending",
+      "note": "旧版证据基线演示，不是实际业务问题",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 20:37:05",
+      "page": "C",
+      "evidenceId": 43,
+      "scope": "设备状态：有效设备",
+      "filters": {
+        "deviceStatus": "Effective"
+      },
+      "baseline": "D7 80.0%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 43
+    },
+    "record:F:默认演示范围:51": {
+      "issueId": "DEMO-F-51-4RNHR1",
+      "owner": "历史模拟核查",
+      "status": "pending",
+      "note": "旧版证据基线演示，不是实际业务问题",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 20:37:05",
+      "page": "F",
+      "evidenceId": 51,
+      "scope": "默认演示范围",
+      "filters": {},
+      "baseline": "30日回绑 72.0%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 51
+    },
+    "record:F:设备状态：有效设备:51": {
+      "issueId": "DEMO-F-51-YMPHA",
+      "owner": "历史模拟核查",
+      "status": "pending",
+      "note": "旧版证据基线演示，不是实际业务问题",
+      "due": "",
+      "target": "",
+      "linkedSample": "",
+      "reviewValue": "",
+      "reviewedAt": "",
+      "updatedAt": "2026/10/18 20:37:05",
+      "page": "F",
+      "evidenceId": 51,
+      "scope": "设备状态：有效设备",
+      "filters": {
+        "deviceStatus": "Effective"
+      },
+      "baseline": "30日回绑 72.0%",
+      "baselineAt": "快照 2026-09-24",
+      "reviewMetric": 51
+    }
+  }
+}

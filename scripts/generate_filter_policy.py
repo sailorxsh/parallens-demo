@@ -74,6 +74,10 @@ for item in contract:
         # Business applicability remains; event facts have no geography/season
         # fields, so rebuilding must not re-enable independent slice estimates.
         demonstrable.difference_update({"country", "season"})
+    if mid in (43, 51):
+        # Historical populations need status at entry, not today's status.
+        # Keep the business dimension visible while that linked field is absent.
+        demonstrable.discard("deviceStatus")
     metric_policy.append({
         "id": mid,
         "page": item["page"],

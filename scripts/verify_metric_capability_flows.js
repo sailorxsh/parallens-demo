@@ -28,11 +28,11 @@ async(parent)=>{
       check(text.includes(`统计对象：${entityNames[source.entity]??source.entity} · 窗口：${source.window}`),`Entity or observation window changed incorrectly #${id}`);
       results.push({page,id,actual,controls});
     }
-    for(const [page,id,missing] of [['A',13,'season'],['B',27,'deviceStatus'],['G',53,'season']]){
+    for(const [page,id,missing,demonstrable] of [['A',13,'season',false],['B',27,'deviceStatus',true],['G',53,'season',true]]){
       await p.goto(`${base}#/${page}?metric=${id}&panel=data`);
       await p.locator(`#metric-evidence-${id}`).waitFor();
       const raw=await p.evaluate(({id,missing})=>policyFor(id).demonstrableDimensions.includes(missing),{id,missing});
-      check(raw,'Fix erased a source capability rather than correcting its page description');
+      check(raw===demonstrable,'Capability contradicts the source: natural-season attribution is absent from onboarding facts; the other hidden page controls retain their source slices');
       check(!await p.locator('.filter-bar').locator(`select[name="${missing}"]`).count(),'Fix silently expanded filter behavior');
     }
     // A page control with missing data remains a business filter, not a usable measured scope.

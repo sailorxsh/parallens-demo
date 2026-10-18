@@ -219,6 +219,11 @@ function renderSavedIssues() {
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
+  if(id===43)return '新设备留存批次日期待补';
+  if(id===51) {
+    const cohort=sourceData.metrics.m51?.value?.cohort;
+    return typeof cohort==='string'&&/^\d{4}-(?:0[1-9]|1[0-2])$/.test(cohort)?`完整月 ${cohort}`:'解绑批次日期待补';
+  }
   const history=metricHistory(id),last=history?.labels.at(-1);
   if([41,44].includes(id))return `快照 ${sourceData.snapshot.asOf} · 设备行为口径v1 · ${id===41?'近30天活跃':`${metric(id).thresholdDays}天未使用`}`;
   if(last&&/^W\d+$/.test(last)) {
@@ -1098,11 +1103,13 @@ function projectMetric(id,state=filterState) {
   const filters=effectiveFor(id,state);
   for(const [key,value] of filters) {
     if(key==='week'&&!contract.dimensions.includes(key))continue;
-    if(!policy.demonstrableDimensions.includes(key))return pending(`${filterLabels[key]}适用，但演示数据缺少同范围明细`);
+    if(!policy.demonstrableDimensions.includes(key))return pending(key==='deviceStatus'&&[43,51].includes(id)?
+      '设备状态适用，但缺少入组时设备状态明细；不能用当前状态排除未留存或已解绑设备':
+      `${filterLabels[key]}适用，但演示数据缺少同范围明细`);
     if(!['week','functionType'].includes(key)&&!sourceData.slices[key]?.[value]) return na('未定义的筛选值');
   }
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
-  if(scoped.deviceStatus==='Inactive'&&[8,11,15,16,27,41,42,43,44,45,46,47].includes(id))
+  if(scoped.deviceStatus==='Inactive'&&[8,11,15,16,27,41,42,44,45,46,47].includes(id))
     return na('该指标以有效设备为统计对象，非有效设备不属于分母');
   if(product&&model&&product!=='All'&&model!=='All'&&((product==='Hunting')!==(model==='Hunt Pro')))
     return na('产品线与设备型号组合无样本');

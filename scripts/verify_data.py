@@ -507,6 +507,14 @@ for label,mid in [('binding',11),('activation',13)]:
             duration_ok &= (success+excluded==r['eligible'] and all(type(seconds) is int and type(count) is int and
                 0<=seconds<=(86400 if mid==11 else 604799) and count>=0 for seconds,count in r['durationCounts']))
 check('D23-onboarding-frequency-source',duration_ok,'576个互斥合成分组；成功频数与失败/未达成闭合、24个原周度总计和完整观察窗保留')
+historical_contracts={item['id']:item for item in contract if item['id'] in (43,51)}
+check('D24-historical-device-boundaries',
+      all('deviceStatus' in policy_metrics[mid]['businessDimensions'] and
+          'deviceStatus' not in policy_metrics[mid]['demonstrableDimensions'] and
+          'deviceStatus' in policy_metrics[mid]['unavailableDimensions'] for mid in (43,51)) and
+      '入组日期与观察截止待补' in historical_contracts[43]['window'] and
+      historical_contracts[51]['window'].startswith(metrics['m51']['value']['cohort']+'解绑批次'),
+      '历史留存与解绑不按当前状态剔除流失者；未提供的入组状态和批次日期明确待补，已知解绑月份与来源一致')
 
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

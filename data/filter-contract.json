@@ -1009,7 +1009,7 @@
     "name": "新设备D7/D30留存",
     "page": "C",
     "entity": "设备Cohort",
-    "window": "完整观察窗内的指定批次",
+    "window": "新设备D7/D30汇总样例；入组日期与观察截止待补",
     "dimensions": [
       "country",
       "productLine",
@@ -1233,7 +1233,7 @@
     "name": "解绑与重新绑定情况",
     "page": "F",
     "entity": "解绑事件",
-    "window": "完整观察窗内的指定批次",
+    "window": "2026-07解绑批次；已满30日观察窗，逐台观察截止待补",
     "dimensions": [
       "country",
       "appPlatform",
