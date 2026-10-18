@@ -826,6 +826,18 @@ article.trial-sample-item {cursor:auto}
 .home-dashboard .chart-scale-note {background:transparent;border:0;padding:0;font-size:var(--text-xs);font-weight:400;margin:.5rem 0 .75rem}
 .home-dashboard .chart-scale-note[hidden] {display:none}
 .home-dashboard .trend-table-wrap {font-size:.75rem;margin-top:auto}
+.home-dashboard .trend-panel.has-contribution #trendChart:not(.chart-fallback) {height:14rem;min-height:14rem;flex:none}
+.home-contribution {border-top:1px solid var(--line);padding-top:.65rem;margin:.2rem 0 .65rem;min-width:0}
+.home-contribution[hidden] {display:none}
+.home-contribution h4 {font-size:.82rem;font-weight:650;margin:0 0 .35rem;line-height:1.6}
+.home-contribution-chart {height:6.5rem;width:100%;min-width:0}
+.home-contribution-chart.chart-fallback {height:auto;min-height:0}
+.home-contribution-note {font-size:var(--text-xs);line-height:1.6;color:#53694f;margin:.3rem 0}
+.home-contribution-actions {display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:.35rem .8rem}
+.home-contribution-actions .chart-data {margin:0;font-size:.75rem;min-width:0;max-width:100%;flex:0 1 auto}
+.home-contribution-actions .chart-data[open] {flex-basis:100%}
+.home-contribution-actions .insight-link {font-size:.75rem;margin:0}
+.home-contribution .data-table-scroll {padding:.3rem 0;border:0}
 .home-dashboard .insight-panel {min-width:0;padding:.9rem 1rem}
 .home-dashboard .signal-heading {font-size:1.1rem;margin:0 0 .6rem;font-weight:650}
 .home-selection {margin:0 0 .6rem;padding-left:.65rem;border-left:2px solid #719b80}

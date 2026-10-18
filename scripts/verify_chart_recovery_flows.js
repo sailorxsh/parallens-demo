@@ -6,7 +6,7 @@ async(parent)=>{
   p.on('pageerror',e=>errors.push(e.message));p.on('console',m=>{if(m.type()==='error')logs.push(m.text());});
   p.on('dialog',dialog=>dialog.accept());
   const check=(ok,message)=>{if(!ok)throw Error(message);};
-  const model=()=>p.locator('#C-panel-groups .evidence-pair .detail-chart');
+  const model=()=>p.locator('#C-panel-groups .evidence-pair .detail-chart[aria-label^="设备型号 · 模拟分组对比"]');
   const technical=()=>p.locator('#C-panel-groups .detail-chart-panel .detail-chart');
   const form=()=>p.locator('.action-record');
   const ready=()=>p.locator('#main[aria-busy="false"] #C-tab-change').waitFor();
@@ -33,11 +33,11 @@ async(parent)=>{
     window.__chartFault={active:true,count:0,mode,failures:[]};
     const original=window.echarts,test=Object.create(original);
     Object.defineProperty(test,'init',{value:function(box,...args){
-      if(box.matches('#C-panel-groups .evidence-pair .detail-chart')&&__chartFault.active&&mode==='init'){
+      if(box.matches('#C-panel-groups .evidence-pair .detail-chart[aria-label^="设备型号 · 模拟分组对比"]')&&__chartFault.active&&mode==='init'){
         __chartFault.count++;__chartFault.failures.push('init');throw Error('SIMULATED_EVIDENCE_INIT_FAILURE');
       }
       const instance=original.init.call(original,box,...args);
-      if(box.matches('#C-panel-groups .evidence-pair .detail-chart')&&mode==='option'){
+      if(box.matches('#C-panel-groups .evidence-pair .detail-chart[aria-label^="设备型号 · 模拟分组对比"]')&&mode==='option'){
         const set=instance.setOption;instance.setOption=function(...values){
           if(__chartFault.active){__chartFault.count++;__chartFault.failures.push('option');throw Error('SIMULATED_EVIDENCE_OPTION_FAILURE');}
           return set.apply(this,values);
@@ -67,7 +67,7 @@ async(parent)=>{
       check((await p.locator('#announcement').innerText()).includes('仍无法显示'),'A failed retry announces success');
       const failedCalls=await p.evaluate(()=>__chartFault.count);
       await model().getByRole('button',{name:'查看设备型号 · 模拟分组对比完整数据表',exact:true}).click();
-      const calculation=p.locator('#C-panel-groups .workspace-calculation');
+      const calculation=p.locator('#C-panel-groups .evidence-pair').filter({has:p.getByRole('heading',{name:'设备型号 · 模拟分组对比',exact:true})}).locator('.workspace-calculation');
       check(await calculation.evaluate(n=>n.open&&document.activeElement===n.querySelector('summary')),'Data fallback does not open and focus its own table');
       const first=await calculation.locator('tbody tr').first().innerText();
       check(first.includes('3,280')&&first.includes('4,000')&&first.includes('82.0%'),'Failure changes the source counts');

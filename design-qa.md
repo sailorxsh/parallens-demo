@@ -1542,3 +1542,17 @@ Chrome与WebKit各通过income_sign、income、income_workspace、monetary_chang
 测试初轮的查找失败定位到真实#3子串问题；无效筛选断言的类名另按现有filter-error-notice修正，没有改产品筛选政策。截图初轮尝试从定义按钮Shift+Tab回标题，但tabIndex=-1标题本来不在顺序Tab中，因此回到前一张卡片，拒绝作为标题落点证据；现直接在标题接收焦点时截图。正式03-evidence-focus、04-keyboard-registration、05-keyboard-saved、06-keyboard-lookup、07-keyboard-reopened、09-evidence-focus-enlarged均已实际保存并打开：焦点环和字段未被覆盖，记录与入口可达，200%文字仍可读。
 
 Chrome／WebKit各通过evidence_focus、search、saved_issues、reading_history、navigation五组。新增定位使用getElementById及补充实际步骤截图后，两浏览器独立重跑32状态和任务通过；原始个别FAIL不作为最终结果。结果与截图在output/playwright/v124-audit，最新新用例以*-evidence-focus-final为准；suite只记录该次分组运行。语法、projection、40项源数据检查、diff和28文件构建通过。没有修改数据、样式、依赖、CI或Netlify；这只是键盘任务连续性的改善，不是全站无障碍或整体获奖品质认证。上一批首页提案继续待确认，发布本批修复后另查准确SHA和线上路径。
+
+## v125 · 首页时间趋势与同周期贡献组合（2026-10-18）
+
+用户已确认采用预览：仅在试用线索有可验算贡献时，在现有左侧趋势面板内增加紧凑横向贡献图，右侧保留解读和行动。四模块顺序、深绿主色、源数据及问题单保持不变。本轮实现这一明确范围，不据此宣布整体品质目标达成。
+
+副图和观察复用homeTrialEvidence的同范围两期事实。默认前9周4050/9000→近3周1302/3000，变化−1.60个百分点；观鸟Android Plus月付1746/9000→534/3000贡献−1.60，其余2304/9000→768/3000为0。分母始终是同期总体成熟试用人数，互斥贡献回到总体变化；不是该组自身转正率，也不是因果或收入损失。坐标保留零，负向橙色、正向绿色、零贡献灰点及数字，数值和单位可从标题、提示和原生数据表核对。
+
+主趋势仅在副图出现时缩至14rem，副图6.5rem，原趋势表保留。激活、并列、缺数、持平及分组小样本不显示贡献；首页仍只开放国家、产品线、App平台，未新增周筛选。共享贡献能力的单周抑制通过直接能力测试验证，不把首页忽略非适用URL参数误判成周筛选失效。切换销毁旧实例并移出重绘集合，复用现有图表文字缩放、减弱动态效果和错误恢复。资源缺失时保留节点用途类，使副图提示使用紧凑高度，不留下整块空图。
+
+新增verify_home_contribution_flows.js：每浏览器44个独立源记录×桌面／字号状态，核对图中分组及贡献、两期人数／总体分母、零基线、键盘展开、真实鼠标点柱展开对应计算行、D18分组跳转与筛选、返回、本地存储不改写。覆盖1366/1600/1920和1366实际32px根字号，截图前与源值核查时明确检查字号，避免导航后字号丢失造成假通过。另测激活／并列／无效条件及单周能力抑制，正负方向构造样例，主动故障、显式重试和缺库数据降级。
+
+Chrome和WebKit各通过home_contribution、home_trial_clue、home_priority、home_chart_selection、home_brief、home_filter_context、home_device_clue、reading_history、loading、chart_recovery。旧chart_recovery把C分组页所有evidence-pair当成唯一型号图，现有贡献图已使该选择器命中两项；本轮将故障注入、恢复与核算表查找明确限定到“设备型号 · 模拟分组对比”，原来的24次故障、数值、草稿／历史基线、健康图不重绘及重试断言全部保留并通过，未屏蔽失败。
+
+结果及截图位于output/playwright/v125-audit，查看各独立*-名称.json；suite只代表最后一批运行。早期测试失败包括对首页非适用week参数的错误假设、只读ECharts导出方法未成功注入及旧选择器多命中，均已明确修正测试并重跑。已人工查看三个桌面宽度和实际放大截图。语法、projection、40项数据检查、12000条试用事实／8类就绪分桶、diff及28文件构建通过。README说明新行为，未修改数据、依赖、CI或Netlify。发布后另核准确提交SHA与线上资源，不以本地通过代替上线验收。

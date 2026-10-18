@@ -360,8 +360,7 @@ function homeTrialEvidence(comparison) {
   if(!leader||Math.abs(leader.value)<.005)return null;
   return {parts,leader};
 }
-function homeTrialClue(comparison) {
-  const evidence=homeTrialEvidence(comparison);
+function homeTrialClue(comparison,evidence=homeTrialEvidence(comparison)) {
   if(!evidence)return '';
   const {parts,leader}=evidence;
   const signed=value=>`${value<0?'−':'+'}${Math.abs(value).toFixed(2)} 个百分点`;
@@ -1747,24 +1746,26 @@ function renderHome() {
   const heading=element('h3','');
   const period=element('p','panel-sub',`${periodLabel('W1').split(' · ')[1].split('–')[0]}–${periodLabel('W12').split('–')[1]} · 12个观察周${filterState.week?` · 已选W${filterState.week}，保留完整趋势`:''}`);
   const labels=element('div','trend-heading');labels.append(element('p','section-kicker','02 / CHANGE · 变化线索'),heading,period);
-  const overview=element('button','trend-overview','并列对照');overview.type='button';overview.setAttribute('aria-controls','trendChart');
+  const overview=element('button','trend-overview','并列对照');overview.type='button';overview.setAttribute('aria-controls','trendChart home-contribution');
   panelHeader.append(labels,overview);
   trend.append(panelHeader);
   const chartBox=element('div',''); chartBox.id='trendChart'; chartBox.setAttribute('role','img');
   trend.append(chartBox);
   const scaleNote=element('p','chart-scale-note');trend.append(scaleNote);
+  const contribution=element('section','home-contribution');contribution.hidden=true;
+  contribution.id='home-contribution';trend.append(contribution);
   trend.append(createTrendTable());
   const insight=element('aside','insight-panel');
   insight.append(element('h3','signal-heading','变化解读与行动建议'));
   const selection=element('div','home-selection');
   const selectionReason=element('p','home-selection-reason');
   const resetSelection=element('button','home-selection-reset','恢复建议起点');resetSelection.type='button';
-  resetSelection.setAttribute('aria-controls','trendChart home-comparison-context');
+  resetSelection.setAttribute('aria-controls','trendChart home-contribution home-comparison-context');
   selection.append(selectionReason,resetSelection);insight.append(selection,homeDeviceClue());
   const signals=element('div','home-signals');
   comparisons.forEach(item=>{
     const button=element('button',`home-signal signal-${item.id}`);button.type='button';button.dataset.metricId=item.id;
-    button.setAttribute('aria-controls','trendChart home-comparison-context');
+    button.setAttribute('aria-controls','trendChart home-contribution home-comparison-context');
     const title=element('span','home-signal-title');title.append(element('strong','',item.name));
     const values=element('span','home-signal-values');values.append(element('span','',`${item.beforeRate.toFixed(1)}%`),element('span','signal-arrow','→'),element('strong','',`${item.afterRate.toFixed(1)}%`),
       element('span',`signal-delta ${item.delta<-.05?'adverse':item.delta>.05?'improving':'neutral'}`,homeComparisonChange(item)));
@@ -1791,6 +1792,9 @@ function renderHome() {
       id===null?'已切换为并列对照；筛选更新后保留此视图。':'当前为手动选择；筛选更新后，线索可用时继续保留。';
     resetSelection.hidden=homeSelectionMode==='auto';
     const selected=comparisons.find(item=>item.id===id);
+    const trialEvidence=selected?homeTrialEvidence(selected):null;
+    updateHomeContribution(contribution,selected,trialEvidence,redraw);
+    trend.classList.toggle('has-contribution',!!trialEvidence);
     heading.textContent=selected?`${selected.name} · 周度变化`:'激活与转正 · 周度对照';
     overview.setAttribute('aria-pressed',String(!selected));
     signals.querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.metricId)===id)));
@@ -1807,7 +1811,7 @@ function renderHome() {
       const action=element('div','home-signal-actions');action.append(link,basis);
       const movement=Math.abs(selected.delta)<.05?'基本持平':`较前期${selected.delta>0?'上升':'下降'} ${Math.abs(selected.delta).toFixed(1)} 个百分点`;
       const adverse=selected.delta<=-.05;
-      const advice=homeTrialClue(selected)||(adverse?
+      const advice=homeTrialClue(selected,trialEvidence)||(adverse?
         selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。':
         '可查看分组与批次明细；当前变化不作为异常处置依据。');
       context.append(element('strong','home-observation-label','观察'),
@@ -1859,6 +1863,43 @@ function renderHome() {
   });
   const statusBox=document.querySelector('#statusChart');if(statusBox)drawStatus(statusBox);
   drawTrend(homeTrendFocus,comparisons.find(item=>item.id===homeTrendFocus));
+  const contributionPlot=contribution.querySelector('.home-contribution-chart');
+  if(contributionPlot)drawEvidenceChart(contributionPlot,evidenceChartSpecs.get(contributionPlot));
+}
+function updateHomeContribution(container,comparison,evidence,draw=true) {
+  const oldPlot=container.querySelector('.home-contribution-chart');
+  const oldInstance=oldPlot&&window.echarts?.getInstanceByDom(oldPlot);
+  if(oldInstance) {
+    destroyChart(oldInstance);
+    const index=detailCharts.indexOf(oldInstance);if(index>=0)detailCharts.splice(index,1);
+  }
+  container.replaceChildren();container.hidden=!evidence;
+  if(!evidence)return;
+  const {parts}=evidence;
+  const title=`同周期分组贡献 · 合计 ${chartValue(comparison.delta,'个百分点')}`;
+  const note=`${comparison.beforeLabel} → ${comparison.afterLabel}；每组转正人数分别除以同期总体成熟试用人数，再比较差值。数学分解，不证明因果。`;
+  const spec={kind:'groupContribution',title,unit:'个百分点',labels:parts.groups.map(group=>group.name),
+    series:[{name:'变化贡献',values:parts.changes}],parts,comparison};
+  const heading=element('h4','',title);heading.id='home-contribution-heading';
+  container.setAttribute('aria-labelledby',heading.id);
+  const plot=element('div','home-contribution-chart');plot.setAttribute('role','img');
+  plot.setAttribute('aria-label',`${title}；${parts.groups.map((group,index)=>`${group.name} ${chartValue(parts.changes[index],'个百分点')}`).join('；')}。下方可核对两期人数。`);
+  evidenceChartSpecs.set(plot,spec);
+  const table=element('details','chart-data');
+  table.append(element('summary','','核对贡献人数与计算'));
+  const rows=parts.groups.map((group,index)=>[group.name,
+    `${number(group.summaries[0].numerator)} / ${number(parts.overall[0].denominator)}`,
+    `${number(group.summaries[1].numerator)} / ${number(parts.overall[1].denominator)}`,
+    chartValue(parts.changes[index],'个百分点')]);
+  rows.push(['合计',`${number(parts.overall[0].numerator)} / ${number(parts.overall[0].denominator)}`,
+    `${number(parts.overall[1].numerator)} / ${number(parts.overall[1].denominator)}`,chartValue(comparison.delta,'个百分点')]);
+  table.append(dataTable({title:'试用转正 · 同周期互斥分组贡献',
+    columns:['互斥分组',`${comparison.beforeLabel} · 组内转正 / 总体成熟`,`${comparison.afterLabel} · 组内转正 / 总体成熟`,'变化贡献'],rows,
+    note:`${comparison.beforeWindow} → ${comparison.afterWindow}。来源：${comparison.source}。各行分母为同期总体人数，不是该组自身人数；贡献合计等于总体转正率变化。`}));
+  const link=element('a','insight-link','查看专题分组证据 ↗');link.href=routeHref('D',18,'groups');
+  const actions=element('div','home-contribution-actions');actions.append(table,link);
+  container.append(heading,plot,element('p','home-contribution-note',note),actions);
+  if(draw&&container.isConnected)drawEvidenceChart(plot,spec);
 }
 function createTrendTable() {
   const wrap=element('details','trend-table-wrap');
@@ -2361,8 +2402,8 @@ function bindChartTableSelection(instance,table,describe,{indexFor=params=>param
 function drawEvidenceChart(box,spec,legendSelection) {
   evidenceChartSpecs.set(box,spec);
   if(box.classList.contains('chart-render-error'))return;
-  const panel=box.closest('.detail-chart-panel,.evidence-pair');
-  const details=panel?.querySelector(':scope > .chart-data,:scope > .workspace-calculation');
+  const panel=box.closest('.detail-chart-panel,.evidence-pair,.home-contribution');
+  const details=panel?.querySelector(':scope > .chart-data,:scope > .workspace-calculation,:scope > .home-contribution-actions > .chart-data');
   const description=box.getAttribute('aria-label')??spec.title;
   try {
     const existing=window.echarts?.getInstanceByDom(box);
@@ -2483,7 +2524,7 @@ function categoryAxisLayout(box,spec,left,right) {
 }
 function drawDetailChart(box,spec) {
   if (!window.echarts) {
-    box.className='detail-chart chart-fallback'; box.removeAttribute('role');
+    box.classList.add('detail-chart','chart-fallback'); box.removeAttribute('role');
     box.textContent='图表未加载；下方保留完整数据表。'; return undefined;
   }
   const instance=createChart(box);
@@ -2491,6 +2532,39 @@ function drawDetailChart(box,spec) {
   if(box.parentElement?.classList.contains('chart-legend-frame'))box.parentElement.querySelector('.chart-legend')?.remove();
   const isTimeline=isTimelineSpec(spec);
   const colors=['#bf762b','#356d51','#7593a0'];
+  if(spec.kind==='groupContribution') {
+    setChartOption(instance,()=>{
+      const values=spec.series[0].values.map(value=>Math.abs(value)<1e-10?0:value);
+      const extent=Math.max(...values.map(Math.abs),.1),step=chartNiceStep(extent/4);
+      const min=Math.floor((Math.min(0,...values)-extent*.22)/step)*step;
+      const max=Math.ceil((Math.max(0,...values)+extent*.22)/step)*step;
+      const left=142,right=38;
+      const available=box.clientWidth-chartText(left+right);
+      const label=value=>`${value<0?'−':value>0?'+':''}${Math.abs(value).toFixed(2)}`;
+      return {animationDuration:chartAnimationDuration(350),
+        grid:{left,right,top:4,bottom:25},
+        xAxis:{type:'value',min,max,interval:step,
+          axisLabel:{color:'#58695b',formatter:value=>`${value<0?'−':''}${Math.abs(value).toFixed(step<.1?2:1)}`},
+          splitLine:{lineStyle:{color:'#e7ede6'}},axisLine:{show:false},axisTick:{show:false}},
+        yAxis:{type:'category',inverse:true,data:spec.labels,
+          axisLabel:{color:'#405a48',formatter:value=>value.replace(' Android ',' Android\n'),lineHeight:chartText(16)},axisLine:{show:false},axisTick:{show:false}},
+        tooltip:{...chartTooltipStyle(),trigger:'item',formatter:params=>{
+          const index=params.dataIndex,group=spec.parts.groups[index];
+          return `${group.name}：${chartValue(values[index],'个百分点')}<br>${group.summaries.map((part,i)=>`${i?spec.comparison.afterLabel:spec.comparison.beforeLabel}：${number(part.numerator)} / ${number(spec.parts.overall[i].denominator)}`).join('<br>')}<br>分母为同期总体成熟试用人数`;
+        }},
+        series:[{name:'变化贡献',type:'bar',barMaxWidth:chartText(20),
+          data:values.map(value=>{
+            const inside=Math.abs(value)/(max-min)*available>chartText(58);
+            return {value,itemStyle:{color:value<0?'#ad551f':value>0?'#356d51':'#718078'},
+              label:{show:true,position:value<0?(inside?'insideLeft':'left'):(inside?'insideRight':'right'),
+                distance:chartText(6),color:inside?'#fffefa':'#405a48',fontWeight:600,fontSize:chartText(12),formatter:label(value)}};
+          })},
+          {name:'零贡献',type:'scatter',silent:true,symbolSize:chartText(6),itemStyle:{color:'#718078'},
+            data:values.map((value,index)=>value===0?[0,index]:[null,index])}],
+      };
+    },{responsive:true});
+    return instance;
+  }
   if(spec.kind==='periodComparison') {
     const line=spec.series[0],axis=trendAxisDomain(spec.series,spec.unit);
     setChartOption(instance,()=>({animationDuration:chartAnimationDuration(350),
