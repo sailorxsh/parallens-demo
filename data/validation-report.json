@@ -1,6 +1,6 @@
 {
-  "passed": 52,
-  "total": 52,
+  "passed": 53,
+  "total": 53,
   "checks": [
     {
       "rule": "catalog",
@@ -51,6 +51,11 @@
       "rule": "F8-subscription-flow",
       "passed": true,
       "detail": "分产品线订阅流转各自闭合，合计回总体与互斥订阅状态"
+    },
+    {
+      "rule": "D31-subscription-status-history",
+      "passed": true,
+      "detail": "12期状态快照各产品内互斥闭合，当前人数与原始付费/绑定池历史保持"
     },
     {
       "rule": "F3-incomparable-rates",

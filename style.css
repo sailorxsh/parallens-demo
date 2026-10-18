@@ -991,3 +991,19 @@ article.trial-sample-item {cursor:auto}
 .data-table-scroll:is(.model-calculation,.model-context-calculation) {padding-inline:0}
 .data-table-scroll:is(.model-calculation,.model-context-calculation) caption,
 .data-table-scroll:is(.model-calculation,.model-context-calculation) > :is(.table-note,.table-scroll-hint) {padding-inline:.65rem}
+
+/* The status timeline reuses the diagnostic tabs and leaves current snapshot registration intact. */
+.status-history {min-width:0}
+.status-history>h3 {font-size:1rem;margin:.5rem 0}
+.status-history-controls {display:flex;flex-wrap:wrap;gap:.8rem;margin:1rem 0}
+.status-history-controls label {display:grid;gap:.4rem;min-width:0;font-size:var(--text-sm);color:var(--ink-soft)}
+.status-history-controls select {font:inherit;color:var(--ink);background:var(--paper);border:1px solid #b8cbb4;border-radius:.3rem;padding:.45rem .6rem;min-width:0;max-width:100%}
+.status-history-controls select:focus-visible {outline:2px solid var(--focus);outline-offset:3px}
+.status-history-summary {font-size:var(--text-sm);line-height:1.7;color:#405c48;margin:1rem 0}
+.status-history .detail-chart.status-history-structure {height:27rem;min-height:27rem}
+.data-table-scroll.status-history-full {padding-inline:0}
+.status-history-full caption,.status-history-full>.table-note,.status-history-full>.table-scroll-hint {padding-inline:.65rem}
+
+.status-baseline-details {font-size:var(--text-sm);margin:.35rem 0 .8rem}
+.status-baseline-details>summary {color:#4d6d53;cursor:pointer}
+.status-baseline-details>.table-note {overflow-wrap:anywhere}

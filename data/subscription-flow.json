@@ -3,8 +3,295 @@
   "asOf": "2026-09-24",
   "unit": "主账号人数",
   "byProductLine": {
-    "Bird": {"opening": 7750, "trialPaid": 350, "directPaid": 80, "recovered": 60, "lost": 240, "closing": 8000},
-    "Hunting": {"opening": 4270, "trialPaid": 180, "directPaid": 40, "recovered": 30, "lost": 120, "closing": 4400}
+    "Bird": {
+      "opening": 7750,
+      "trialPaid": 350,
+      "directPaid": 80,
+      "recovered": 60,
+      "lost": 240,
+      "closing": 8000
+    },
+    "Hunting": {
+      "opening": 4270,
+      "trialPaid": 180,
+      "directPaid": 40,
+      "recovered": 30,
+      "lost": 120,
+      "closing": 4400
+    }
   },
-  "note": "合成演示流水；各产品线期末与互斥订阅状态中的有效订阅人数闭合，各列合计回总体。"
+  "note": "合成演示流水；各产品线期末与互斥订阅状态中的有效订阅人数闭合，各列合计回总体。",
+  "statusHistory": {
+    "version": "synthetic-status-snapshots-v1",
+    "classification": "entirely_synthetic",
+    "asOf": "2026-09-24",
+    "timezone": "UTC",
+    "rows": [
+      {
+        "at": "2026-07-09",
+        "products": {
+          "bird": {
+            "free": 47045,
+            "trialEarly": 1100,
+            "trialNearExpiry": 450,
+            "paidCurrent": 7125,
+            "cancelledButEntitled": 520,
+            "paymentFailed": 285
+          },
+          "hunting": {
+            "noEntitlement": 18030,
+            "trialEarly": 900,
+            "trialNearExpiry": 420,
+            "paidCurrent": 3875,
+            "cancelledButEntitled": 330,
+            "paymentFailed": 320,
+            "expired": 350
+          }
+        }
+      },
+      {
+        "at": "2026-07-16",
+        "products": {
+          "bird": {
+            "free": 47083,
+            "trialEarly": 1120,
+            "trialNearExpiry": 460,
+            "paidCurrent": 7152,
+            "cancelledButEntitled": 525,
+            "paymentFailed": 290
+          },
+          "hunting": {
+            "noEntitlement": 17997,
+            "trialEarly": 930,
+            "trialNearExpiry": 430,
+            "paidCurrent": 3888,
+            "cancelledButEntitled": 335,
+            "paymentFailed": 330,
+            "expired": 360
+          }
+        }
+      },
+      {
+        "at": "2026-07-23",
+        "products": {
+          "bird": {
+            "free": 47145,
+            "trialEarly": 1100,
+            "trialNearExpiry": 480,
+            "paidCurrent": 7180,
+            "cancelledButEntitled": 530,
+            "paymentFailed": 300
+          },
+          "hunting": {
+            "noEntitlement": 17935,
+            "trialEarly": 950,
+            "trialNearExpiry": 450,
+            "paidCurrent": 3900,
+            "cancelledButEntitled": 340,
+            "paymentFailed": 350,
+            "expired": 390
+          }
+        }
+      },
+      {
+        "at": "2026-07-30",
+        "products": {
+          "bird": {
+            "free": 47198,
+            "trialEarly": 1080,
+            "trialNearExpiry": 490,
+            "paidCurrent": 7207,
+            "cancelledButEntitled": 535,
+            "paymentFailed": 330
+          },
+          "hunting": {
+            "noEntitlement": 17862,
+            "trialEarly": 970,
+            "trialNearExpiry": 480,
+            "paidCurrent": 3908,
+            "cancelledButEntitled": 350,
+            "paymentFailed": 370,
+            "expired": 420
+          }
+        }
+      },
+      {
+        "at": "2026-08-06",
+        "products": {
+          "bird": {
+            "free": 47141,
+            "trialEarly": 1150,
+            "trialNearExpiry": 520,
+            "paidCurrent": 7234,
+            "cancelledButEntitled": 540,
+            "paymentFailed": 360
+          },
+          "hunting": {
+            "noEntitlement": 17744,
+            "trialEarly": 1020,
+            "trialNearExpiry": 500,
+            "paidCurrent": 3916,
+            "cancelledButEntitled": 360,
+            "paymentFailed": 395,
+            "expired": 470
+          }
+        }
+      },
+      {
+        "at": "2026-08-13",
+        "products": {
+          "bird": {
+            "free": 47124,
+            "trialEarly": 1180,
+            "trialNearExpiry": 530,
+            "paidCurrent": 7261,
+            "cancelledButEntitled": 545,
+            "paymentFailed": 410
+          },
+          "hunting": {
+            "noEntitlement": 17626,
+            "trialEarly": 1060,
+            "trialNearExpiry": 520,
+            "paidCurrent": 3924,
+            "cancelledButEntitled": 370,
+            "paymentFailed": 430,
+            "expired": 520
+          }
+        }
+      },
+      {
+        "at": "2026-08-20",
+        "products": {
+          "bird": {
+            "free": 47226,
+            "trialEarly": 1160,
+            "trialNearExpiry": 540,
+            "paidCurrent": 7279,
+            "cancelledButEntitled": 560,
+            "paymentFailed": 390
+          },
+          "hunting": {
+            "noEntitlement": 17719,
+            "trialEarly": 1040,
+            "trialNearExpiry": 510,
+            "paidCurrent": 3931,
+            "cancelledButEntitled": 380,
+            "paymentFailed": 415,
+            "expired": 500
+          }
+        }
+      },
+      {
+        "at": "2026-08-27",
+        "products": {
+          "bird": {
+            "free": 47409,
+            "trialEarly": 1100,
+            "trialNearExpiry": 520,
+            "paidCurrent": 7301,
+            "cancelledButEntitled": 570,
+            "paymentFailed": 360
+          },
+          "hunting": {
+            "noEntitlement": 17806,
+            "trialEarly": 1030,
+            "trialNearExpiry": 505,
+            "paidCurrent": 3939,
+            "cancelledButEntitled": 390,
+            "paymentFailed": 390,
+            "expired": 480
+          }
+        }
+      },
+      {
+        "at": "2026-09-03",
+        "products": {
+          "bird": {
+            "free": 47532,
+            "trialEarly": 1080,
+            "trialNearExpiry": 510,
+            "paidCurrent": 7318,
+            "cancelledButEntitled": 585,
+            "paymentFailed": 340
+          },
+          "hunting": {
+            "noEntitlement": 17908,
+            "trialEarly": 1020,
+            "trialNearExpiry": 500,
+            "paidCurrent": 3952,
+            "cancelledButEntitled": 395,
+            "paymentFailed": 360,
+            "expired": 450
+          }
+        }
+      },
+      {
+        "at": "2026-09-10",
+        "products": {
+          "bird": {
+            "free": 47660,
+            "trialEarly": 1050,
+            "trialNearExpiry": 505,
+            "paidCurrent": 7345,
+            "cancelledButEntitled": 590,
+            "paymentFailed": 320
+          },
+          "hunting": {
+            "noEntitlement": 17985,
+            "trialEarly": 1010,
+            "trialNearExpiry": 500,
+            "paidCurrent": 3965,
+            "cancelledButEntitled": 400,
+            "paymentFailed": 340,
+            "expired": 430
+          }
+        }
+      },
+      {
+        "at": "2026-09-17",
+        "products": {
+          "bird": {
+            "free": 47777,
+            "trialEarly": 1020,
+            "trialNearExpiry": 500,
+            "paidCurrent": 7373,
+            "cancelledButEntitled": 595,
+            "paymentFailed": 310
+          },
+          "hunting": {
+            "noEntitlement": 18058,
+            "trialEarly": 1005,
+            "trialNearExpiry": 500,
+            "paidCurrent": 3982,
+            "cancelledButEntitled": 400,
+            "paymentFailed": 320,
+            "expired": 410
+          }
+        }
+      },
+      {
+        "at": "2026-09-24",
+        "products": {
+          "bird": {
+            "free": 47880,
+            "trialEarly": 1000,
+            "trialNearExpiry": 500,
+            "paidCurrent": 7400,
+            "cancelledButEntitled": 600,
+            "paymentFailed": 300
+          },
+          "hunting": {
+            "noEntitlement": 18120,
+            "trialEarly": 1000,
+            "trialNearExpiry": 500,
+            "paidCurrent": 4000,
+            "cancelledButEntitled": 400,
+            "paymentFailed": 300,
+            "expired": 400
+          }
+        }
+      }
+    ],
+    "note": "每7天一个合成订阅状态快照，包含当前9/24。各期有效付费合计及主账号池分别沿用已构造的#2和#48历史；其他状态为新增模拟场景。各状态互斥；没有跨期用户身份，不从快照之差推算转化、流失或原因。不是注册批次W1–W12。"
+  }
 }

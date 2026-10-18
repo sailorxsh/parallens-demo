@@ -1674,6 +1674,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  if(id===2){const part=subscriptionStatusHistoryProjection();if(part.rows)return part.rows.map(r=>Object.values(r.products).reduce((sum,p)=>sum+p.paidCurrent+p.cancelledButEntitled,0));}
   if(id===4||id===25){const p=activeWindowProjection();return p.rows?p.rows.map(r=>r.counts[id===4?'MAU':'DAU']):null;}
   if(id===23){const part=renewalProjection();return part.rows?part.rows.map(r=>r.renewal.kind==='rate'?r.renewal.value*100:null):null;}
   if(id===24){const part=retentionProjection();return part.rows?part.rows.map(r=>r.value===null?null:r.value*100):null;}
@@ -2083,6 +2084,7 @@ function metricHistory(id) {
       details:source.rows.map(row=>({...row,basisLabel:'订阅净收入 / 付款主账号',numeratorUnit:'美元',denominatorUnit:'人'})),
       unit:'美元/人',title:'订阅ARPPU',note:source.note};
   }
+  if(id===2){const part=subscriptionStatusHistoryProjection();if(part.rows)return {labels:sourceData.metricTrends.m02.labels,values:trendValues(2),unit:'人',title:metricCardLabels[2],note:`${part.note} 有效付费按付费中＋已取消未到期合计；当前范围与#5共用状态人数。`};}
   const history=sourceData.metricTrends?.[`m${String(id).padStart(2,'0')}`];
   const labels=history?.labels??sourceData.weekly.map(w=>`W${w.week}`);
   const values=trendValues(id);
@@ -2507,6 +2509,76 @@ function subscriptionStatusSpec(value=metric(5).value) {
     labels:keys.map(key=>groupLabels[key]??key),series,showPercentLabels:true,
     note:`每行按本产品线主账号合计100%；${keys.map((key,index)=>`${groupLabels[key]??key} ${number(totals[index])}人`).join('，')}。试用中合并前期与临期，Free仅适用于观鸟，无权益仅适用于狩猎；零分母不绘制比例。`};
 }
+const statusHistoryCache=new WeakMap();
+const statusHistorySelections=new Map();
+const statusHistoryFields={free:'Free',noEntitlement:'无权益',trialEarly:'试用早期（>3天）',trialNearExpiry:'试用临期（≤3天）',paidCurrent:'付费中',cancelledButEntitled:'已取消未到期',paymentFailed:'支付失败',expired:'已过期'};
+const statusHistoryColors={free:'#9eaa9a',noEntitlement:'#9eaa9a',trialEarly:'#e8b765',trialNearExpiry:'#d89935',paidCurrent:'#356d51',cancelledButEntitled:'#e8963c',paymentFailed:'#e5484d',expired:'#718078'};
+function subscriptionStatusHistoryIndex() {
+  const source=sourceData.subscriptionFlow?.statusHistory;
+  if(!source||typeof source!=='object')return {reason:'订阅状态历史待补；当前快照仍可在分组证据核对。'};
+  if(statusHistoryCache.has(source))return statusHistoryCache.get(source);
+  const invalid=()=>{const result={reason:'订阅状态历史的日期、分类或人数待核验；不以当前结构回填旧日期。'};statusHistoryCache.set(source,result);return result;};
+  const current=sourceData.metrics.m05?.value,paid=sourceData.metricTrends?.m02,pool=sourceData.metricTrends?.m48,asOf=Date.parse(source.asOf+'T00:00:00Z');
+  if(source.version!=='synthetic-status-snapshots-v1'||source.classification!=='entirely_synthetic'||source.timezone!=='UTC'||source.asOf!==sourceData.snapshot.asOf||!Number.isFinite(asOf)||new Date(asOf).toISOString().slice(0,10)!==source.asOf||!Array.isArray(source.rows)||source.rows.length!==12||!current||paid?.points?.length!==12||pool?.points?.length!==12)return invalid();
+  for(const [i,row]of source.rows.entries()) {
+    const time=typeof row?.at==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(row.at)?Date.parse(row.at+'T00:00:00Z'):NaN;
+    if(!Number.isFinite(time)||time!==asOf-(11-i)*7*86400000||new Date(time).toISOString().slice(0,10)!==row.at||!row.products||Object.keys(row.products).length!==2)return invalid();
+    let owners=0,entitled=0;
+    for(const product of ['bird','hunting']) {
+      const part=row.products[product],fields=Object.keys(current[product]??{});
+      if(!part||!fields.length||fields.some(k=>!Object.hasOwn(statusHistoryFields,k))||Object.keys(part).length!==fields.length||fields.some(k=>!Number.isSafeInteger(part[k])||part[k]<0))return invalid();
+      owners+=Object.values(part).reduce((sum,n)=>sum+n,0);entitled+=part.paidCurrent+part.cancelledButEntitled;
+      if(i===11&&fields.some(k=>part[k]!==current[product][k]))return invalid();
+    }
+    const label=`${new Date(time).getUTCMonth()+1}/${new Date(time).getUTCDate()}`;
+    if(!Number.isSafeInteger(owners)||!Number.isSafeInteger(entitled)||owners!==pool.points[i].denominator||entitled!==paid.points[i].value||paid.labels?.[i]!==label||pool.labels?.[i]!==label)return invalid();
+  }
+  const result={rows:source.rows,note:source.note};statusHistoryCache.set(source,result);return result;
+}
+function subscriptionStatusHistoryProjection(state=filterState) {
+  const source=subscriptionStatusHistoryIndex();if(source.reason)return source;
+  const filters=effectiveFor(5,state);
+  if(filters.some(([key])=>!policyFor(5).demonstrableDimensions.includes(key)))return {reason:'当前条件缺少同范围订阅状态历史；不回退到总体。'};
+  const product=filters.find(([key])=>key==='productLine')?.[1],keys=product?[product==='Bird'?'bird':'hunting']:['bird','hunting'],other=filters.filter(([key])=>key!=='productLine'),shares=sharesFor(other,5);
+  return {rows:source.rows.map(row=>({at:row.at,products:projectGroup(Object.fromEntries(keys.map(key=>[key,row.products[key]])),shares,other,5)})),keys,
+    note:source.note+(other.length?' 当前历史沿用本原型的独立维度分片估算，不是实测国家、平台或订阅平台交叉明细。':''),estimated:!!other.length};
+}
+function subscriptionStatusHistoryTable(part=subscriptionStatusHistoryProjection()) {
+  if(part.reason)return {title:'订阅状态历史 · 待核验',columns:['状态'],rows:[[part.reason]]};
+  return {title:'12个状态快照 · 全部人数（人）',columns:['快照 / 产品线','主账号合计','Free或无权益','试用早期','试用临期','付费中','已取消未到期','支付失败','已过期'],rows:part.rows.flatMap(row=>part.keys.map(key=>{const p=row.products[key];return [`${row.at} · ${groupLabels[key]}`,Object.values(p).reduce((a,b)=>a+b,0),p.free??p.noEntitlement,p.trialEarly,p.trialNearExpiry,p.paidCurrent,p.cancelledButEntitled,p.paymentFailed,p.expired??0];})),note:part.note};
+}
+function subscriptionStatusHistory() {
+  const node=element('section','status-history');node.dataset.evidenceMetric='5';node.append(element('h3','','近12个订阅状态快照'));
+  const part=subscriptionStatusHistoryProjection();
+  if(part.reason){node.append(element('p','na-note',part.reason));return {node,init:()=>{}};}
+  node.append(element('p','table-note',part.note));
+  const scope=JSON.stringify(effectiveFor(5).sort(([a],[b])=>a.localeCompare(b))),previous=statusHistorySelections.get(scope)??{product:part.keys[0],measure:'paidEntitled'};
+  const controls=element('div','status-history-controls'),productLabel=element('label','','历史产品线（仅查看）'),product=element('select',''),measureLabel=element('label','','查看状态占比趋势'),measure=element('select','');
+  product.id='status-history-product';measure.id='status-history-measure';productLabel.htmlFor=product.id;measureLabel.htmlFor=measure.id;
+  for(const key of part.keys){const option=element('option','',groupLabels[key]);option.value=key;product.append(option);}product.value=part.keys.includes(previous.product)?previous.product:part.keys[0];
+  productLabel.append(product);measureLabel.append(measure);controls.append(productLabel,measureLabel);node.append(controls);
+  const summary=element('p','status-history-summary'),content=element('div','status-history-charts');node.append(summary,content,element('p','table-note','产品线和状态控件仅切换历史视图；登记仍按全局筛选与当前快照，查看旧日期不更新原基线或草稿。'));
+  let boxes=[];
+  function render() {
+    node.dataset.initialized='true';
+    for(const box of boxes){const e=window.echarts?.getInstanceByDom(box);if(e){destroyChart(e);const i=detailCharts.indexOf(e);if(i>=0)detailCharts.splice(i,1);}}boxes=[];
+    const key=product.value,fields=Object.keys(part.rows[0].products[key]),selected=measure.value||previous.measure;
+    measure.replaceChildren();for(const [value,label]of [['paidEntitled','有效付费（含已取消未到期）'],...fields.map(k=>[k,statusHistoryFields[k]])]){const o=element('option','',label);o.value=value;measure.append(o);}measure.value=[...measure.options].some(o=>o.value===selected)?selected:'paidEntitled';
+    statusHistorySelections.set(scope,{product:key,measure:measure.value});
+    const selectedFields=measure.value==='paidEntitled'?['paidCurrent','cancelledButEntitled']:[measure.value],name=measure.selectedOptions[0].textContent,rows=part.rows.map(r=>{const p=r.products[key],denominator=Object.values(p).reduce((a,b)=>a+b,0),numerator=selectedFields.reduce((a,k)=>a+p[k],0);return {at:r.at,parts:p,denominator,numerator,value:denominator>=30?numerator/denominator*100:null};});
+    const first=rows[0],last=rows.at(-1),delta=last.value!==null&&first.value!==null?last.value-first.value:null;
+    summary.textContent=`${groupLabels[key]} · ${name}：${number(first.numerator)} / ${number(first.denominator)} 人 → ${number(last.numerator)} / ${number(last.denominator)} 人；${delta===null?'样本不足30，不生成占比变化':`占比 ${first.value.toFixed(1)}% → ${last.value.toFixed(1)}%（${delta>=0?'+':'−'}${Math.abs(delta).toFixed(2)} 个百分点）`}。这是不同快照的状态构成，不是同一用户的转化或流失。`;
+    content.replaceChildren();
+    const append=(spec,table,extra='')=>{const panel=element('section','detail-chart-panel workspace-chart-panel');panel.dataset.evidenceMetric='5';panel.append(element('h3','',spec.title));const box=element('div',`detail-chart ${extra}`);box.setAttribute('role','img');box.setAttribute('aria-label',`${spec.title}；${spec.note}`);panel.append(box);const scale=chartScaleNote(spec);if(scale)panel.append(element('p','chart-scale-note',scale));panel.append(element('p','table-note',spec.note));const detail=element('details','chart-data');detail.append(element('summary','','查看状态人数与占比'),dataTable(table));panel.append(detail);content.append(panel);boxes.push(box);drawEvidenceChart(box,spec);};
+    append({title:`${groupLabels[key]} · ${name}占比`,unit:'%',nearestLinePoint:true,labels:rows.map(r=>r.at),series:[{name,values:rows.map(r=>r.value),details:rows.map(r=>({...r,numeratorUnit:'人',denominatorUnit:'人',basisLabel:'所选状态 / 本产品线主账号'}))}],note:'每个比例使用本快照、本产品线的主账号合计；人数与完整值可验算。'},
+      {title:`${groupLabels[key]} · ${name}人数验算`,columns:['快照','所选状态（人）','产品线主账号（人）','占比'],rows:rows.map(r=>[r.at,r.numerator,r.denominator,r.value===null?'样本不足或无样本':`${r.value.toFixed(1)}%`]),note:part.estimated?'独立分片模拟估算。':'同一合成状态快照。'});
+    append({kind:'stacked100',chronologicalRows:true,title:`${groupLabels[key]} · 12期互斥状态结构`,unit:'%',labels:rows.map(r=>r.at),series:fields.map(k=>({name:statusHistoryFields[k],color:statusHistoryColors[k],values:rows.map(r=>r.denominator>=30?r.parts[k]/r.denominator*100:null),details:rows.map(r=>({numerator:r.parts[k],denominator:r.denominator,numeratorUnit:'人',denominatorUnit:'人'}))})),note:'从上到下按日期递增；有效样本每行状态互斥合计100%，分母是该行本产品线主账号；不足30人不绘制比例，完整人数仍可查。不将12期人数相加为独立用户。'},
+      {title:`${groupLabels[key]} · 每期完整状态人数`,columns:['快照','主账号合计（人）',...fields.map(k=>statusHistoryFields[k]+'（人）')],rows:rows.map(r=>[r.at,r.denominator,...fields.map(k=>r.parts[k])]),note:part.note},'status-history-structure');
+    updateScrollableTables();
+  }
+  product.addEventListener('change',render);measure.addEventListener('change',render);return {node,init:render};
+}
+
 function drawStatus(box) {
   box.dataset.drawn='1';
   if (!window.echarts) {box.removeAttribute('role');box.textContent='图表不可用；下方保留完整状态人数表。';return;}
@@ -3155,6 +3227,13 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===5&&metric(5).kind==='group') {
+    const value=metric(5).value;
+    return '状态人数：'+['bird','hunting'].filter(key=>Object.hasOwn(value,key)).map(key=>{
+      const p=value[key],fields=[...Object.keys(statusHistoryFields).filter(k=>Object.hasOwn(p,k)),...Object.keys(p).filter(k=>!Object.hasOwn(statusHistoryFields,k)).sort()];
+      return `${groupLabels[key]}（合计${number(Object.values(p).reduce((a,b)=>a+b,0))}人）：${fields.map(field=>`${statusHistoryFields[field]??field}${number(p[field])}`).join('、')}`;
+    }).join('；');
+  }
   if(id===25&&metric(25).kind==='group'){const v=metric(25).value;return activityWindows.map(w=>`${w.name} 复合${number(v[w.composite])}人／App${number(v[w.app])}人；${activeWindowPeriod(w.days)}`).join('；');}
   if(id===23&&metric(23).kind==='rate'){const part=renewalProjection(),r=part.current;return `${part.month} 续订 ${percent(r.renewal.value)}（${number(r.renewed)}/${number(r.due)}人）；发生权益流失 ${number(r.lostDuring)}/${number(r.opening)}人；主动取消 ${number(r.cancelled)}/${number(r.opening)}人`;}
   if(id===38&&metric(38).kind==='group'){const source=structureMetricViews();if(source.views)return source.views.map(view=>`${view.label}（分母${number(view.denominator)}${view.unit}）：${view.rows.map(([name,n])=>`${name}${number(n)}${view.unit}/${percent(n/view.denominator)}`).join('、')}`).join('；');}
@@ -3686,10 +3765,10 @@ function drawDetailChart(box,spec) {
         }).join('<br>')}`;
       }},
       legend:{bottom:0,itemWidth:12,selectedMode:false,textStyle:{fontSize:chartText(12),color:'#506455'}},
-      grid:{left:115,right:24,top:22,bottom:55},
+      grid:{left:115,right:24,top:22,bottom:spec.chronologicalRows?90:55},
       xAxis:{type:'value',min:0,max:100,axisLabel:{formatter:'{value}%',color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}}},
-      yAxis:{type:'category',data:spec.labels,axisLabel:{color:'#506455'},axisTick:{show:false}},
-    series:spec.series.map((line,index)=>({name:line.name,type:'bar',stack:'total',barWidth:38,
+      yAxis:{type:'category',inverse:!!spec.chronologicalRows,data:spec.labels,axisLabel:{color:'#506455',interval:spec.chronologicalRows?0:'auto'},axisTick:{show:false}},
+    series:spec.series.map((line,index)=>({name:line.name,type:'bar',stack:'total',barWidth:spec.chronologicalRows?chartText(18):38,
         data:line.values,itemStyle:{color:line.color??colors[index%colors.length]},
         label:{show:!!spec.showPercentLabels,position:'inside',color:line.labelColor??'#263d2e',fontSize:chartText(12),
           formatter:params=>Number.isFinite(params.value)&&params.value>=8?`${params.value.toFixed(1)}%`:''}})),
@@ -4453,7 +4532,9 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${baseline} · ${baselineAt}。`));
+  const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(statusCountBaseline){const counts=element('details','status-baseline-details');counts.append(element('summary','','查看本次基线的完整状态人数'),element('p','table-note',baseline));form.append(counts);}
   let comparisonSection=comparisonEvidenceSection(evidenceId,simulatedActionState[key]);form.append(comparisonSection);
   const filterContext=metricFilterContext(evidenceId),scopeDetails=element('dl','action-scope');
   const calculationScope=filterContext.applied.map(([name,value])=>`${filterLabels[name]}：${name==='week'?`W${value}`:optionLabel(name,value)}`).join(' · ')||'总体 · 默认业务对象';
@@ -4485,8 +4566,9 @@ function actionRecord(page,evidenceId) {
   const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
-  else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note',
-    `当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
+  else if(evidenceId===5&&current.baseline&&!current.baseline.startsWith('状态人数：'))form.append(element('p','action-baseline-note status-legacy-note','原登记只保存状态名称，未保存完整人数；不能自动判断状态是否变化。原编号、基线和草稿保留，不补写历史人数。'));
+  else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p',`action-baseline-note${evidenceId===5?' status-count-change':''}`,
+    evidenceId===5?'当前状态人数与登记时不同，请展开基线人数并核对当前完整数据；保存进度保留原基线。':`当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
   if(evidenceId===24&&current.baseline&&!current.baseline.includes('→'))form.append(element('p','action-baseline-note',
     '原登记未保存留存人数与基期月份；保留原文字基线，不补写或反推历史人数。'));
   if(evidenceId===23&&current.baselineAt&&!current.baselineAt.startsWith('月度续订观察期末'))form.append(element('p','action-baseline-note renewal-legacy-note','原登记为周度口径；当前为完整月口径，不能直接比较。原编号、基线、周期和草稿保留，不补写历史。'));
@@ -5147,6 +5229,13 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     }
   }
   const info=dataset.diagnostics[page];
+  let selectedStatusExplorer;
+  if(selectedMetric===5) {
+    selectedStatusExplorer=subscriptionStatusHistory();panels.get('change').prepend(selectedStatusExplorer.node);
+    const historyData=element('details','workspace-context status-history-complete');
+    historyData.append(element('summary','','查看12期全部订阅状态人数'),dataTable(subscriptionStatusHistoryTable(),'status-history-full'));
+    panels.get('data').append(historyData);
+  }
   let selectedActivityExplorer;
   if(page==='B'&&selectedMetric===25&&metric(25).kind==='group'){
     selectedActivityExplorer=activityExplorer(()=>{const old=finding.querySelector('.detail-finding[data-metric-id="25"]');if(old)old.replaceWith(diagnosticFinding('B',25,filteredFinding('B',25)));});
@@ -5308,7 +5397,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(closed||!box.isConnected||!box.getClientRects().length||!box.clientWidth)continue;
       drawEvidenceChart(box,spec);
     }
-    const explorer=selectedActivityExplorer??selectedStructureExplorer??legacy?.explorer;
+    const explorer=selectedActivityExplorer??selectedStatusExplorer??selectedStructureExplorer??legacy?.explorer;
     if(explorer&&!explorer.node.dataset.initialized&&explorer.node.getClientRects().length) {
       let visible=true;
       for(let node=explorer.node;node&&node!==workspace;node=node.parentElement)
@@ -5329,7 +5418,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     }
     if(push) {
       const params=new URLSearchParams(location.hash.split('?')[1]??'');
-      if(key==='change'&&selectedMetric!==15)params.delete('panel');else params.set('panel',key);
+      if(key==='change'&&![5,15].includes(selectedMetric))params.delete('panel');else params.set('panel',key);
       pushRoute(`#/${page}${params.size?`?${params}`:''}`);lastRenderedHash=location.hash;
     }
     if(focus)buttons.get(key).focus({preventScroll:true});

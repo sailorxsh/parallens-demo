@@ -53,13 +53,19 @@ async (parent) => {
       check((await table.locator('thead').innerText()).includes('主账号人数（人）'),'Subscription counts lose their explicit entity or unit');
     }
     for(const [page,id,columns,expect] of [['D',2,2,'12,400'],['A',14,2,'1,440'],['B',26,2,'2.1'],
-      ['E',38,2,'65.0%'],['E',40,3,'$5.10/人'],['A',12,4,'2,670'],['G',54,4,'9,650']]) {
+      ['E',40,3,'$5.10/人'],['A',12,4,'2,670'],['G',54,4,'9,650']]) {
       await open(`${page}?metric=${id}&panel=data`);
       const table=p.locator(`#${page}-panel-data > .data-table-scroll`).filter({has:p.getByText('当前筛选完整值',{exact:false})}).first();
       check(await table.locator('thead th').count()===columns&&(await table.innerText()).includes(expect),`Compaction removes a meaningful value for #${id}`);
-      if([38,40].includes(id))check((await table.innerText()).includes('未提供同口径分子、分母明细'),'Compaction conceals missing ratio components');
+      if(id===40)check((await table.innerText()).includes('未提供同口径分子、分母明细'),'Compaction conceals missing ratio components');
       if(id===12)check((await table.innerText()).includes('W7')&&(await table.innerText()).includes('80.1%'),'Mature cohort or result disappears from mixed rows');
     }
+    // #38 now has reviewed counts for three distinct populations, rather than the old two-column summary.
+    await open('E?metric=38&panel=data');
+    const structure=p.locator('#E-panel-data > .data-table-scroll').filter({has:p.getByText('用户与设备结构 · 三类对象完整验算',{exact:true})});
+    check(await structure.locator('thead th').count()===5&&await structure.locator('tbody tr').count()===10,'Structure detail loses its count/denominator/share columns or any reviewed group');
+    const structureText=await structure.innerText();for(const value of ['83,590人','128,600人','65.0%','57,870人','16,000台','143,800台','11.1%'])check(structureText.includes(value),'Structure table loses reviewed evidence '+value);
+    check(!structureText.includes('未提供同口径分子、分母明细'),'Known structure counts are labelled as missing');
     await open('D?metric=5&plan=Plus');
     check(await chart().count()===0&&(await p.locator('#metric-evidence-5').innerText()).includes('待补数据'),'Unsupported plan fabricates a subscription mix');
     // A true zero population must not become a plotted 0% or 100% composition.
@@ -68,7 +74,7 @@ async (parent) => {
       for(const states of Object.values(json.m05.value))for(const key of Object.keys(states))states[key]=0;
       await route.fulfill({response,json});
     });
-    await open('D?metric=5');await p.reload();await p.locator('#metric-evidence-5 .na-note').waitFor();
+    await open('D?metric=5');await p.reload();await p.locator('#D-metric-availability-5').waitFor();
     check(await chart().count()===0,'Zero status population is plotted as a known percentage');
     check(!errors.length,errors.join('; '));
     return {status:'PASS',checks:['source counts and six state shares','three widths and product/platform/market scopes',

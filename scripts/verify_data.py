@@ -104,6 +104,13 @@ check("F8-subscription-flow", all(
           snapshot["subscriptionStatuses"][status]["cancelledButEntitled"]
           for product,status in (("Bird","bird"),("Hunting","hunting"))),
       "分产品线订阅流转各自闭合，合计回总体与互斥订阅状态")
+status_history = subscription_flow.get("statusHistory", {})
+check("D31-subscription-status-history", status_history.get("classification") == "entirely_synthetic" and
+      len(status_history.get("rows", [])) == 12 and status_history["rows"][-1]["products"] == metrics["m05"]["value"] and
+      all(sum(sum(part.values()) for part in row["products"].values()) == metric_trends["m48"]["points"][i]["denominator"] and
+          sum(part["paidCurrent"] + part["cancelledButEntitled"] for part in row["products"].values()) == metric_trends["m02"]["points"][i]["value"]
+          for i, row in enumerate(status_history["rows"])),
+      "12期状态快照各产品内互斥闭合，当前人数与原始付费/绑定池历史保持")
 check("F3-incomparable-rates", len(diagnostics["D"]["chart"]["series"]) == 1 and
       len(diagnostics["D"]["extraCharts"]) >= 1 and
       len(diagnostics["D"]["extraCharts"][0]["series"]) == 1 and
