@@ -38,6 +38,12 @@ let statusChart;
 const sparklines=[];
 const detailCharts=[];
 const chartPresentations=new WeakMap();
+const evidenceChartSpecs=new WeakMap();
+function refreshEvidenceChart(instance) {
+  const box=instance.getDom(),spec=evidenceChartSpecs.get(box);
+  if(!spec)return false;
+  drawEvidenceChart(box,spec);return true;
+}
 const chartTextScale=()=>Math.max(1,parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
 const chartText=size=>size*chartTextScale();
 function setChartOption(instance,build,{responsive=false,legendPadding=null}={}) {
@@ -70,7 +76,7 @@ function refreshChartTypography(instance) {
 }
 chartMotionPreference?.addEventListener('change',()=>{
   for(const instance of [chart,statusChart,...sparklines,...detailCharts]) {
-    if(instance&&!instance.isDisposed())refreshChartTypography(instance);
+    if(instance&&!instance.isDisposed()&&!refreshEvidenceChart(instance))refreshChartTypography(instance);
   }
 });
 const chartSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(entries=>requestAnimationFrame(()=>{
@@ -78,6 +84,7 @@ const chartSizeObserver=typeof ResizeObserver==='function'?new ResizeObserver(en
     if(!box.isConnected||!box.clientWidth||!box.clientHeight)continue;
     const instance=window.echarts?.getInstanceByDom(box);
     if(!instance||instance.isDisposed())continue;
+    if(refreshEvidenceChart(instance))continue;
     const typographyChanged=refreshChartTypography(instance);
     if(!typographyChanged&&Math.abs(instance.getWidth()-box.clientWidth)<1&&Math.abs(instance.getHeight()-box.clientHeight)<1)continue;
     instance.resize();
@@ -218,11 +225,13 @@ function actionBaselineWindow(id) {
   return `快照 ${sourceData.snapshot.asOf}`;
 }
 window.addEventListener('resize',()=>{
-  [chart,statusChart,...sparklines,...detailCharts].filter(item=>item&&!item.isDisposed()).forEach(item=>{refreshChartTypography(item);item.resize();});
+  [chart,statusChart,...sparklines,...detailCharts].filter(item=>item&&!item.isDisposed()).forEach(item=>{
+    if(!refreshEvidenceChart(item)){refreshChartTypography(item);item.resize();}
+  });
   document.querySelectorAll('.chart-legend-frame').forEach(frame=>{
     const box=frame.querySelector('.detail-chart,#trendChart');
     const instance=box&&window.echarts?.getInstanceByDom(box);
-    if(instance)fitChartLegend(frame,instance);
+    if(instance&&!evidenceChartSpecs.has(box))fitChartLegend(frame,instance);
   });
   updateScrollableTables();
   updateSectionNavigation();
@@ -2218,18 +2227,67 @@ function bindChartTableSelection(instance,table,describe,{indexFor=params=>param
     requestAnimationFrame(()=>{if(row.isConnected&&row.classList.contains('chart-selected'))row.scrollIntoView({block:'nearest'});});
   });
 }
-function drawEvidenceChart(box,spec) {
-  const instance=drawDetailChart(box,spec);
+function drawEvidenceChart(box,spec,legendSelection) {
+  evidenceChartSpecs.set(box,spec);
+  if(box.classList.contains('chart-render-error'))return;
   const panel=box.closest('.detail-chart-panel,.evidence-pair');
   const details=panel?.querySelector(':scope > .chart-data,:scope > .workspace-calculation');
-  if(!instance||!details)return;
-  const indexFor=params=>spec.kind==='heatmap'?params.value?.[1]:params.dataIndex;
-  bindChartTableSelection(instance,details.querySelector('table'),params=>{
-    const index=indexFor(params);
-    const dimension=spec.kind==='heatmap'?spec.dimensions[params.value?.[0]]:
-      spec.kind==='stacked100'?spec.series[params.seriesIndex].name:null;
-    return `${spec.labels[index]}${dimension?` · ${dimension}`:''}`;
-  },{indexFor,resolvePoint:params=>spec.kind==='stacked100'?stackedChartPoint(instance,spec,params):params});
+  const description=box.getAttribute('aria-label')??spec.title;
+  try {
+    const existing=window.echarts?.getInstanceByDom(box);
+    if(existing) {
+      legendSelection={...existing.getOption().legend?.[0]?.selected};
+      refreshChartTypography(existing);
+      existing.resize();
+      if(box.parentElement.classList.contains('chart-legend-frame'))fitChartLegend(box.parentElement,existing);
+      return;
+    }
+    const instance=drawDetailChart(box,spec);
+    if(instance&&legendSelection)for(const [name,selected] of Object.entries(legendSelection))
+      if((instance.getOption().legend?.[0]?.selected?.[name]!==false)!==selected)
+        instance.dispatchAction({type:'legendToggleSelect',name});
+    if(!instance||!details)return;
+    const indexFor=params=>spec.kind==='heatmap'?params.value?.[1]:params.dataIndex;
+    bindChartTableSelection(instance,details.querySelector('table'),params=>{
+      const index=indexFor(params);
+      const dimension=spec.kind==='heatmap'?spec.dimensions[params.value?.[0]]:
+        spec.kind==='stacked100'?spec.series[params.seriesIndex].name:null;
+      return `${spec.labels[index]}${dimension?` · ${dimension}`:''}`;
+    },{indexFor,resolvePoint:params=>spec.kind==='stacked100'?stackedChartPoint(instance,spec,params):params});
+  } catch(error) {
+    console.error(`证据图表绘制失败：${spec.title}`,error);
+    const frame=box.parentElement,restoreFocus=box.contains(document.activeElement)||
+      frame.classList.contains('chart-legend-frame')&&frame.contains(document.activeElement);
+    const failed=window.echarts?.getInstanceByDom(box);
+    if(failed&&!failed.isDisposed()) {
+      try {destroyChart(failed);}catch(cleanupError){console.error('清理失败的证据图表时出错',cleanupError);}
+      const index=detailCharts.indexOf(failed);if(index>=0)detailCharts.splice(index,1);
+    }
+    if(box.parentElement.classList.contains('chart-legend-frame'))box.parentElement.querySelector('.chart-legend')?.remove();
+    box.classList.add('chart-fallback','chart-render-error');
+    box.setAttribute('role','group');box.setAttribute('aria-label',`${spec.title}图表状态`);
+    const message=element('p','',details?'图表暂时无法显示，完整数据表仍可查看。':'图表暂时无法显示，可切换至完整数据核对。');
+    message.setAttribute('role','status');
+    const actions=element('div','chart-error-actions');
+    const retry=element('button','filter-reset','重试图表');retry.type='button';retry.setAttribute('aria-label',`重试${spec.title}图表`);
+    retry.addEventListener('click',()=>{
+      box.classList.remove('chart-render-error');box.setAttribute('aria-label',description);
+      drawEvidenceChart(box,spec,legendSelection);
+      const restored=window.echarts?.getInstanceByDom(box);
+      const recovered=!!restored&&!restored.isDisposed()&&!!box.querySelector('svg')&&!box.classList.contains('chart-render-error');
+      if(!recovered&&box.querySelector('button'))box.querySelector('button').focus({preventScroll:true});
+      else {box.tabIndex=-1;box.focus({preventScroll:true});}
+      document.querySelector('#announcement').textContent=!recovered?
+        `${spec.title}仍无法显示，完整数据可继续核对。`:`${spec.title}图表已恢复。`;
+    });
+    actions.append(retry);
+    if(details) {
+      const data=element('button','filter-reset','查看数据表');data.type='button';data.setAttribute('aria-label',`查看${spec.title}完整数据表`);
+      data.addEventListener('click',()=>{details.open=true;details.querySelector('summary').focus();updateScrollableTables();});actions.append(data);
+    }
+    box.replaceChildren(message,actions);
+    if(restoreFocus)retry.focus({preventScroll:true});
+  }
 }
 function structureExplorer(views) {
   const section=element('section','structure-explorer');
@@ -3455,11 +3513,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       for(let ancestor=box.parentElement;ancestor&&ancestor!==workspace;ancestor=ancestor.parentElement)
         if(ancestor.hidden||ancestor.tagName==='DETAILS'&&!ancestor.open){closed=true;break;}
       if(closed||!box.isConnected||!box.getClientRects().length||!box.clientWidth)continue;
-      const existing=window.echarts?.getInstanceByDom(box);
-      if(existing) {
-        existing.resize();
-        if(box.parentElement.classList.contains('chart-legend-frame'))fitChartLegend(box.parentElement,existing);
-      } else drawEvidenceChart(box,spec);
+      drawEvidenceChart(box,spec);
     }
     const explorer=legacy?.explorer;
     if(explorer&&!explorer.node.dataset.initialized&&explorer.node.getClientRects().length) {

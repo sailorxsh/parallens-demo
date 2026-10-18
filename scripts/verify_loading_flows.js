@@ -19,7 +19,8 @@ async(page)=>{
   try {
    // DOMContentLoaded waits for deferred scripts, so inspect this intentional gap before it.
    await p.goto(base,{waitUntil:'commit'});
-   await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===17,{},{timeout:10000});
+   // WebKit can withhold animation frames while this deferred script is deliberately gated.
+   await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===17,{},{timeout:10000,polling:50});
    check(await p.locator('#main').getAttribute('aria-busy')==='true','Waiting for the chart library falsely presents a ready dashboard');
    check((await p.locator('#load-status').innerText()).includes('正在准备图表'),'Completed data leaves an unexplained wait');
    check(!await p.locator('.home-results').count(),'Data alone presents a partially initialized dashboard');
