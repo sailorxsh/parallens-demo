@@ -223,8 +223,8 @@
     {
       "id": 4,
       "page": "B",
-      "entity": "用户",
-      "window": "截至2026-09-24向前30天滚动窗口",
+      "entity": "正式复合活跃主账号",
+      "window": "UTC 2026-09-24零时截止的滚动30天，左含右不含",
       "businessDimensions": [
         "appPlatform",
         "country",
@@ -233,11 +233,12 @@
       ],
       "demonstrableDimensions": [
         "appPlatform",
-        "country",
+        "country"
+      ],
+      "unavailableDimensions": [
         "deviceModel",
         "productLine"
-      ],
-      "unavailableDimensions": []
+      ]
     },
     {
       "id": 5,
@@ -648,8 +649,8 @@
     {
       "id": 25,
       "page": "B",
-      "entity": "用户",
-      "window": "截至2026-09-24的当日、向前7天与向前30天滚动窗口",
+      "entity": "正式复合活跃主账号",
+      "window": "UTC 2026-09-24零时截止；滚动1／7／30天，左含右不含",
       "businessDimensions": [
         "appPlatform",
         "country",
@@ -658,11 +659,12 @@
       ],
       "demonstrableDimensions": [
         "appPlatform",
-        "country",
+        "country"
+      ],
+      "unavailableDimensions": [
         "deviceModel",
         "productLine"
-      ],
-      "unavailableDimensions": []
+      ]
     },
     {
       "id": 26,
@@ -741,19 +743,22 @@
     {
       "id": 30,
       "page": "B",
-      "entity": "用户",
-      "window": "截至2026-09-24向前30天滚动窗口；三来源去重并集与交集",
+      "entity": "正式复合活跃主账号",
+      "window": "UTC 2026-09-24零时截止的滚动30天，左含右不含",
       "businessDimensions": [
         "appPlatform",
         "country",
+        "deviceModel",
         "productLine"
       ],
       "demonstrableDimensions": [
         "appPlatform",
-        "country",
-        "productLine"
+        "country"
       ],
-      "unavailableDimensions": []
+      "unavailableDimensions": [
+        "deviceModel",
+        "productLine"
+      ]
     },
     {
       "id": 31,

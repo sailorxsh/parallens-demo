@@ -983,3 +983,6 @@ article.trial-sample-item {cursor:auto}
 
 /* The owned structure view uses one chart shell inside the evidence workspace. */
 .structure-metric-evidence .structure-explorer {border:0;padding:0;margin:0}
+.activity-window-explorer .evidence-charts-grid {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));
+}

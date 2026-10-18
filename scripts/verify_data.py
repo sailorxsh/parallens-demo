@@ -584,6 +584,25 @@ check('D28-structure-source',len(views)==3 and all(sum(r[1] for r in v['rows'])=
       views[0]['denominator']==views[1]['denominator']==metrics['m07']['value']['registered'] and views[2]['denominator']==metrics['m08']['value']['boundCurrent'],
       '国家与App按全部注册用户、型号按当前绑定设备，人数与各自分母闭合；没有12个月历史或交叉切片')
 
+active_windows=load('activity-window-facts.json')
+active_ok=active_windows['version']=='synthetic-active-windows-v1' and active_windows['status']=='approved-synthetic' and len(active_windows['rows'])==84
+for i,row in enumerate(active_windows['rows']):
+    active_ok &= (datetime.fromisoformat(row['at'])==datetime.fromisoformat(active_windows['asOf'])-timedelta(days=83-i) and len(row['records'])==8 and
+                  len({(r['country'],r['appPlatform']) for r in row['records']})==8)
+    for r in row['records']:
+        counts=[]
+        for field in ['compositeAge','appAge']:
+            counts.append([sum(o['count'] for o in r['outcomes'] if o[field] is not None and o[field]<=bound) for bound in range(3)])
+        active_ok &= all(a<=b for a,b in zip(counts[1],counts[0])) and all(v[0]<=v[1]<=v[2] for v in counts)
+last=active_windows['rows'][-1]
+for bound,key in enumerate(['DAU','WAU','MAU']):
+    active_ok &= metrics['m25']['value'][key]==sum(o['count'] for r in last['records'] for o in r['outcomes'] if o['compositeAge']<=bound)
+    active_ok &= metrics['m25']['value']['app'+key]==sum(o['count'] for r in last['records'] for o in r['outcomes'] if o['appAge'] is not None and o['appAge']<=bound)
+check('D29-active-window-frequencies',active_ok,'84个每日UTC零时快照、672组；三窗口嵌套，App子集与六项当前人数闭合；不是自然周／月')
+active_policies=[r for r in filter_policy['metrics'] if r['id'] in [4,25,30]]
+check('D30-active-window-applicability',len(active_policies)==3 and all(set(r['demonstrableDimensions'])=={'country','appPlatform'} and {'deviceModel','productLine'}<=set(r['unavailableDimensions']) for r in active_policies),
+      '三项仅国家×App同源可算；型号／产品线保留业务适用性、缺归属待补，不独立乘比例')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

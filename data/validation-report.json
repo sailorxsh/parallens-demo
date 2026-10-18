@@ -1,6 +1,6 @@
 {
-  "passed": 50,
-  "total": 50,
+  "passed": 52,
+  "total": 52,
   "checks": [
     {
       "rule": "catalog",
@@ -251,6 +251,16 @@
       "rule": "D28-structure-source",
       "passed": true,
       "detail": "国家与App按全部注册用户、型号按当前绑定设备，人数与各自分母闭合；没有12个月历史或交叉切片"
+    },
+    {
+      "rule": "D29-active-window-frequencies",
+      "passed": true,
+      "detail": "84个每日UTC零时快照、672组；三窗口嵌套，App子集与六项当前人数闭合；不是自然周／月"
+    },
+    {
+      "rule": "D30-active-window-applicability",
+      "passed": true,
+      "detail": "三项仅国家×App同源可算；型号／产品线保留业务适用性、缺归属待补，不独立乘比例"
     }
   ]
 }

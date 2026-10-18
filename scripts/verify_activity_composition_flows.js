@@ -3,7 +3,7 @@ async(parent)=>{
  const base=new URL('.',parent.url()).href,browser=parent.context().browser(),results=[],errors=[];
  const check=(ok,message)=>{if(!ok)throw Error(message);};
  const read=async name=>{const r=await parent.request.get(`${base}data/${name}.json`);check(r.ok(),name);return r.json();};
- const [raw,slices]=await Promise.all(['metric-values','filter-slices'].map(read)),original=raw.m30.value;
+ const [raw,facts]=await Promise.all(['metric-values','activity-window-facts'].map(read)),original=raw.m30.value;
  const keys=['appOnly','contentOnly','pushOnly','appContentOnly','appPushOnly','contentPushOnly','allThree'];
  const names=['仅App','仅内容','仅推送','App＋内容','App＋推送','内容＋推送','三者都有'];
  const memberships={app:[0,3,4,6],content:[1,3,5,6],pushClicked:[2,4,5,6]};
@@ -30,15 +30,12 @@ async(parent)=>{
     note:node.textContent,summary:metricCardSummary(30),active:metric(4).value,mau:metric(25).value,
     legacyMargins:projectGroup(sourceData.metrics.m30.value,sharesFor(effectiveFor(30),30),effectiveFor(30),30)};
   });
-  const scale=Object.entries(filters).reduce((n,[key,value])=>n*slices[key][value].denominatorShare,1);
-  const cells=keys.map(k=>state.value.exclusiveCells[k]),union=Math.round(original.composite*scale);
-  check(JSON.stringify(cells)===JSON.stringify(state.values),'Visible bars differ from projected source cells');
+  const source=facts.currentComposition.filter(r=>Object.entries(filters).every(([k,v])=>r[k]===v));
+  const cells=keys.map(k=>state.value.exclusiveCells[k]),union=source.reduce((n,r)=>n+r.composite,0);
+  check(JSON.stringify(cells)===JSON.stringify(state.values),'Visible bars differ from source cells');
+  for(const [i,k] of keys.entries())check(cells[i]===source.reduce((n,r)=>n+r.exclusive[k],0),'Group count is not summed from joint source');
   check(cells.reduce((a,b)=>a+b,0)===union&&state.value.composite===union,'Seven groups do not close to the union');
-  check(cells.every((n,i)=>Number.isSafeInteger(n)&&n>=0&&Math.abs(n-original.exclusiveCells[keys[i]]*scale)<1.00000001),
-   'A cell changed by more than integer rounding');
-  for(const [field,indexes] of Object.entries(memberships))check(indexes.reduce((n,i)=>n+cells[i],0)===state.value[field]&&
-   state.value[field]===state.legacyMargins[field]&&Math.abs(state.value[field]-original[field]*scale)<=.50000001,
-   `Source margin ${field} changed: ${JSON.stringify({filters,scale,cells,value:state.value[field],legacy:state.legacyMargins[field]})}`);
+  for(const [field,indexes] of Object.entries(memberships))check(indexes.reduce((n,i)=>n+cells[i],0)===state.value[field],`Source margin ${field} differs from the exclusive cells`);
   check(state.active===union&&state.mau.MAU===union&&state.mau.appMAU===state.value.app,'Activity counts disagree across metrics');
   check(state.min===0&&state.max>=Math.max(...cells),'Count bars omit zero or a real cell');
   check(state.labels.map(s=>s.replaceAll('\n','')).join('|')===names.join('|'),'Category names do not match the exclusive groups');
@@ -48,16 +45,16 @@ async(parent)=>{
    numeric(state.rows[i][2])===union&&state.rows[i][3]===`${(100*cells[i]/union).toFixed(1)}%`,'Displayed numerator, denominator or share is stale');
   check(numeric(state.rows[7][1])===union&&state.rows[7][3]==='100.0%','Exact table has no reconciled total');
   check(state.summary.label==='复合活跃主账号'&&state.summary.unit==='人'&&state.summary.fields.length===3,'Current summary hides a source or its unit');
-  check(state.note.includes('不能相加')&&state.note.includes('App＋内容不含推送')&&state.note.includes('向前30天'),'Composition loses overlap, exclusivity or period boundaries');
-  if(Object.keys(filters).length)check(state.note.includes('模拟分片估算'),'Scoped estimates are presented as observed facts');
+  check(state.note.includes('不能相加')&&state.note.includes('App＋内容不含推送')&&state.note.includes('滚动30天'),'Composition loses overlap, exclusivity or period boundaries');
+  if(Object.keys(filters).length)check(state.note.includes('同源合成频数重算'),'Scoped estimates are presented as observed facts');
   check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Composition creates page overflow');
   results.push({filters,width:await p.evaluate(()=>innerWidth),union,cells,app:state.value.app});return state;
  };
  try{
   let visited=0;
-  for(const country of ['', 'US','UK','DE','Other'])for(const appPlatform of ['', 'iOS','Android'])for(const productLine of ['', 'Bird','Hunting']){
+  for(const country of ['', 'US','UK','DE','Other'])for(const appPlatform of ['', 'iOS','Android']){
    if(visited++%10===0)await p.goto('about:blank');
-   const filters=Object.fromEntries(Object.entries({country,appPlatform,productLine}).filter(([,v])=>v));
+   const filters=Object.fromEntries(Object.entries({country,appPlatform}).filter(([,v])=>v));
    await open(`B?metric=30&${new URLSearchParams(filters)}`);await inspect(filters);
   }
   check(await stored()===null,'Reading a composition writes an issue');
@@ -79,6 +76,7 @@ async(parent)=>{
    check(!clipped.length,`Chart text is clipped at ${width}/${font}: ${clipped.join(', ')}`);
    await plot.scrollIntoViewIfNeeded();
    for(const index of [0,2]){
+    await plot.scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     const point=await plot.evaluate((node,index)=>{
      const chart=echarts.getInstanceByDom(node),value=chart.getOption().series[0].data[index],r=node.getBoundingClientRect();
      if(index===2){
@@ -88,7 +86,7 @@ async(parent)=>{
      }
      const [x,y]=chart.convertToPixel({seriesIndex:0},[index,value/2]);return{x:r.left+x,y:r.top+y};
     },index);
-    const url=p.url();await p.mouse.click(point.x,point.y);
+    const url=p.url();await p.mouse.click(point.x,point.y);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
     check(await details.evaluate(n=>n.open),'Actual bar click does not open its evidence');
     const selected=details.locator('tbody tr.chart-selected');
     check(await selected.count()===1&&(await selected.locator('th,td').first().innerText())===names[index],
@@ -137,20 +135,14 @@ async(parent)=>{
     await q.route('**/data/metric-values.json',r=>r.fulfill({json:fixture}));
     await q.goto(`${base}#/B?metric=30`);await q.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));
     const value=await q.evaluate(()=>metric(30));
-    if(mode==='corrupt')check(value.availability==='pending'&&await q.locator('.evidence-pair[data-evidence-metric="30"]').count()===0,'Corrupt source produces a plausible graph');
-    else{
-     const evidence=q.locator('.evidence-pair[data-evidence-metric="30"]');
-     await evidence.locator('.workspace-calculation > summary').click();
-     check(value.value.composite===(mode==='zero'?0:12)&&(await evidence.innerText()).includes('样本不足（少于30人）')&&
-      !(await evidence.locator('tbody').innerText()).includes('NaN'),'Small or zero group implies a reliable share');
-    }
+    check(value.availability==='pending'&&await q.locator('.evidence-pair[data-evidence-metric="30"]').count()===0,'Raw totals conflicting with joint facts produce a plausible graph');
    }finally{await isolated.close();}
    results.push({fixture:mode});
   }
   check(!errors.length,errors.join('; '));
-  return{status:'PASS',checks:['45 supported scopes reconcile seven exclusive cells and all three overlapping margins',
+  return{status:'PASS',checks:['15 supported scopes reconcile seven exclusive cells and all three overlapping margins',
    'cross-metric MAU identity and exact numerator/denominator/share table','three desktop widths and actual 200% text',
    'real bar and tiny-group value-label selection, keyboard data disclosure','explicit tabs, search and history',
-   'saved scope, draft and immutable historical baseline','corrupt, zero and small-sample source responses'],results};
+   'saved scope, draft and immutable historical baseline','conflicting raw totals are not substituted for source frequencies'],results};
  }finally{await context.close();}
 }

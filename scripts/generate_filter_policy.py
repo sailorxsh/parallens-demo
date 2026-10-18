@@ -13,6 +13,7 @@ contract = json.loads((DATA / "filter-contract.json").read_text())
 # These joins are meaningful to the business, but the current aggregate workbook
 # does not have the linked records required to calculate them.
 BUSINESS_ADD = {
+    4: {"productLine", "deviceModel"}, 25: {"productLine", "deviceModel"}, 30: {"productLine", "deviceModel"},
     2: {"deviceModel"}, 3: {"deviceModel", "billingCycle"},
     5: {"deviceModel", "plan"}, 6: {"deviceModel"},
     14: {"country", "productLine", "deviceModel"},
