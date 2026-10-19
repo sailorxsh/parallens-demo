@@ -55,7 +55,7 @@ async(parent)=>{
   await control('当前指标').click();
   const priority=p.locator('.page-observation');await priority.locator('> summary').focus();await p.keyboard.press('Enter');
   check(await priority.evaluate(n=>n.open),'Page observation is not keyboard operable');
-  check((await priority.innerText()).includes('7 条模拟异常事件'),'Page priority lost its authored event evidence');
+  check((await priority.innerText()).includes('最新完整24小时有 7 条合成异常发现'),'Page priority lost its same-source 24h event evidence');
   await priority.locator('.insight-link').first().click();await ready();
   check(await current().getAttribute('data-metric-id')==='53'&&await input('issueMetric').inputValue()==='54','Reading event evidence changes the active quality issue');
   await p.goBack();await ready();

@@ -12,7 +12,7 @@ async(parent)=>{
   try {
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
       await p.setViewportSize({width,height});
-      for(const code of ['C','G']) {
+      for(const code of ['C']) {
         await open(code);
         const navigation=p.getByRole('navigation',{name:'分组证据定位',exact:true});
         await navigation.getByRole('button').filter({hasText:code==='C'?'设备样本':'异常事件'}).click();
@@ -59,12 +59,12 @@ async(parent)=>{
     const target=await p.locator('.entity-sample-detail .inspector-link').getAttribute('href');
     check(target.includes('country=US')&&target.includes('deviceModel=K6'),'Related metric drops supported sample-scope filters');
     await open('G','appPlatform=iOS');
-    check(await p.locator('.entity-sample-item').count()===0&&(await p.locator('.entity-workspace').innerText()).includes('没有逐条筛选维度'),
-      'Unknown event dimensions reuse overall sample records');
+    check(await p.locator('.anomaly-event-table tbody tr').count()===3,
+      'Same-source iOS event list does not match three latest records');
     await open('G','metric=53');
     check((await p.locator('.income-evidence .evidence-meta').innerText()).includes('统一近4周基线待补'),'Anomaly window claims an uncomputed four-week alert baseline');
     const originalStorage=await p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY));
-    await p.getByRole('button',{name:/EX-06 长期未使用/}).click();
+    await p.locator('.anomaly-event-workspace').getByRole('button',{name:/查看EX-06 长期未使用/}).click();
     const unusedLink=p.locator('.entity-sample-detail .inspector-link');
     check((await unusedLink.getAttribute('href')).includes('/C?metric=44'),'Long-unused device event routes to active rate instead of #44');
     await unusedLink.click();await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
@@ -78,7 +78,7 @@ async(parent)=>{
     check(await selected.evaluate(n=>n===document.activeElement)&&await p.locator('.entity-sample-detail .inspector-link').isVisible(),'Constrained reading loses sample selection or its next action');
     check(errors.length===0,errors.join('; '));
     return {status:'PASS',checks:['list and detail in same view at three desktop sizes','heading and next action visible','mouse and keyboard selection',
-      'selection feedback and focus','no document jump','draft and baseline preservation','device filters and related evidence scope','event scope missing facts',
+      'selection feedback and focus','no document jump','draft and baseline preservation','device filters and related evidence scope','same-source iOS events and related unused-device destination',
       'larger desktop text retains accessible content','no runtime errors'],results};
   } finally {await context.close();}
 }

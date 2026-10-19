@@ -42299,6 +42299,1889 @@
         ],
         "note": "有可靠预期事件数的演示样本；无预期数时应显示待核验，而非绿色正常。"
       }
-    ]
+    ],
+    "anomalyEvents": {
+      "status": "approved-synthetic",
+      "version": "synthetic-anomaly-events-noon-v1",
+      "classification": "entirely_synthetic",
+      "asOf": "2026-09-24T12:00:00Z",
+      "period": "30-contiguous-24h-windows",
+      "events": [
+        {
+          "id": "SYN-20260826-01",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-08-26T08:10:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260826-02",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-08-26T08:27:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260827-01",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-08-27T08:10:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260827-02",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-08-27T08:27:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "Other",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260827-03",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-08-27T08:44:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260828-01",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-08-28T08:10:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260829-01",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-08-29T08:10:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260829-02",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-08-29T08:27:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260829-03",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-08-29T08:44:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260829-04",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-08-29T09:01:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260830-01",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-08-30T08:10:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260830-02",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-08-30T08:27:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260901-01",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-01T08:10:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260901-02",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-01T08:27:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260901-03",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-01T08:44:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260902-01",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-02T08:10:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260902-02",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-02T08:27:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260903-01",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-03T08:10:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260903-02",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-03T08:27:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260903-03",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-03T08:44:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260903-04",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-03T09:01:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260904-01",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-04T08:10:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260905-01",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-05T08:10:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260905-02",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-05T08:27:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260905-03",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-05T08:44:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260906-01",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-06T08:10:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260906-02",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-06T08:27:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260907-01",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-07T08:10:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260907-02",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-07T08:27:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260907-03",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-07T08:44:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260907-04",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-07T09:01:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260907-05",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-07T09:18:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260908-01",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-08T08:10:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260908-02",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-08T08:27:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "Other",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260909-01",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-09T08:10:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260909-02",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-09T08:27:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260909-03",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-09T08:44:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260910-01",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-10T08:10:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260911-01",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-11T08:10:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260911-02",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-11T08:27:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260911-03",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-11T08:44:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260911-04",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-11T09:01:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260912-01",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-12T08:10:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260912-02",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-12T08:27:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "Other",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260912-03",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-12T08:44:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260913-01",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-13T08:10:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260913-02",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-13T08:27:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260914-01",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-14T08:10:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260914-02",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-14T08:27:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260914-03",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-14T08:44:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260914-04",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-14T09:01:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260915-01",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-15T08:10:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260915-02",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-15T08:27:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260915-03",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-15T08:44:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260916-01",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-16T08:10:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260916-02",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-16T08:27:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "Other",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260917-01",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-17T08:10:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260917-02",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-17T08:27:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260917-03",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-17T08:44:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260917-04",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-17T09:01:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260918-01",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-18T08:10:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260918-02",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-18T08:27:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260918-03",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-18T08:44:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260919-01",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-19T08:10:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260919-02",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-19T08:27:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260920-01",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-20T08:10:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260921-01",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-21T08:10:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260921-02",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-21T08:27:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260921-03",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-21T08:44:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260921-04",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-21T09:01:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260922-01",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-22T08:10:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "Other",
+          "appPlatform": "Android",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260922-02",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-22T08:27:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260923-01",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-23T08:10:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260923-02",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-23T08:27:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260923-03",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-23T08:44:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260923-04",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-23T09:01:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "SYN-20260923-05",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-23T09:18:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "newly-constructed-historical-event"
+        },
+        {
+          "id": "EX-01",
+          "domain": "新客",
+          "signal": "7日价值激活下降",
+          "status": "待核验",
+          "observedAt": "2026-09-24T09:10:00Z",
+          "scope": "观鸟线完整7日注册批次",
+          "review": "核对批次成熟度与产品线分母。",
+          "evidence": {
+            "page": "A",
+            "metricId": 13
+          },
+          "country": "US",
+          "appPlatform": "iOS",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        },
+        {
+          "id": "EX-02",
+          "domain": "新客",
+          "signal": "绑定后无首图",
+          "status": "待核验",
+          "observedAt": "2026-09-24T09:25:00Z",
+          "scope": "绑定未激活设备演示清单",
+          "review": "核对绑定时间、激活事件与首图上传事件。",
+          "evidence": {
+            "page": "A",
+            "metricId": 15
+          },
+          "country": "UK",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        },
+        {
+          "id": "EX-03",
+          "domain": "订阅",
+          "signal": "试用转正下降",
+          "status": "已定位演示贡献",
+          "observedAt": "2026-09-24T09:40:00Z",
+          "scope": "最近成熟试用批次",
+          "review": "复查转正分子、分母与 Android Plus 月付组的变化贡献。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        },
+        {
+          "id": "EX-04",
+          "domain": "订阅",
+          "signal": "支付失败上升",
+          "status": "待核验",
+          "observedAt": "2026-09-24T10:05:00Z",
+          "scope": "Android Plus 月付演示分组",
+          "review": "核对支付尝试、失败次数和同期转正变化；不直接推断因果。",
+          "evidence": {
+            "page": "D",
+            "metricId": 18
+          },
+          "country": "US",
+          "appPlatform": "Android",
+          "anomalyType": "Business",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        },
+        {
+          "id": "EX-05",
+          "domain": "设备",
+          "signal": "K6固件2.8空触发升高",
+          "status": "待核验",
+          "observedAt": "2026-09-24T10:20:00Z",
+          "scope": "观鸟 K6 固件 2.8 分组",
+          "review": "查看设备样本和分组空触发率的独立证据。",
+          "evidence": {
+            "page": "C",
+            "metricId": 42
+          },
+          "country": "DE",
+          "appPlatform": "Android",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        },
+        {
+          "id": "EX-06",
+          "domain": "设备",
+          "signal": "长期未使用",
+          "status": "待核验",
+          "observedAt": "2026-09-24T10:35:00Z",
+          "scope": "设备行为演示清单",
+          "review": "先核对有效设备分母、最近行为窗口与心跳排除规则。",
+          "evidence": {
+            "page": "C",
+            "metricId": 44
+          },
+          "country": "UK",
+          "appPlatform": "iOS",
+          "anomalyType": "Device",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        },
+        {
+          "id": "EX-07",
+          "domain": "数据质量",
+          "signal": "ID映射覆盖待观察",
+          "status": "待核验",
+          "observedAt": "2026-09-24T10:50:00Z",
+          "scope": "演示映射记录",
+          "review": "核对映射记录覆盖率及演示阈值；不要把正常样本状态推断为生产达标。",
+          "evidence": {
+            "page": "G",
+            "metricId": 54
+          },
+          "country": "Other",
+          "appPlatform": "iOS",
+          "anomalyType": "Quality",
+          "severity": null,
+          "affectedCount": null,
+          "provenance": "existing-seven-signals-with-new-synthetic-attribution"
+        }
+      ],
+      "windows": [
+        {
+          "startInclusive": "2026-08-25T12:00:00Z",
+          "endExclusive": "2026-08-26T12:00:00Z",
+          "eventIds": [
+            "SYN-20260826-01",
+            "SYN-20260826-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-08-26T12:00:00Z",
+          "endExclusive": "2026-08-27T12:00:00Z",
+          "eventIds": [
+            "SYN-20260827-01",
+            "SYN-20260827-02",
+            "SYN-20260827-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-08-27T12:00:00Z",
+          "endExclusive": "2026-08-28T12:00:00Z",
+          "eventIds": [
+            "SYN-20260828-01"
+          ]
+        },
+        {
+          "startInclusive": "2026-08-28T12:00:00Z",
+          "endExclusive": "2026-08-29T12:00:00Z",
+          "eventIds": [
+            "SYN-20260829-01",
+            "SYN-20260829-02",
+            "SYN-20260829-03",
+            "SYN-20260829-04"
+          ]
+        },
+        {
+          "startInclusive": "2026-08-29T12:00:00Z",
+          "endExclusive": "2026-08-30T12:00:00Z",
+          "eventIds": [
+            "SYN-20260830-01",
+            "SYN-20260830-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-08-30T12:00:00Z",
+          "endExclusive": "2026-08-31T12:00:00Z",
+          "eventIds": []
+        },
+        {
+          "startInclusive": "2026-08-31T12:00:00Z",
+          "endExclusive": "2026-09-01T12:00:00Z",
+          "eventIds": [
+            "SYN-20260901-01",
+            "SYN-20260901-02",
+            "SYN-20260901-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-01T12:00:00Z",
+          "endExclusive": "2026-09-02T12:00:00Z",
+          "eventIds": [
+            "SYN-20260902-01",
+            "SYN-20260902-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-02T12:00:00Z",
+          "endExclusive": "2026-09-03T12:00:00Z",
+          "eventIds": [
+            "SYN-20260903-01",
+            "SYN-20260903-02",
+            "SYN-20260903-03",
+            "SYN-20260903-04"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-03T12:00:00Z",
+          "endExclusive": "2026-09-04T12:00:00Z",
+          "eventIds": [
+            "SYN-20260904-01"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-04T12:00:00Z",
+          "endExclusive": "2026-09-05T12:00:00Z",
+          "eventIds": [
+            "SYN-20260905-01",
+            "SYN-20260905-02",
+            "SYN-20260905-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-05T12:00:00Z",
+          "endExclusive": "2026-09-06T12:00:00Z",
+          "eventIds": [
+            "SYN-20260906-01",
+            "SYN-20260906-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-06T12:00:00Z",
+          "endExclusive": "2026-09-07T12:00:00Z",
+          "eventIds": [
+            "SYN-20260907-01",
+            "SYN-20260907-02",
+            "SYN-20260907-03",
+            "SYN-20260907-04",
+            "SYN-20260907-05"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-07T12:00:00Z",
+          "endExclusive": "2026-09-08T12:00:00Z",
+          "eventIds": [
+            "SYN-20260908-01",
+            "SYN-20260908-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-08T12:00:00Z",
+          "endExclusive": "2026-09-09T12:00:00Z",
+          "eventIds": [
+            "SYN-20260909-01",
+            "SYN-20260909-02",
+            "SYN-20260909-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-09T12:00:00Z",
+          "endExclusive": "2026-09-10T12:00:00Z",
+          "eventIds": [
+            "SYN-20260910-01"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-10T12:00:00Z",
+          "endExclusive": "2026-09-11T12:00:00Z",
+          "eventIds": [
+            "SYN-20260911-01",
+            "SYN-20260911-02",
+            "SYN-20260911-03",
+            "SYN-20260911-04"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-11T12:00:00Z",
+          "endExclusive": "2026-09-12T12:00:00Z",
+          "eventIds": [
+            "SYN-20260912-01",
+            "SYN-20260912-02",
+            "SYN-20260912-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-12T12:00:00Z",
+          "endExclusive": "2026-09-13T12:00:00Z",
+          "eventIds": [
+            "SYN-20260913-01",
+            "SYN-20260913-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-13T12:00:00Z",
+          "endExclusive": "2026-09-14T12:00:00Z",
+          "eventIds": [
+            "SYN-20260914-01",
+            "SYN-20260914-02",
+            "SYN-20260914-03",
+            "SYN-20260914-04"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-14T12:00:00Z",
+          "endExclusive": "2026-09-15T12:00:00Z",
+          "eventIds": [
+            "SYN-20260915-01",
+            "SYN-20260915-02",
+            "SYN-20260915-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-15T12:00:00Z",
+          "endExclusive": "2026-09-16T12:00:00Z",
+          "eventIds": [
+            "SYN-20260916-01",
+            "SYN-20260916-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-16T12:00:00Z",
+          "endExclusive": "2026-09-17T12:00:00Z",
+          "eventIds": [
+            "SYN-20260917-01",
+            "SYN-20260917-02",
+            "SYN-20260917-03",
+            "SYN-20260917-04"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-17T12:00:00Z",
+          "endExclusive": "2026-09-18T12:00:00Z",
+          "eventIds": [
+            "SYN-20260918-01",
+            "SYN-20260918-02",
+            "SYN-20260918-03"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-18T12:00:00Z",
+          "endExclusive": "2026-09-19T12:00:00Z",
+          "eventIds": [
+            "SYN-20260919-01",
+            "SYN-20260919-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-19T12:00:00Z",
+          "endExclusive": "2026-09-20T12:00:00Z",
+          "eventIds": [
+            "SYN-20260920-01"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-20T12:00:00Z",
+          "endExclusive": "2026-09-21T12:00:00Z",
+          "eventIds": [
+            "SYN-20260921-01",
+            "SYN-20260921-02",
+            "SYN-20260921-03",
+            "SYN-20260921-04"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-21T12:00:00Z",
+          "endExclusive": "2026-09-22T12:00:00Z",
+          "eventIds": [
+            "SYN-20260922-01",
+            "SYN-20260922-02"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-22T12:00:00Z",
+          "endExclusive": "2026-09-23T12:00:00Z",
+          "eventIds": [
+            "SYN-20260923-01",
+            "SYN-20260923-02",
+            "SYN-20260923-03",
+            "SYN-20260923-04",
+            "SYN-20260923-05"
+          ]
+        },
+        {
+          "startInclusive": "2026-09-23T12:00:00Z",
+          "endExclusive": "2026-09-24T12:00:00Z",
+          "eventIds": [
+            "EX-01",
+            "EX-02",
+            "EX-03",
+            "EX-04",
+            "EX-05",
+            "EX-06",
+            "EX-07"
+          ]
+        }
+      ],
+      "rules": [
+        "一条记录表示一个被登记的异常发现，不表示一个受影响用户、设备或原始触发事件。",
+        "截至2026-09-24 12:00 UTC，最近24小时为9/23 12:00→9/24 12:00，左含右不含；不同于其他指标的UTC零时窗口。",
+        "选择历史窗口只更新事件清单，顶部仍显示最新24小时。新登记保存最新及前24小时窗口的事件证据，旧编号、范围、基线与草稿保留。",
+        "所有统计从事件ID去重计算；维度分组互斥闭合，不再独立乘比例。",
+        "没有已批准的生产告警规则或严重程度定级；不把昨日事件数、未评级或未知影响人数当作正常基线、低风险或零影响。"
+      ],
+      "limitations": [
+        "新增模拟市场与App归属，不能作为真实跨指标用户或设备身份链。",
+        "只有国家×App×异常类型有完整来源；产品线、型号、固件、设备状态与季节仍缺事件归属。",
+        "30日历史为合成情景，原末7个计数及EX-01至EX-07名称、状态、观测钟点保留；UTC时区和12:00截点为已确认演示口径。",
+        "严重程度、影响人数及统一4周监控基线仍待业务定义；已有单项指标的比较证据可通过链接查看。"
+      ]
+    }
   }
 }

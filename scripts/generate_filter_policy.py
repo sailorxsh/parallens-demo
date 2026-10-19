@@ -79,6 +79,8 @@ for item in contract:
         # Independent plan/product slices contradict the subscription subset.
         # The filters remain meaningful; linked entitlement ownership is absent.
         demonstrable.difference_update({"plan", "productLine"})
+    if mid == 53:
+        demonstrable.intersection_update({"country", "appPlatform", "anomalyType"})
     if mid == 51:
         # Historical populations need status at entry, not today's status.
         # Keep the business dimension visible while that linked field is absent.

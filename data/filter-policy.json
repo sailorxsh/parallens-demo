@@ -1231,7 +1231,7 @@
       "id": 53,
       "page": "G",
       "entity": "异常事件",
-      "window": "2026-09-24 当日演示异常事件数；当前变化比较前1日，统一近4周基线待补",
+      "window": "最近24小时：2026-09-23 12:00 → 2026-09-24 12:00 UTC（左含右不含）；比较前24小时，统一近4周基线待补",
       "businessDimensions": [
         "anomalyType",
         "appPlatform",
@@ -1245,14 +1245,15 @@
       "demonstrableDimensions": [
         "anomalyType",
         "appPlatform",
-        "country",
+        "country"
+      ],
+      "unavailableDimensions": [
         "deviceModel",
         "deviceStatus",
         "firmware",
         "productLine",
         "season"
-      ],
-      "unavailableDimensions": []
+      ]
     },
     {
       "id": 54,

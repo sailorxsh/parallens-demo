@@ -287,6 +287,7 @@ function observedBaselineEnd(window) {
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
   if([11,13,18].includes(id)){const c=cohortObservation(id);return c.reason?'当前批次观察截止待核验':`完整周 W${c.week} · ${c.start}—${c.end} · 观察截至 ${c.observedThrough}（UTC）`;}
+  if(id===53)return anomalyWindow();
   if(id===26)return sessionDepthWindow();
   if([4,25,30].includes(id))return `快照 ${sourceData.snapshot.asOf} · 活跃窗口v1 · UTC零时截止`;
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
@@ -312,6 +313,8 @@ function baselineWindowEnd(window) {
   const observed=observedBaselineEnd(window);if(observed)return observed;
   // Only interpret the explicit saved window formats. Never substitute today's
   // metric window for an unknown historical baseline.
+  const anomaly=/^异常24小时v1 · (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ) → (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)（左含右不含）$/.exec(window);
+  if(anomaly){if(Date.parse(anomaly[2])-Date.parse(anomaly[1])!==86400000||anomaly.slice(1).some(d=>!Number.isFinite(Date.parse(d))||new Date(d).toISOString().replace('.000Z','Z')!==d))return null;return anomaly[2].slice(0,10);}
   const session=/^会话日口径v1 · (\d{4}-\d{2}-\d{2}) → (\d{4}-\d{2}-\d{2}) UTC零时（左含右不含）$/.exec(window);
   if(session){if(Date.parse(session[2])-Date.parse(session[1])!==86400000||session.slice(1).some(d=>!Number.isFinite(Date.parse(d))||new Date(d).toISOString().slice(0,10)!==d))return null;return session[2];}
   const dated=/^(?:完整周 W[1-9]\d* · |快照 )(\d{4}-\d{2}-\d{2})(?:(?: · 设备行为口径v1 · (?:近30天活跃|(?:21|30)天未使用))|(?: · 活跃窗口v1 · UTC零时截止))?$/.exec(window);
@@ -1714,6 +1717,77 @@ function relationshipContextTable(spec) {
     ['绑定设备合计',part.shared,part.boundCurrent-part.shared,part.boundCurrent]],note:part.note};
 }
 
+const anomalyDimensions=['country','appPlatform','anomalyType'];
+const anomalyNote='30个连续24小时窗口，按同一合成异常发现记录去重；不是受影响用户或设备数。统一近4周告警基线、严重程度及影响人数待补。';
+function anomalyProjection(state=filterState) {
+  const source=sourceData.diagnostics.G.anomalyEvents,invalid=()=>({reason:'异常事件来源、归属或24小时窗口待核验，未回退原汇总'});
+  const filters=effectiveFor(53,state),unsupported=filters.find(([key])=>!anomalyDimensions.includes(key));
+  if(unsupported)return {reason:`${filterLabels[unsupported[0]]}适用，但异常记录缺少该归属，不能用总体或0代替`};
+  const iso=s=>typeof s==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().replace('.000Z','Z')===s;
+  if(!source||source.status!=='approved-synthetic'||source.version!=='synthetic-anomaly-events-noon-v1'||source.classification!=='entirely_synthetic'||!iso(source.asOf)||!Array.isArray(source.windows)||source.windows.length!==30||!Array.isArray(source.events))return invalid();
+  const byId=new Map(),covered=new Set();
+  for(const e of source.events){
+    if(!e||typeof e.id!=='string'||!e.id||byId.has(e.id)||!iso(e.observedAt)||!['US','UK','DE','Other'].includes(e.country)||!['iOS','Android'].includes(e.appPlatform)||!['Business','Device','Quality'].includes(e.anomalyType)||!['signal','status','scope','review','domain'].every(k=>typeof e[k]==='string'&&e[k])||!e.evidence||!supportsPageMetric(e.evidence.page,e.evidence.metricId)||e.severity!==null||e.affectedCount!==null)return invalid();
+    byId.set(e.id,e);
+  }
+  const rows=[];
+  for(const [i,w] of source.windows.entries()){
+    if(!w||!iso(w.startInclusive)||!iso(w.endExclusive)||Date.parse(w.endExclusive)!==Date.parse(source.asOf)-(29-i)*86400000||Date.parse(w.endExclusive)-Date.parse(w.startInclusive)!==86400000||!Array.isArray(w.eventIds))return invalid();
+    const events=[];
+    for(const id of w.eventIds){const e=byId.get(id);if(!e||covered.has(id)||e.observedAt<w.startInclusive||e.observedAt>=w.endExclusive)return invalid();covered.add(id);if(filters.every(([key,value])=>e[key]===value))events.push(e);}
+    rows.push({...w,events,count:events.length});
+  }
+  if(covered.size!==byId.size)return invalid();
+  return {rows,current:rows.at(-1),previous:rows.at(-2),note:anomalyNote,source:source.version};
+}
+function anomalyWindow() {
+  const p=anomalyProjection();return p.reason?'异常24小时窗口待核验':`异常24小时v1 · ${p.current.startInclusive} → ${p.current.endExclusive}（左含右不含）`;
+}
+function anomalyBaseline() {
+  const p=anomalyProjection();if(p.reason)return '异常事件证据待核验';
+  return '异常事件证据v1：'+JSON.stringify({source:p.source,windows:[p.previous,p.current].map(w=>({start:w.startInclusive,end:w.endExclusive,events:[...w.events].sort((a,b)=>a.id.localeCompare(b.id)).map(e=>({id:e.id,at:e.observedAt,country:e.country,app:e.appPlatform,type:e.anomalyType,signal:e.signal,status:e.status,evidence:e.evidence}))}))});
+}
+function anomalyBaselineDetails(baseline) {
+  const detail=element('details','anomaly-baseline-details');detail.append(element('summary','','查看首次保存的两窗异常事件证据'));
+  try{const saved=JSON.parse(baseline.slice('异常事件证据v1：'.length));for(const w of saved.windows){detail.append(element('p','table-note',`${w.start} → ${w.end} · ${w.events.length}条`));detail.append(dataTable({title:'首次保存事件',columns:['ID','观测时间（UTC）','国家/App','异常类型','发现'],rows:w.events.map(e=>[e.id,e.at,`${optionLabel('country',e.country)} / ${e.app}`,optionLabel('anomalyType',e.type),e.signal])}));}}catch{detail.append(element('p','na-note','原证据文本无法解析，未用当前数据替换。'),element('p','table-note',baseline));}return detail;
+}
+function anomalyContextTable(spec) {
+  const p=anomalyProjection();return {...spec,title:'最新24小时异常事件',rows:p.reason?[['—','—',p.reason,'待核验']]:p.current.events.map(e=>[e.id,e.domain,e.signal,e.status]),note:anomalyNote};
+}
+function anomalyHistoryTable(p=anomalyProjection()) {
+ return {title:'异常发现 · 30个完整24小时窗口',columns:['起点（含，UTC）','终点（不含，UTC）','发现数（条）'],rows:p.rows.map(w=>[w.startInclusive,w.endExclusive,w.count]),note:anomalyNote};
+}
+function anomalyEventExplorer() {
+  const node=element('section','entity-workspace anomaly-event-workspace'),part=anomalyProjection();
+  node.append(element('h3','','异常事件 · 同源清单'));
+  if(part.reason){node.append(element('p','na-note',part.reason));return node;}
+  node.append(element('p','table-note','顶部主值与趋势按完整窗口计算；以下历史选择和查找只缩小清单。'));
+  const controls=element('div','anomaly-list-controls'),windowLabel=element('label','','清单窗口'),select=element('select',''),searchLabel=element('label','','查找事件'),search=element('input','');
+  search.type='search';search.placeholder='编号、发现、国家或状态';search.autocomplete='off';
+  for(const w of [...part.rows].reverse()){const option=element('option','',`${w.endExclusive.slice(5,10)} 12:00 UTC 截止 · ${w.count}条`);option.value=w.endExclusive;select.append(option);}
+  windowLabel.append(select);searchLabel.append(search);controls.append(windowLabel,searchLabel);node.append(controls);
+  const basis=element('p','table-note anomaly-list-basis'),status=element('p','table-note anomaly-list-status'),grid=element('div','entity-workspace-grid'),list=element('div','anomaly-event-list'),detail=element('aside','entity-sample-detail');
+  detail.id='G-anomaly-event-detail';detail.setAttribute('aria-label','选中异常事件');list.setAttribute('role','group');list.setAttribute('aria-label','同源异常事件列表');grid.append(list,detail);node.append(basis,status,grid);let chosen;
+  const choose=(e,announce=false)=>{
+    chosen=e.id;const viewport={left:scrollX,top:scrollY,behavior:'instant'};
+    for(const b of list.querySelectorAll('button')){b.setAttribute('aria-pressed',String(b.dataset.eventId===e.id));b.closest('tr').toggleAttribute('data-selected',b.dataset.eventId===e.id);}
+    const facts=element('dl','inspector-facts');for(const [k,v]of [['观测时间',e.observedAt.replace('T',' ').replace('Z',' UTC')],['国家/App',`${optionLabel('country',e.country)} / ${e.appPlatform}`],['异常类型',optionLabel('anomalyType',e.anomalyType)],['研判状态',e.status],['严重程度','待评级'],['影响人数','未知'],['关联范围',e.scope]]){const row=element('div','');row.append(element('dt','',k),element('dd','',v));facts.append(row);}
+    const link=element('a','inspector-link',`查看关联指标 #${e.evidence.metricId} 证据 ↗`);link.href=routeHref(e.evidence.page,e.evidence.metricId);
+    detail.replaceChildren(element('p','inspector-kicker',e.id),element('h4','',e.signal),facts,element('p','entity-sample-review',`建议核对：${e.review}`),link,element('p','table-note','关联指标按自身周期和范围计算；合成归属不建立跨源用户或设备身份。查看证据不会替换已有问题单。'));
+    if(announce){scrollTo(viewport);document.querySelector('#announcement').textContent=`已选择 ${e.id}，原位详情已更新；问题单未改变。`;}
+  };
+  const draw=()=>{
+    const w=part.rows.find(w=>w.endExclusive===select.value),query=search.value.trim().normalize('NFKC').toLocaleLowerCase(),events=w.events.filter(e=>!query||[e.id,e.signal,e.country,optionLabel('country',e.country),e.appPlatform,e.status,e.domain,optionLabel('anomalyType',e.anomalyType)].join(' ').normalize('NFKC').toLocaleLowerCase().includes(query));
+    basis.textContent=`${w.startInclusive.replace('T',' ').replace('Z','')} → ${w.endExclusive.replace('T',' ').replace('Z','')} UTC（左含右不含）`;
+    status.textContent=`显示 ${events.length} / ${w.count} 条；最新24小时 ${part.current.count} 条。查找不改变指标和趋势。`;
+    if(!events.length){list.replaceChildren(element('p','na-note',w.count?'没有匹配当前查找的事件；清除查找可恢复此窗清单。':'此完整窗口已知0条合成异常发现，来源完整。'));detail.replaceChildren(element('h4','','暂无选中事件'));chosen=null;return;}
+    const table=dataTable({title:'异常事件清单',columns:['事件编号','观测（UTC）','发现与状态'],rows:events.map(e=>[e.id,e.observedAt.slice(11,16),`${e.signal} · ${e.status}`])},'anomaly-event-table');
+    [...table.querySelectorAll('tbody tr')].forEach((tr,i)=>{const e=events[i],button=element('button','retention-device-select',e.id);button.type='button';button.dataset.eventId=e.id;button.setAttribute('aria-controls',detail.id);button.setAttribute('aria-label',`查看${e.id} ${e.signal}`);tr.firstChild.replaceChildren(button);button.addEventListener('click',()=>choose(e,true));});list.replaceChildren(table);choose(events.find(e=>e.id===chosen)??events[0]);updateScrollableTables();
+  };
+  node.selectAnomalyWindow=end=>{if(part.rows.some(w=>w.endExclusive===end)){select.value=end;draw();select.focus({preventScroll:true});}};
+  select.addEventListener('change',draw);search.addEventListener('input',draw);draw();return node;
+}
+
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -1729,6 +1803,7 @@ function projectMetric(id,state=filterState) {
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
   if(id===23){if(scoped.plan==='Free'||product==='Bird'&&scoped.plan==='Starter')return na('所选套餐不属于期初有效付费主订阅群');return renewalMetric(state);}
   if([4,25,30].includes(id))return activeWindowMetric(id,state);
+  if(id===53){const part=anomalyProjection(state);return part.reason?pending(part.reason):{kind:"count",value:part.current.count};}
   if(id===26){const part=sessionDepthProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{sessionsPerUser:part.current.frequency,durationP50Minutes:part.current.p50===null?null:part.current.p50/60,durationP90Minutes:part.current.p90===null?null:part.current.p90/60}};}
   if(id===7){const part=accountStockProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{registered:part.registered,boundOwners:part.boundOwners}};}
   if(id===34){const part=paidRightsFacts(state);return part.reason?pending(part.reason):{kind:'count',value:part.total};}
@@ -2102,6 +2177,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  if(id===53){const part=anomalyProjection();return part.rows?part.rows.map(w=>w.count):null;}
   if(id===7){const part=accountStockHistory();return part.rows?part.rows.map(r=>r.registered):null;}
   if(id===46)return technicalHistoryHeadline()?.values??null;
   if(id===2){const part=subscriptionStatusHistoryProjection();if(part.rows)return part.rows.map(r=>Object.values(r.products).reduce((sum,p)=>sum+p.paidCurrent+p.cancelledButEntitled,0));}
@@ -2498,6 +2574,7 @@ function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
   if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
+  if(id===53){const p=anomalyProjection();return p.rows?{comparisonLabel:'较前24小时',title:'异常发现',unit:'条',nearestLinePoint:true,labels:p.rows.map(w=>w.endExclusive.slice(0,10)),values:p.rows.map(w=>w.count),note:'每点为当日12:00 UTC截止的完整24小时窗口，起含止不含；'+anomalyNote}:null;}
   if(id===26){const p=sessionDepthProjection();return p.rows?{comparisonLabel:'较前日',title:'人均有效会话',unit:'次/人',labels:p.rows.map(r=>r.end.slice(0,10)),values:p.rows.map(r=>r.frequency),note:'84个完整UTC日；独立刻度，不代表留存或打开间隔。'}:null;}
   if(id===46)return technicalHistoryHeadline();
   if(id===4||id===25){const p=activeWindowProjection();if(p.reason)return null;return {comparisonLabel:'较前日',nearestLinePoint:true,title:id===4?'近30天复合活跃主账号':'近1天复合活跃主账号',unit:'人',labels:p.rows.map(r=>r.at.slice(0,10)),values:trendValues(id),note:'84个每日UTC零时快照；滚动窗口，起含止不含，不是自然周／月。合成频数，7／30天相邻窗口重叠，不相加为独立人数。'};}
@@ -3426,6 +3503,11 @@ function waterfallLevels(spec) {
     return running;
   });
 }
+function evidenceTrendAxis(spec) {
+  const axis=trendAxisDomain(spec.series,spec.unit);
+  if(axis&&spec.metricId===53){axis.step=Math.max(1,Math.ceil(axis.step));axis.min=0;axis.max=Math.max(axis.step,Math.ceil(Math.max(...spec.series.flatMap(s=>s.values))/axis.step)*axis.step);}
+  return axis;
+}
 function chartScaleNote(spec) {
   if(spec.kind==='waterfall') {
     const axis=trendAxisDomain([waterfallLevels(spec)],spec.unit);
@@ -3437,7 +3519,7 @@ function chartScaleNote(spec) {
   }
   const barAxis=percentageBarAxis(spec);
   if(barAxis)return `${trendAxisNote(barAxis,spec.unit)} 柱形从零比较；不同图的刻度上限可能不同。`;
-  const axis=!spec.kind&&isTimelineSpec(spec)?trendAxisDomain(spec.series,spec.unit):null;
+  const axis=!spec.kind&&isTimelineSpec(spec)?evidenceTrendAxis(spec):null;
   return axis?`${trendAxisNote(axis,spec.unit)}${spec.labels.some(label=>/^W\d+$/.test(label))?` ${weeklyAxisNote}`:''}`:'';
 }
 function chartNote(spec) {
@@ -3582,7 +3664,7 @@ const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU
     9:'周新增注册用户',10:'注册后72小时绑定率',11:'首次绑定成功率',13:'观鸟7日价值激活率',
     15:'绑定后未产首图设备',18:'成熟试用转正率',21:'有效订阅净增',25:'近1天复合活跃主账号',
     41:'近30天设备活跃率',44:'长期未使用设备率',29:'季节阈值未使用率',34:'付费权益主账号',35:'订阅ARPPU',48:'多设备主账号占比',
-    49:'设备共享率',52:'流失高危主账号',53:'当日异常事件数',54:'事件丢失率'};
+    49:'设备共享率',52:'流失高危主账号',53:'近24小时异常发现',54:'事件丢失率'};
 const metricCountUnits={2:'人',4:'人',9:'人',15:'台',16:'台',34:'人',52:'人',53:'条'};
 const metricSearchSubitems={
   11:['首次绑定失败原因','蓝牙配对','WiFi连接','App流程','绑定过程耗时'],
@@ -3615,7 +3697,7 @@ function metricCardSummary(id) {
   const contexts={3:'月化经常性收入，非本月实际收款',4:'最近30天复合活跃主账号去重',
     10:'已满72小时观察的新注册批次',13:'已满7日观察的观鸟注册批次',15:'绑定已超过3天，仍未产出首图',
     34:'当前有效付费权益，含订阅或增值Pack',48:'绑定2台及以上的主账号占比',49:'至少共享给1人的主账号绑定设备占比',
-    52:'命中流失风险信号的主账号去重',53:'当日演示事件数，不代表受影响用户数'};
+    52:'命中流失风险信号的主账号去重',53:'截至9/24 12:00 UTC；不代表受影响人数'};
   summary.context=contexts[id]??'';
   if(id===23){const part=renewalProjection();if(!part.reason)summary.context=`${part.month} · 到期后7天合成观察窗`;}
   if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)summary.context=`${row.baseMonth} → ${row.observedMonth} · 完整自然月` ;}
@@ -3681,6 +3763,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===53&&metric(53).kind==='count')return anomalyBaseline();
   if(id===50&&metric(50).kind==='group'){const v=metric(50).value;return '设备状态计数：'+['boundActivated','boundNotActivated','activatedUnbound','sharedBoundActivated','sharedBoundNotActivated'].map(key=>`${groupLabels[key]} ${number(v[key])}台`).join('；');}
   if(id===26&&metric(26).kind==='group')return sessionDepthBaseline();
   if(id===7&&metric(7).kind==='group'){const v=metric(7).value;return `累计注册用户：${number(v.registered)}人；当前绑定主账号：${number(v.boundOwners)}人`;}
@@ -3793,6 +3876,7 @@ function chartBasis(detail) {
 }
 function diagnosticChartFacts(page,spec) {
   const info=sourceData.diagnostics[page];
+  if(page==='G'&&spec.title===info.chart.title){const p=anomalyProjection();return p.reason?{...spec,series:[],unavailableReason:p.reason}:{...spec,title:'最新24小时异常发现 · 领域',labels:['新客','订阅','设备','数据质量'],series:[{name:'异常发现',values:['新客','订阅','设备','数据质量'].map(k=>p.current.events.filter(e=>e.domain===k).length)}],note:anomalyNote};}
   if(page==='F'&&spec.metricId===50){const part=deviceStateProjection();return part.reason?{...spec,unavailableReason:part.reason,series:[]}:{...spec,series:[{...spec.series[0],values:[part.value.boundActivated,part.value.boundNotActivated,part.value.activatedUnbound]}],note:deviceStateTable(part).note};}
   if(page==='E'&&spec.kind==='heatmap'&&metric(39).kind==='group')
     spec={...spec,...modelSubscriptionHeatmap(),title:spec.title};
@@ -4236,7 +4320,7 @@ function drawDetailChart(box,spec) {
   }
   const plotted=spec.series.flatMap(line=>line.values).filter(value=>Number.isFinite(value));
   const span=plotted.length?Math.max(...plotted)-Math.min(...plotted):0;
-  const trendAxis=isTimeline?trendAxisDomain(spec.series,spec.unit):null;
+  const trendAxis=isTimeline?evidenceTrendAxis(spec):null;
   const barAxis=percentageBarAxis(spec);
   const weeklyAxis=isTimeline&&spec.labels.some(label=>/^W\d+$/.test(label));
   const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
@@ -4473,7 +4557,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
@@ -4509,6 +4593,10 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===53){const part=anomalyProjection(),history=metricHistory(53);
+    appendEvidencePair({metricId:53,title:'异常发现 · 最近30个24小时窗口',unit:'条',nearestLinePoint:true,onPoint:index=>panel.dispatchEvent(new CustomEvent('anomaly-window-select',{bubbles:true,detail:part.rows[index]?.endExclusive})),labels:history.labels,series:[{name:'异常发现',values:history.values}],note:history.note},anomalyHistoryTable(part),'change');
+    const table=dataTable(anomalyHistoryTable(part),'anomaly-history-table');table.dataset.evidenceKind='data';panel.append(table);return {node:panel,specs};
+  }
   if(id===50){const part=deviceStateProjection(),v=part.value;
     appendEvidencePair({metricId:50,title:'设备交叉状态 · 当前快照',unit:'台',labels:['绑定且已激活','绑定未激活','已激活未绑定'],series:[{name:'设备数',values:[v.boundActivated,v.boundNotActivated,v.activatedUnbound]}],note:deviceStateTable(part).note},deviceStateTable(part));
     const table=dataTable(deviceStateTable(part),'device-state-calculation');table.dataset.evidenceKind='data';panel.append(table);
@@ -5012,10 +5100,12 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  const anomalyBaselineSaved=evidenceId===53&&baseline.startsWith('异常事件证据v1：');
   const deviceStateBaseline=evidenceId===50&&baseline.startsWith('设备状态计数：');
   const sessionBaseline=evidenceId===26&&baseline.startsWith('会话日证据v1：');
   const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(anomalyBaselineSaved)form.append(anomalyBaselineDetails(baseline));
   if(deviceStateBaseline){const detail=element('details','device-state-baseline-details');detail.append(element('summary','','查看首次保存的五项状态计数'),element('p','table-note',baseline));form.append(detail);}
   if(sessionBaseline)form.append(sessionDepthBaselineDetails(baseline));
   if(statusCountBaseline){const counts=element('details','status-baseline-details');counts.append(element('summary','','查看本次基线的完整状态人数'),element('p','table-note',baseline));form.append(counts);}
@@ -5050,6 +5140,10 @@ function actionRecord(page,evidenceId) {
   const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
+  else if(evidenceId===53&&(current.baseline||draft?.baseline)){
+    if(!anomalyBaselineSaved||!baselineAt.startsWith('异常24小时v1'))form.append(element('p','action-baseline-note anomaly-legacy-note','旧登记未保存24小时窗和事件明细；保留原编号、范围、基线、周期与草稿，不补写历史或当作同口径比较。'));
+    else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note anomaly-evidence-change','当前事件窗口或记录证据与首次保存不同，即使条数相同也需核对。保存处理进度保留首次事件证据。'));
+  }
   else if(evidenceId===50&&current.baseline&&!current.baseline.startsWith('设备状态计数：'))form.append(element('p','action-baseline-note device-state-legacy-note','原登记只保存摘要，未记录五项设备状态计数，不能据摘要相同断言共享构成未变。原编号、范围、基线、窗口和草稿保留，请对照当前完整状态表；保存进度不补写历史。'));
   else if(evidenceId===5&&current.baseline&&!current.baseline.startsWith('状态人数：'))form.append(element('p','action-baseline-note status-legacy-note','原登记只保存状态名称，未保存完整人数；不能自动判断状态是否变化。原编号、基线和草稿保留，不补写历史人数。'));
   else if(evidenceId===26&&(current.baseline||draft?.baseline)){
@@ -5387,7 +5481,7 @@ function filteredFinding(page,requestedId) {
   if(page==='F'&&requestedId===50&&m(50).kind==='group'){const part=deviceStateProjection(),v=part.value;return {id:50,text:`当前绑定 ${number(v.boundActivated)}＋${number(v.boundNotActivated)}＝${number(part.boundCurrent)} 台；累计激活 ${number(v.boundActivated)}＋${number(v.activatedUnbound)}＝${number(part.activatedCumulative)} 台。其中共享 ${number(v.sharedBoundActivated)}＋${number(v.sharedBoundNotActivated)}＝${number(part.shared)} 台，与同范围设备共享指标分子一致。当前是合成状态快照，不能用存量差推断解绑或迁移。`};}
   if(page==='F'&&isTarget(48)&&m(48).kind==='rate'&&m(49).kind==='rate')
     return {id:48,text:`多设备主账号占比 ${percent(m(48).value)}${changeText(recentChange(48))}；设备共享率 ${percent(m(49).value)}。前者以主账号为分母，后者以当前绑定设备为分母。`};
-  if(page==='G'&&isTarget(53)&&m(53).kind==='count')return {id:53,text:`当前筛选下有 ${number(m(53).value)} 条模拟异常事件${changeText(recentChange(53),0)}；先核对事件归属和数据质量，再判断业务异常。`};
+  if(page==='G'&&isTarget(53)&&m(53).kind==='count')return {id:53,text:`最新完整24小时有 ${number(m(53).value)} 条合成异常发现${changeText(recentChange(53),0)}；截至9/24 12:00 UTC。事件条数不表示严重程度或影响人数；先查看同源清单，关联指标另按自身窗口核对。`};
   if(page==='G'&&isTarget(54)&&m(54).kind==='group') {
     const value=m(54),quality=dataQualityState(value);
     const rates=quality.label==='演示预警'||quality.label==='演示正常'?
@@ -5571,6 +5665,7 @@ function currentMetricObservation(page,id) {
   return wrap;
 }
 function entitySamplesPanel(page) {
+  if(page==='G')return anomalyEventExplorer();
   if(!['C','G'].includes(page))return null;
   const panel=element('section','entity-workspace');
   const heading=element('div','entity-workspace-head');
@@ -5932,6 +6027,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(viewport&&navigationRevision===evidenceNavigationRevision){scrollTo(viewport);updateSectionNavigation();}
     });
   };
+  workspace.addEventListener('anomaly-window-select',event=>{const explorer=workspace.querySelector('.anomaly-event-workspace');if(!explorer?.selectAnomalyWindow)return;activate('groups',{push:true});explorer.selectAnomalyWindow(event.detail);document.querySelector('#announcement').textContent='已打开所选24小时窗清单；顶部主值和问题单保持不变。';});
   for(const [key,button] of buttons) {
     button.addEventListener('click',()=>activate(key,{push:true}));
     button.addEventListener('keydown',event=>{
@@ -6135,7 +6231,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(explorer.node);
     }
     const grids=element('div','evidence-grid');
-    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):page==='F'?relationshipContextTable(spec):spec));});
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):page==='F'?relationshipContextTable(spec):page==='G'&&spec.title==='异常事件样本'?anomalyContextTable(spec):spec));});
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));
