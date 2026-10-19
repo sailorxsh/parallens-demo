@@ -23,6 +23,20 @@ async parent=>{
   }
   for(const[width,font]of[[1366,16],[1920,16],[1366,32]]){await p.setViewportSize({width,height:1000});await open('C?metric=42');await p.evaluate(s=>document.documentElement.style.fontSize=s+'px',font);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await hover(p.locator('#C-panel-change .detail-chart').first());await p.keyboard.press('Escape');await p.waitForFunction(()=>[...document.querySelectorAll('.chart-tooltip')].every(n=>!n.textContent.trim()||getComputedStyle(n).visibility==='hidden'||Number(getComputedStyle(n).opacity)===0));check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Enlarged tooltip repair causes overflow');results.push({width,font});}
   await p.evaluate(()=>document.documentElement.style.fontSize='');await open('C?metric=42');
+  const motionBox=p.locator('#C-panel-change .detail-chart').first();await hover(motionBox);const motionBaseline=await evidence(),motionResults=[];
+  for(const preference of ['reduce','no-preference','reduce']) {
+   await p.emulateMedia({reducedMotion:preference});
+   await p.waitForFunction(reduced=>{const n=document.querySelector('#C-panel-change .detail-chart');return echarts.getInstanceByDom(n).getOption().tooltip[0].transitionDuration===(reduced?0:.4);},preference==='reduce');
+   await hover(motionBox);await p.waitForTimeout(450);
+   const target=await motionBox.evaluate(n=>{const i=echarts.getInstanceByDom(n),r=n.getBoundingClientRect(),xy=i.convertToPixel({gridIndex:0},[10,82]);return{x:r.x+xy[0],y:r.y+xy[1]};});
+   await p.mouse.move(target.x,target.y);await p.waitForTimeout(80);
+   const motion=await tip().evaluate(n=>({transition:getComputedStyle(n).transitionDuration,active:n.getAnimations().filter(a=>a.playState==='running'&&a.transitionProperty==='transform').map(a=>a.effect.getTiming().duration)}));
+   check(preference==='reduce'?motion.transition==='0s'&&!motion.active.length:motion.transition.split(',').some(value=>parseFloat(value)===.4),'Tooltip ignores the current motion preference: '+JSON.stringify({preference,...motion}));
+   await p.keyboard.press('Escape');await p.waitForFunction(()=>[...document.querySelectorAll('.chart-tooltip')].every(n=>!n.textContent.trim()||getComputedStyle(n).visibility==='hidden'||Number(getComputedStyle(n).opacity)===0));
+   motionResults.push({preference,...motion});
+  }
+  check(JSON.stringify(await evidence())===JSON.stringify(motionBaseline),'Motion preference changes source evidence, focus or scope');
+  results.push({motionResults});
   await p.locator('.workspace-metric-heading .definition-trigger').click();await p.keyboard.press('Escape');check(!await p.locator('#metric-definition-popover').isVisible(),'Definition Escape precedence broken');
   await p.locator('#open-metric-search').click();await p.keyboard.press('Escape');check(!await p.locator('#metric-search').isVisible(),'Search Escape precedence broken');
   await p.locator('#open-saved-issues').click();await p.keyboard.press('Escape');check(!await p.locator('#saved-issues').isVisible(),'Saved issues Escape precedence broken');

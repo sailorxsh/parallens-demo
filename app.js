@@ -4286,7 +4286,7 @@ function chartValue(value,unit) {
   return `${number(numeric)}${unit??''}`;
 }
 const chartLabelColor=color=>({'#bf762b':'#97541c','#b87021':'#97541c','#7593a0':'#496876','#e5484d':'#b82d37'})[color]??color;
-const chartTooltipStyle=()=>({confine:true,enterable:true,className:'chart-tooltip',backgroundColor:'#fffefa',borderColor:'#cddbc7',
+const chartTooltipStyle=()=>({confine:true,enterable:true,className:'chart-tooltip',transitionDuration:chartMotionPreference?.matches?0:.4,backgroundColor:'#fffefa',borderColor:'#cddbc7',
   textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize:chartText(13),lineHeight:chartText(20),color:'#263d2e'}});
 function chartPointDetail(spec,line,index) {
   if(!['%','美元/人'].includes(spec.unit)&&!spec.structureComposition)return null;
@@ -6884,7 +6884,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261019-179`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261019-180`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}
