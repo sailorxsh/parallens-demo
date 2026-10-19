@@ -37,11 +37,11 @@ for(const appPlatform of ['',...source.filterPolicy.controls.appPlatform.options
 assert.equal(Object.keys(home.scopes).length,45,'Home global filter combinations changed; update acceptance deliberately');
 // Small shared definitions and navigation metadata; no event rows in initial transfer.
 const common=['catalog','metrics','weekly','snapshot','stories','contract','filterPolicy','slices','modelMarket','metricTrends','entitySamples','inactivityCohorts','subscriptionFlow'];
-const heavyFields=new Set(['accountHistory','registrationFacts','sessionDepth','userRetentionFacts','riskFacts','unbindingFacts','anomalyEvents','qualityFacts']);
+const heavyFields=new Set(['accountHistory','registrationFacts','sessionDepth','userRetentionFacts','riskFacts','unbindingFacts','anomalyEvents','qualityFacts','activationFacts']);
 const diagnostics=Object.fromEntries(Object.entries(source.diagnostics).map(([p,d])=>[p,Object.fromEntries(Object.entries(d).filter(([k])=>!heavyFields.has(k)))]));
 const options=plain(run(`Object.fromEntries([
  ['B','userCohortType'],['B','userCohort'],['D','riskSnapshot'],['F','unbindingMonth'],
- ['D','renewalMonth'],['B','retentionMonth'],['C','activationCohort']
+ ['D','renewalMonth'],['B','retentionMonth'],['C','activationCohort'],['A','activationWeek']
 ].map(([page,key])=>[key,availableOptions(page,key)]))`));
 const core={version:1,revision,sources:{...Object.fromEntries(common.map(k=>[k,source[k]])),diagnostics},metricIds:ids,options};
 // Intern repeated metric/history objects across ignored-filter combinations.
@@ -64,7 +64,7 @@ const requirements={
 // Metric 2/5/6/21 reconciliation is small shared data. The page's own facts are
 // independently checked by projectMetric before the corresponding value is used.
 for(const [page,r] of Object.entries(requirements))files[`route-${page}`]={version:1,revision,page,
- sources:Object.fromEntries(r.facts.map(k=>[k,source[k]])),diagnostics:Object.fromEntries(r.diagnostics.map(p=>[p,source.diagnostics[p]]))};
+ sources:Object.fromEntries(r.facts.map(k=>[k,source[k]])),diagnostics:Object.fromEntries(r.diagnostics.map(p=>[p,page==='A'?source.diagnostics[p]:Object.fromEntries(Object.entries(source.diagnostics[p]).filter(([k])=>k!=='activationFacts'))]))};
 const check=process.argv.includes('--check');
 for(const [name,value] of Object.entries(files)) {
  const filename=path.join(root,'data',name+'.json'),text=JSON.stringify(value)+'\n';

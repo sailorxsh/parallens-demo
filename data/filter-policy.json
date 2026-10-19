@@ -456,7 +456,7 @@
       "id": 16,
       "page": "A",
       "entity": "设备",
-      "window": "新增激活设备演示汇总；截至2026-09-24，原始统计期起止日未注明",
+      "window": "最近完整UTC周；默认2026-09-14—2026-09-20，首次内容日／周同源计数；不受成熟统计周影响",
       "businessDimensions": [
         "country",
         "deviceModel",

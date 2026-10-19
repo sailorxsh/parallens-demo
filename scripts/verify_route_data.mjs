@@ -31,5 +31,5 @@ for(const page of 'ABCDEFG'){
  }
 }
 // The option index must be exactly what the full validated source exposes.
-for(const[page,key]of[['B','userCohort'],['D','riskSnapshot'],['F','unbindingMonth'],['D','renewalMonth'],['B','retentionMonth'],['C','activationCohort']])assert.deepEqual(core.options[key],plain(run(full,`availableOptions('${page}','${key}')`)));
+for(const[page,key]of[['B','userCohort'],['D','riskSnapshot'],['F','unbindingMonth'],['D','renewalMonth'],['B','retentionMonth'],['C','activationCohort'],['A','activationWeek']])assert.deepEqual(core.options[key],plain(run(full,`availableOptions('${page}','${key}')`)));
 console.log(`PASS route source equivalence: ${checks} metric/scope values, 45 home histories/comparisons, 7 isolated topics and saved-scope option index.`);
