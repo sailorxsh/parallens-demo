@@ -37,6 +37,7 @@ for cells in sheet.iter_rows(min_row=4, max_row=57, values_only=True):
         "businessQuestion": question, "scope": scope, "note": note,
         "page": page,
     })
+next(item for item in catalog if item["id"] == 26).update({'businessQuestion': '使用深度：一天使用几次、每次看多久', 'definition': '最近完整UTC日，App主动活跃正式主账号平均使用几次、每次前台使用多久；不是打开间隔或留存。', 'formula': '人均有效会话次数＝最近完整UTC日有效会话数÷同日App主动活跃主账号数；P50/P90按合并后的有效前台时长频数用R7计算，非分组分位数平均。', 'default': '人均会话次数、P50/P90和84日独立刻度趋势；按日期查看次数与时长分布及完整频数。', 'note': '连续30分钟无有效前台交互后重开；UTC零时切分，后台不计时。次数分母对齐#25 App近1天，时长单列合格样本数；版本、用户类型及逐用户来源待补。'})
 next(item for item in catalog if item["id"] == 29).update({
     "definition": "看当前有多少主账号达到未使用阈值，以及独立历史入组的未使用主账号在随后7天有多少重新活跃。",
     "formula": "未使用率＝连续N天（迁徙季21天/淡季30天）无复合活跃的主账号÷当前可观察主账号；7天回流率＝独立历史入组人群中7天内重新复合活跃的主账号÷该历史入组可观察主账号。当前池与历史入组群体不能直接相减；历史入组日期未提供，不作跨期比较。",
@@ -730,6 +731,8 @@ for item in catalog[1:]:
         window = windows["month"]
     else:
         window = windows["day"]
+    if mid == 26:
+        window = '最近完整UTC日：2026-09-23 00:00 → 2026-09-24 00:00（左含右不含）'
     if mid == 36:
         window = "2026-09-24 有效增值Pack权益快照；分母为同日付费权益主账号"
     if mid == 48:
@@ -742,9 +745,14 @@ for item in catalog[1:]:
         numerator = denominator = "各子项独立，见原指标计算方法"
     else:
         numerator, denominator = "去重计数或金额", "不适用"
+    if mid == 26:
+        numerator = '有效前台会话总次数；合格时长会话频数'
+        denominator = '同日App主动活跃正式主账号；时长分位数以合格会话为样本'
     dimensions = [name for name, ids in dimension_ids.items() if mid in ids]
-    if mid in {14,26,33,38}:
+    if mid in {14,33,38}:
         dimensions = []
+    elif mid == 26:
+        dimensions = ['country', 'appPlatform']
     elif mid == 39:
         dimensions = ["productLine", "deviceModel"]
     elif mid == 40:
@@ -770,7 +778,7 @@ for item in catalog[1:]:
         "formula": item["formula"], "source": item["source"],
         "rateComponents": [],
         "unsupported": unsupported,
-        "model": ("周×观鸟型号×固件的合成触发事件计数；从原有周总量及K6固件2.8分组拆分，其他分组为构造样本。国家与季节缺少明细，显示待补数据。"
+        "model": ('84个完整UTC日、国家×App平台同源合成会话频数；人数对齐#25 App近1天，次数与时长为新构造；没有逐用户Session日志。' if mid == 26 else "周×观鸟型号×固件的合成触发事件计数；从原有周总量及K6固件2.8分组拆分，其他分组为构造样本。国家与季节缺少明细，显示待补数据。"
                   if mid == 42 else "国家×App互斥合成账号存量，注册与绑定同源汇总；12个完整月末另列当前快照，不是逐账号日志或注册月份批次。" if mid == 7 else "模拟独立维度分片；交叉筛选只供原型交互验收，不代表实测分布。"),
     })
     def collect_rates(value, path=""):

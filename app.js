@@ -287,6 +287,7 @@ function observedBaselineEnd(window) {
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
   if([11,13,18].includes(id)){const c=cohortObservation(id);return c.reason?'当前批次观察截止待核验':`完整周 W${c.week} · ${c.start}—${c.end} · 观察截至 ${c.observedThrough}（UTC）`;}
+  if(id===26)return sessionDepthWindow();
   if([4,25,30].includes(id))return `快照 ${sourceData.snapshot.asOf} · 活跃窗口v1 · UTC零时截止`;
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
   if(id===23){const part=renewalProjection();return part.reason?'月度续订观察期待核验':`月度续订观察期末 ${new Date(Date.parse(part.current.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)} · 到期月 ${part.month}`;}
@@ -311,6 +312,8 @@ function baselineWindowEnd(window) {
   const observed=observedBaselineEnd(window);if(observed)return observed;
   // Only interpret the explicit saved window formats. Never substitute today's
   // metric window for an unknown historical baseline.
+  const session=/^会话日口径v1 · (\d{4}-\d{2}-\d{2}) → (\d{4}-\d{2}-\d{2}) UTC零时（左含右不含）$/.exec(window);
+  if(session){if(Date.parse(session[2])-Date.parse(session[1])!==86400000||session.slice(1).some(d=>!Number.isFinite(Date.parse(d))||new Date(d).toISOString().slice(0,10)!==d))return null;return session[2];}
   const dated=/^(?:完整周 W[1-9]\d* · |快照 )(\d{4}-\d{2}-\d{2})(?:(?: · 设备行为口径v1 · (?:近30天活跃|(?:21|30)天未使用))|(?: · 活跃窗口v1 · UTC零时截止))?$/.exec(window);
   const month=/^完整月 (\d{4}-(?:0[1-9]|1[0-2]))$/.exec(window);
   const device=/^设备留存(D7|D30)观察期末 (\d{4}-\d{2}-\d{2}) · 激活批次 (\d{4}-\d{2}-\d{2})—(\d{4}-\d{2}-\d{2})$/.exec(window);
@@ -1524,6 +1527,122 @@ function accountStockHistoryEvidence(panel,append) {
   }
 }
 
+// Complete UTC days share #25 App-active account denominators; Session and
+// duration frequencies are synthetic, with no user identities or background time.
+const sessionDepthIndexes=new WeakMap();
+function sessionDepthIndex() {
+  const source=sourceData.diagnostics.B.sessionDepth;
+  if(!source||typeof source!=='object')return {reason:'缺少同源会话日频数，不沿用观察期不明的旧汇总。'};
+  if(sessionDepthIndexes.has(source))return sessionDepthIndexes.get(source);
+  const bad=reason=>{const result={reason};sessionDepthIndexes.set(source,result);return result;};
+  const active=activeWindowIndex();
+  if(active.reason||source.metricId!==26||!Array.isArray(source.rules)||!Array.isArray(source.limitations)||![...source.rules,...source.limitations].every(text=>typeof text==='string'&&text.trim())||source.version!=='synthetic-session-day-v1'||source.status!=='approved-synthetic'||source.classification!=='entirely_synthetic'||source.period!=='rolling-1-day-at-UTC-midnight'||source.asOf!==active.asOf||!Array.isArray(source.rows)||!source.rows.length)
+    return bad('会话日口径、截至时点或App日活人数待核验；不回退到旧汇总。');
+  const validate=(row,end)=>{
+    if(!row||row.endExclusive!==end||row.startInclusive!==new Date(Date.parse(end)-86400000).toISOString().replace('.000Z','Z')||!Array.isArray(row.cells)||row.cells.length!==8)return false;
+    const parent=active.rows.find(r=>r.at===end);if(!parent)return false;
+    const seen=new Set();
+    for(const cell of row.cells){
+      const key=`${cell?.country}|${cell?.appPlatform}`,account=parent.records.find(r=>`${r.country}|${r.appPlatform}`===key);
+      if(!account||seen.has(key)||!validHeadcount(cell.activeAccounts)||cell.activeAccounts!==aggregateActiveWindows([account]).appDAU)return false;seen.add(key);
+      const frequency=cell.accountSessionFrequency,duration=cell.durationSecondsFrequency;
+      const valid=rows=>Array.isArray(rows)&&rows.every(r=>Array.isArray(r)&&r.length===2&&Number.isSafeInteger(r[0])&&r[0]>0&&validHeadcount(r[1]))&&new Set(rows.map(r=>r[0])).size===rows.length;
+      if(!valid(frequency)||!valid(duration)||duration.some(([seconds])=>seconds>86400)||frequency.reduce((n,r)=>n+r[1],0)!==cell.activeAccounts)return false;
+      const sessions=frequency.reduce((n,[k,count])=>n+k*count,0),timed=duration.reduce((n,r)=>n+r[1],0);
+      if(!Number.isSafeInteger(sessions)||!Number.isSafeInteger(timed)||timed>sessions)return false;
+    }
+    return true;
+  };
+  const current=source.rows.at(-1);
+  if(!validate(current,source.asOf))return bad('当前会话的人数、频数、时长样本或UTC日界不闭合，暂停#26；#25仍按自身来源计算。');
+  const historyValid=source.rows.length===84&&source.rows.every((r,i)=>validate(r,new Date(Date.parse(source.asOf)-(83-i)*86400000).toISOString().replace('.000Z','Z')));
+  const result={source,current,rows:historyValid?source.rows:null,historyReason:historyValid?null:'84日会话历史缺失或计数不闭合；保留可靠当前日，停止绘制旧趋势。'};
+  sessionDepthIndexes.set(source,result);return result;
+}
+function sessionDepthProjection(state=filterState) {
+  const index=sessionDepthIndex();if(index.reason)return index;
+  const filters=effectiveFor(26,state);
+  if(filters.some(([key,value])=>!['country','appPlatform'].includes(key)||!sourceData.slices[key]?.[value]))return {reason:'当前条件缺少同范围会话归属，不能回退总体。'};
+  const aggregate=row=>{
+    let accounts=0,sessions=0;const frequency=new Map(),durations=new Map();
+    for(const cell of row.cells.filter(c=>filters.every(([key,value])=>c[key]===value))){
+      accounts+=cell.activeAccounts;
+      for(const[k,n]of cell.accountSessionFrequency){sessions+=k*n;frequency.set(k,(frequency.get(k)??0)+n);}
+      for(const[k,n]of cell.durationSecondsFrequency)durations.set(k,(durations.get(k)??0)+n);
+    }
+    const frequencies=[...frequency].sort((a,b)=>a[0]-b[0]),durationFrequency=[...durations].sort((a,b)=>a[0]-b[0]),timedSessions=durationFrequency.reduce((n,r)=>n+r[1],0);
+    return {start:row.startInclusive,end:row.endExclusive,accounts,sessions,timedSessions,frequencies,durations:durationFrequency,
+      frequency:accounts>=30?sessions/accounts:null,p50:frequencyQuantile(durationFrequency,.5),p90:frequencyQuantile(durationFrequency,.9)};
+  };
+  return {current:aggregate(index.current),rows:index.rows?.map(aggregate),historyReason:index.historyReason,source:index.source};
+}
+const sessionDepthNumber=(value,digits=1)=>value===null?'样本不足':Number(value).toFixed(digits);
+const sessionDepthDuration=(seconds,count,digits=1)=>count===0?'无合格时长':seconds===null?'样本不足30次':`${(seconds/60).toFixed(digits)}分钟`;
+function sessionDepthWindow() {
+  const part=sessionDepthProjection();return part.reason?'当前范围暂无可用基线周期':`会话日口径v1 · ${part.current.start.slice(0,10)} → ${part.current.end.slice(0,10)} UTC零时（左含右不含）`;
+}
+function sessionDepthBaseline() {
+  const part=sessionDepthProjection();if(part.reason)return part.reason;const r=part.current;
+  return '会话日证据v1：'+JSON.stringify({version:'synthetic-session-day-v1',start:r.start,end:r.end,accounts:r.accounts,sessions:r.sessions,timedSessions:r.timedSessions,frequencies:r.frequencies,durations:r.durations});
+}
+function sessionDepthBaselineDetails(baseline) {
+  const details=element('details','session-baseline-details');details.append(element('summary','','查看首次保存的会话与分布证据'));
+  // Saved evidence is display-only. Never rewrite legacy or unrecognized records.
+  try{const r=JSON.parse(baseline.slice('会话日证据v1：'.length));
+    if(r.version!=='synthetic-session-day-v1'||![r.accounts,r.sessions,r.timedSessions].every(validHeadcount)||!Array.isArray(r.frequencies)||!Array.isArray(r.durations))throw Error('unknown');
+    details.append(element('p','table-note',`${r.start} → ${r.end}；App活跃 ${number(r.accounts)} 人，有效会话 ${number(r.sessions)} 次，合格时长 ${number(r.timedSessions)} 次。`),
+      dataTable({title:'首次登记 · 次数频数',columns:['每人次数','主账号人数'],rows:r.frequencies}),dataTable({title:'首次登记 · 时长频数',columns:['前台时长（秒）','会话次数'],rows:r.durations}));
+  }catch{details.append(element('p','table-note','原证据格式无法识别，请人工核对；不改写或补齐原内容。'),element('p','table-note',baseline));}
+  return details;
+}
+function sessionDepthChange(a,b,unit,digits) {
+  if(a===null||b===null)return '暂无可比值';const delta=a-b,threshold=10**(-digits);
+  return Math.abs(delta)<1e-12?'与前日持平':`${Math.abs(delta)<threshold?(delta>0?'增加不足':'减少不足')+threshold.toFixed(digits):(delta>0?'+':'−')+Math.abs(delta).toFixed(digits)} ${unit} · 较前日`;
+}
+function sessionDepthEvidence(panel,append) {
+  const part=sessionDepthProjection();if(part.reason)return null;
+  const r=part.current,previous=part.rows?.at(-2),summary=element('div','session-depth-summary');summary.dataset.evidenceKind='change';
+  for(const[key,label,divisor,unit,digits]of [['frequency','人均有效会话',1,'次/人',2],['p50','会话时长 P50',60,'分钟',1],['p90','会话时长 P90',60,'分钟',1]]){
+    const card=element('article','session-depth-value'),value=r[key]===null?null:r[key]/divisor,before=previous?.[key]==null?null:previous[key]/divisor;
+    const text=value===null?(key==='frequency'?(r.accounts?'样本不足30人':'无合格分母'):sessionDepthDuration(r[key],r.timedSessions)):key==='frequency'?`${value.toFixed(digits)} ${unit}`:sessionDepthDuration(r[key],r.timedSessions,digits);
+    card.append(element('p','',label),element('strong','',text));
+    const delta=element('p','table-note',sessionDepthChange(value,before,unit,digits));delta.title=`${previous?.start??'前期缺失'} → ${previous?.end??''} 对比 ${r.start} → ${r.end}；精确变化 ${value===null||before===null?'无值':value-before} ${unit}`;
+    card.append(delta);summary.append(card);
+  }
+  panel.append(summary);const note=`${sessionDepthWindow()}。${number(r.sessions)}次有效会话 ÷ ${number(r.accounts)}名App日活；合格时长 ${number(r.timedSessions)}次。合成国家×App固定归属，与#25同日人数一致；不是跨日独立人数或真实客户端占比。`;
+  const basis=element('p','table-note session-depth-basis',note);basis.dataset.evidenceKind='change';panel.append(basis);
+  let selected=r.end,initialized=false,dynamicPlots=[];const section=element('section','session-distributions');section.dataset.evidenceKind='groups';section.dataset.evidenceMetric='26';
+  const label=element('label','retention-month-control','分布统计日（截至UTC零时）'),select=element('select','');select.id='session-distribution-day';select.name='sessionDistributionDay';label.htmlFor=select.id;
+  for(const row of part.rows??[r]){const option=element('option','',`${row.start.slice(0,10)} → ${row.end.slice(0,10)}`);option.value=row.end;select.append(option);}select.value=selected;label.append(select);
+  const content=element('div','session-distribution-content');section.append(label,element('p','table-note','选择日期只更新下方分布；顶部当前值、登记日窗及已有问题单保持最新完整日。1—4次是本合成场景的取值，不是业务上限。'),content);
+  function renderDistribution(){
+    for(const box of content.querySelectorAll('.detail-chart')){const instance=window.echarts?.getInstanceByDom(box);if(instance){destroyChart(instance);const i=detailCharts.indexOf(instance);if(i>=0)detailCharts.splice(i,1);}}
+    content.replaceChildren();dynamicPlots=[];const row=(part.rows??[r]).find(row=>row.end===selected)??r;
+    content.append(element('p','table-note session-distribution-window',`${row.start} → ${row.end}；${number(row.accounts)}人／${number(row.sessions)}次会话；合格时长${number(row.timedSessions)}次。`));
+    const limits=[60,180,600,1800,Infinity],bins=limits.map(()=>0);for(const[seconds,n]of row.durations)bins[limits.findIndex(max=>seconds<max)]+=n;
+    const items=[{title:'每名活跃主账号 · 日会话次数',unit:'人',labels:row.frequencies.map(([k])=>`${k}次`),values:row.frequencies.map(([,n])=>n),table:{title:'会话次数 · 原始频数',columns:['每人会话次数','主账号（人）','有效会话（次）'],rows:row.frequencies.map(([k,n])=>[k,n,k*n])}},
+      {title:'单次前台时长 · 分布（分钟）',unit:'次',labels:['<1','1—<3','3—<10','10—<30','≥30'],values:bins,table:{title:'时长区间 · 会话次数',columns:['前台时长（分钟）','合格会话（次）'],rows:['<1','1—<3','3—<10','10—<30','≥30'].map((s,i)=>[s,bins[i]])}}];
+    for(const item of items){const spec={title:item.title,unit:item.unit,labels:item.labels,series:[{name:item.unit==='人'?'主账号':'合格会话',values:item.values}],note:'按当前日期与国家×App重算。柱高从0开始；分位数按原始秒值频数计算，不按区间中点估计。'};
+      const shell=element('div','detail-chart-panel workspace-chart-panel');shell.dataset.evidenceMetric='26';const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title+'；'+spec.note);
+      const details=element('details','chart-data');details.append(element('summary','','查看完整频数'),dataTable(item.table));shell.append(element('h3','',item.title),box,details);content.append(shell);
+      dynamicPlots.push([box,spec]);if(section.getClientRects().length)drawEvidenceChart(box,spec);
+    }
+    const exact=element('details','session-raw-duration');exact.append(element('summary','','查看时长原始秒值与会话频数'),dataTable({title:'时长原始频数 · R7验算',columns:['前台秒数','分钟','合格会话（次）'],rows:row.durations.map(([s,n])=>[s,(s/60).toFixed(3),n]),note:`合格会话 ${number(row.timedSessions)}次；P50 ${sessionDepthNumber(row.p50===null?null:row.p50/60,3)}分钟，P90 ${sessionDepthNumber(row.p90===null?null:row.p90/60,3)}分钟。少于30次不显示可靠分位数。`}));content.append(exact);updateScrollableTables();
+  }
+  select.addEventListener('change',()=>{selected=select.value;renderDistribution();document.querySelector('#announcement').textContent='已更新所选日分布，当前主值与登记日窗保持不变。';});
+  if(part.rows){
+    for(const[key,title,divisor,unit]of [['frequency','人均有效会话',1,'次/人'],['p50','会话时长 P50',60,'分钟'],['p90','会话时长 P90',60,'分钟']]){
+      const spec={title:`${title} · 84个完整UTC日`,unit,nearestLinePoint:true,labels:part.rows.map(row=>row.end.slice(0,10)),series:[{name:title,values:part.rows.map(row=>row[key]===null?null:row[key]/divisor)}],
+        note:'独立纵轴，只比较各自方向；趋势不表示留存或打开间隔。点击日期可在分组证据查看同日分布。',onPoint:index=>{selected=part.rows[index].end;select.value=selected;if(initialized)renderDistribution();document.querySelector('#announcement').textContent=`已选择截至${selected.slice(0,10)}的分布，可在分组证据查看；当前值与问题单保持不变。`;}};
+      append(spec,{title:spec.title,columns:['截至日（UTC零时）',title+'（'+unit+'）','App活跃（人）','有效会话（次）','合格时长（次）'],rows:part.rows.map(row=>[row.end.slice(0,10),row[key]===null?'样本不足':(row[key]/divisor).toFixed(3),row.accounts,row.sessions,row.timedSessions]),note:spec.note},'change');
+    }
+  }else{const missing=element('p','na-note session-history-unavailable',part.historyReason);missing.dataset.evidenceKind='change';panel.append(missing);}
+  panel.append(section);
+  const full=dataTable({title:'84日会话 · 完整计数与分位数',columns:['UTC日窗（起含止不含）','App活跃（人）','会话（次）','次/人','合格时长（次）','P50（分钟）','P90（分钟）'],rows:(part.rows??[r]).map(row=>[`${row.start.slice(0,10)} → ${row.end.slice(0,10)}`,row.accounts,row.sessions,sessionDepthNumber(row.frequency,3),row.timedSessions,sessionDepthNumber(row.p50===null?null:row.p50/60,3),sessionDepthNumber(row.p90===null?null:row.p90/60,3)]),note:'每个日窗独立去重；跨日人数不相加。无合格分母或少于30人／次仅保留计数，不作可靠均值或分位数。'},'session-depth-full');full.dataset.evidenceKind='data';panel.append(full);
+  const rules=element('details','session-depth-rules');rules.dataset.evidenceKind='data';rules.append(element('summary','','查看会话规则与模拟边界'));const ul=element('ul','');for(const text of [...part.source.rules,...part.source.limitations])ul.append(element('li','',text));rules.append(ul);panel.append(rules);
+  return {node:section,init:()=>{initialized=true;renderDistribution();},refresh:()=>{if(initialized&&section.getClientRects().length)for(const[box,spec]of dynamicPlots)drawEvidenceChart(box,spec);}};
+}
+
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -1539,6 +1658,7 @@ function projectMetric(id,state=filterState) {
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
   if(id===23){if(scoped.plan==='Free'||product==='Bird'&&scoped.plan==='Starter')return na('所选套餐不属于期初有效付费主订阅群');return renewalMetric(state);}
   if([4,25,30].includes(id))return activeWindowMetric(id,state);
+  if(id===26){const part=sessionDepthProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{sessionsPerUser:part.current.frequency,durationP50Minutes:part.current.p50===null?null:part.current.p50/60,durationP90Minutes:part.current.p90===null?null:part.current.p90/60}};}
   if(id===7){const part=accountStockProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{registered:part.registered,boundOwners:part.boundOwners}};}
   if(id===34){const part=paidRightsFacts(state);return part.reason?pending(part.reason):{kind:'count',value:part.total};}
   if(id===36){const part=packPenetrationFacts(state);if(part.reason)return pending(part.reason);
@@ -1596,7 +1716,7 @@ function projectMetric(id,state=filterState) {
   }
   if(raw.kind==='na') return raw;
   const effectiveFilters=filters.filter(([key])=>key!=='week'||contract.dimensions.includes('week'));
-  if(effectiveFilters.length&&[14,26,33,38].includes(id)) return na('本项只有汇总分布或分位数，缺少可重算的维度明细');
+  if(effectiveFilters.length&&[14,33,38].includes(id)) return na('本项只有汇总分布或分位数，缺少可重算的维度明细');
   if(id===39) {
     if(effectiveFilters.some(([key])=>!['country','productLine','deviceModel'].includes(key))) return pending('型号表现缺少当前条件下的关联模拟样本');
     const rows=sourceData.modelMarket?.records,products={K6:'Bird','Bird Lite':'Bird','Bird Pro':'Bird','Hunt Pro':'Hunting'};
@@ -2032,7 +2152,7 @@ function deviceRetentionMetric(state=filterState) {
 }
 const deviceRetentionText=part=>part.kind==='rate'?percent(part.value):part.denominator<30?(part.denominator?'样本不足30台':'无合格样本'):'观察未结束';
 function hasRegistrationBaseline(id) {
-  const value=metric(id);return value.kind!=='na'&&(id!==43||Object.values(value.value).some(part=>part.kind==='rate'));
+  const value=metric(id);return value.kind!=='na'&&(id!==26||value.value.sessionsPerUser!==null)&&(id!==43||Object.values(value.value).some(part=>part.kind==='rate'));
 }
 function deviceRetentionWindow() {
   const c=deviceRetentionCurrent();if(c.reason)return '当前范围暂无可用基线周期';
@@ -2225,6 +2345,14 @@ function retentionTable() {
     note:`所选观察月 ${part.month}；留存人数÷基期活跃人数。观察月活跃含新进入者，不能作为留存分母。${part.note}`};
 }
 function retentionContextTable(spec) {
+  if(spec.title==='使用深度与核心功能'){
+    const part=sessionDepthProjection(),r=part.current;
+    return {...spec,rows:spec.rows.map(row=>{
+      if(row[0].startsWith('App人均'))return ['App人均有效会话次数',r?`${sessionDepthNumber(r.frequency,2)}次/人`:'待核验',r?`${number(r.sessions)}次 / ${number(r.accounts)}名App日活`:'同源日窗或会话计数待核验'];
+      if(row[0].startsWith('单次使用时长'))return ['单次前台时长 P50 / P90',r?`${sessionDepthDuration(r.p50,r.timedSessions)} / ${sessionDepthDuration(r.p90,r.timedSessions)}`:'待核验',r?`${number(r.timedSessions)}次合格时长，按R7重算`:'不沿用旧汇总分位数'];
+      return row;
+    }),note:`${r?sessionDepthWindow():part.reason}；后台不计时，会话次数不是打开间隔。核心功能仍以复合活跃为分母。`};
+  }
   if(spec.title==='完整月与新客留存批次') {
     const source=retentionProjection();
     return {...spec,rows:spec.rows.map(row=>{
@@ -2291,11 +2419,12 @@ function savedMonthLabel(period) {
     `完整月 ${sourceData.snapshot.asOf.slice(0,4)}年${period}`;
 }
 
-const headlineTrendIds=new Set([2,3,4,7,9,10,11,13,15,17,18,23,24,25,27,34,35,41,42,44,46,48,49,52,53,54]);
+const headlineTrendIds=new Set([2,3,4,7,9,10,11,13,15,17,18,23,24,25,26,27,34,35,41,42,44,46,48,49,52,53,54]);
 function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
   if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
+  if(id===26){const p=sessionDepthProjection();return p.rows?{comparisonLabel:'较前日',title:'人均有效会话',unit:'次/人',labels:p.rows.map(r=>r.end.slice(0,10)),values:p.rows.map(r=>r.frequency),note:'84个完整UTC日；独立刻度，不代表留存或打开间隔。'}:null;}
   if(id===46)return technicalHistoryHeadline();
   if(id===4||id===25){const p=activeWindowProjection();if(p.reason)return null;return {comparisonLabel:'较前日',nearestLinePoint:true,title:id===4?'近30天复合活跃主账号':'近1天复合活跃主账号',unit:'人',labels:p.rows.map(r=>r.at.slice(0,10)),values:trendValues(id),note:'84个每日UTC零时快照；滚动窗口，起含止不含，不是自然周／月。合成频数，7／30天相邻窗口重叠，不相加为独立人数。'};}
   if(id===23){const part=renewalProjection();if(part.reason)return null;return {labels:part.rows.map(r=>r.month),values:trendValues(23),selectedPeriod:part.month,details:part.rows.map(r=>({...r.renewal,basisLabel:'成功续订 / 当月到期',numeratorUnit:'人',denominatorUnit:'人'})),unit:'%',title:'月度到期续订率',note:'完整到期月，期初归属固定；到期后7天为演示观察窗。原周度86%与月度95%不可直接比较；月环比只比较相邻完整月。'};}
@@ -2609,7 +2738,7 @@ function headlineTrend(id) {
   const current=history.values[index],before=history.values[index-1];
   const delta=current==null||before==null?null:current-before;
   const moneyChange=history.unit==='美元/人'&&delta!==null?arppuChangeLabel(delta):null;
-  const deltaText=delta==null?'暂无可比值':moneyChange?(moneyChange==='持平'?'与上期持平':`${moneyChange}（较上期）`):Math.abs(delta)<.05?'与上期持平':history.unit==='%'?
+  const deltaText=id===26?sessionDepthChange(current,before,'次/人',2):delta==null?'暂无可比值':moneyChange?(moneyChange==='持平'?'与上期持平':`${moneyChange}（较上期）`):Math.abs(delta)<.05?'与上期持平':history.unit==='%'?
     `${delta>0?'+':''}${delta.toFixed(1)} 个百分点`:
     `${delta>0?'+':''}${number(Math.round(delta))}${history.unit}（${history.comparisonLabel??'较上期'}）`;
   const wrap=element('div','headline-trend');
@@ -3189,14 +3318,14 @@ function trendAxisDomain(series,unit) {
   const values=series.flatMap(line=>Array.isArray(line)?line:line?.values??[]).filter(Number.isFinite);
   if(!values.length)return null;
   const low=Math.min(...values),high=Math.max(...values);
-  const minimumSpan=(unit==='%'||unit==='美元/人') ? .5 : Math.max(1,Math.max(Math.abs(low),Math.abs(high))*.02);
+  const minimumSpan=unit==='次/人'?.1:(unit==='%'||unit==='美元/人') ? .5 : Math.max(1,Math.max(Math.abs(low),Math.abs(high))*.02);
   const span=Math.max((high-low)*1.5,minimumSpan);
   let lower=(low+high-span)/2,upper=lower+span;
   if(low>=0)lower=Math.max(0,lower);
   if(unit==='%')upper=Math.min(100,upper);
   const roughStep=(upper-lower)/4;
   const nice=chartNiceStep(roughStep);
-  const step=unit==='%'||unit==='美元/人'?nice:Math.max(1,nice);
+  const step=unit==='%'||unit==='美元/人'||unit==='次/人'?nice:Math.max(1,nice);
   const rounded=value=>Number(value.toPrecision(12));
   const min=rounded(Math.floor(lower/step)*step);
   const max=rounded(unit==='%'?Math.min(100,Math.ceil(upper/step)*step):Math.ceil(upper/step)*step);
@@ -3349,7 +3478,7 @@ const groupSummary={
   21:v=>`净增 ${v.closing-v.opening>=0?'+':''}${number(v.closing-v.opening)}`,
   22:v=>`任一用满 ${percent(v.anyExhausted.value)}`,
   25:v=>`DAU ${number(v.DAU)}`,
-  26:v=>`${number(v.sessionsPerUser)}次 / 人`,
+  26:v=>`${sessionDepthNumber(v.sessionsPerUser,2)}${v.sessionsPerUser===null?'':'次 / 人'}`,
   28:v=>`D7 ${percent(v.D7.value)}`,
   30:v=>`App ${number(v.app)} / 复合 ${number(v.composite)}`,
   31:v=>`送达 ${percent(v.delivery.value)}`,
@@ -3435,6 +3564,9 @@ function metricCardSummary(id) {
       summary.text=number(v.DAU);summary.unit='人';
       summary.fields=[['近7天',`${number(v.WAU)}人`],['近30天',`${number(v.MAU)}人`]];
       summary.context='滚动1／7／30天；UTC零时截止，App子项见证据';
+    } else if(id===26) {
+      summary.text=sessionDepthNumber(v.sessionsPerUser,2);summary.unit=v.sessionsPerUser===null?'':'次/人';
+      summary.fields=[['时长P50',v.durationP50Minutes===null?'时长样本不足':sessionDepthNumber(v.durationP50Minutes)+'分钟'],['时长P90',v.durationP90Minutes===null?'时长样本不足':sessionDepthNumber(v.durationP90Minutes)+'分钟']];summary.context='最近完整UTC日；前台会话，人数对齐App日活';
     } else if(id===35) {
       summary.unit='/人';summary.fields=[['月内订阅付款主账号',`${number(v.monthlySubscriptionPayers)}人`]];
       summary.context=`${metricHistory(id)?.labels.at(-1)??'完整月'} · 订阅净收入÷当月付款主账号`;
@@ -3475,6 +3607,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===26&&metric(26).kind==='group')return sessionDepthBaseline();
   if(id===7&&metric(7).kind==='group'){const v=metric(7).value;return `累计注册用户：${number(v.registered)}人；当前绑定主账号：${number(v.boundOwners)}人`;}
   if(id===5&&metric(5).kind==='group') {
     const value=metric(5).value;
@@ -3565,6 +3698,7 @@ function dataTable(spec, extraClass='') {
 function chartValue(value,unit) {
   if(value===null||value===undefined||!Number.isFinite(Number(value)))return '无值';
   const numeric=Number(value);
+  if(unit==='次/人')return `${numeric.toFixed(2)}次/人`;
   if(unit==='%')return `${numeric.toFixed(1)}%`;
   if(unit==='个百分点')return `${Math.abs(numeric)<.005?'':numeric>0?'+':'−'}${Math.abs(numeric).toFixed(2)} 个百分点`;
   if(unit==='美元/人')return `$${numeric.toFixed(2)}/人`;
@@ -3724,6 +3858,7 @@ function drawEvidenceChart(box,spec,legendSelection) {
       const index=indexFor(params);
       const dimension=spec.kind==='heatmap'?spec.dimensions[params.value?.[0]]:
         spec.kind==='stacked100'?spec.series[params.seriesIndex].name:null;
+      spec.onPoint?.(index);
       return `${spec.labels[index]}${dimension?` · ${dimension}`:''}`;
     },{indexFor,resolvePoint:params=>spec.kind==='stacked100'?stackedChartPoint(instance,spec,params):params});
     if(spec.nearestLinePoint&&select)instance.getZr().on('click',event=>{
@@ -4047,6 +4182,7 @@ function drawDetailChart(box,spec) {
     if(spec.unit==='美元/人')return `$${Number(value).toFixed(span<1?2:1)}`;
     if(spec.unit==='美元')return spec.intervalY?`$${number(value)}`:
       value>=1000?`$${(value/1000).toFixed(span<1000?2:1)}k`:`$${number(Math.round(value))}`;
+    if(spec.unit==='次/人')return Number(value).toFixed(Math.max(2,chartStepPrecision(trendAxis?.step??.01)));
     if(['分钟','小时'].includes(spec.unit))return Number(value).toFixed(chartStepPrecision(trendAxis?.step??barAxis?.step??1));
     if(value>=1000)return `${(value/1000).toFixed(span<500?2:span<2000?1:0)}k`;
     return number(Math.round(value));
@@ -4261,7 +4397,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
@@ -4297,6 +4433,7 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===26){const explorer=sessionDepthEvidence(panel,appendEvidencePair);return {node:panel,specs,explorer};}
   if(id===7)accountStockHistoryEvidence(panel,appendEvidencePair);
   if(id===46){if(value.kind==='na')panel.append(element('p','na-note',value.reason));technicalHistoryEvidence(panel,appendEvidencePair);}
   if(id===36){
@@ -4794,8 +4931,10 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  const sessionBaseline=evidenceId===26&&baseline.startsWith('会话日证据v1：');
   const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(sessionBaseline)form.append(sessionDepthBaselineDetails(baseline));
   if(statusCountBaseline){const counts=element('details','status-baseline-details');counts.append(element('summary','','查看本次基线的完整状态人数'),element('p','table-note',baseline));form.append(counts);}
   let comparisonSection=comparisonEvidenceSection(evidenceId,simulatedActionState[key]);form.append(comparisonSection);
   const filterContext=metricFilterContext(evidenceId),scopeDetails=element('dl','action-scope');
@@ -4829,6 +4968,10 @@ function actionRecord(page,evidenceId) {
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
   else if(evidenceId===5&&current.baseline&&!current.baseline.startsWith('状态人数：'))form.append(element('p','action-baseline-note status-legacy-note','原登记只保存状态名称，未保存完整人数；不能自动判断状态是否变化。原编号、基线和草稿保留，不补写历史人数。'));
+  else if(evidenceId===26&&(current.baseline||draft?.baseline)){
+    if(!sessionBaseline||!baselineAt.startsWith('会话日口径v1'))form.append(element('p','action-baseline-note session-legacy-note','原登记未保存完整UTC日及分布频数，不能自动当作同口径比较；原编号、范围、基线、周期和草稿保留，不反推历史。'));
+    else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note session-evidence-change','当前会话日窗、人数或分布证据与首次保存不同，即使三项主值相同也需核对。请展开原证据并对照当前完整频数；保存进度保留首次证据。'));
+  }
   else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p',`action-baseline-note${evidenceId===5?' status-count-change':''}`,
     evidenceId===5?'当前状态人数与登记时不同，请展开基线人数并核对当前完整数据；保存进度保留原基线。':`当前指标：${currentBaseline} · ${currentWindow}。当前数据与登记基线不同，请核对；保存会保留原基线，不会更新指标数据。`));
   if(evidenceId===24&&current.baseline&&!current.baseline.includes('→'))form.append(element('p','action-baseline-note',
@@ -5123,6 +5266,7 @@ function filteredFinding(page,requestedId) {
     }
     return {id:18,text:`当前试用转正 ${number(m(18).numerator)}/${number(m(18).denominator)}（${percent(m(18).value)}）；可比批次样本不足，暂不生成变化判断。`};
   }
+  if(page==='B'&&requestedId===26&&m(26).kind==='group'){const r=sessionDepthProjection().current;return {id:26,text:`最近完整UTC日 ${r.start.slice(0,10)} → ${r.end.slice(0,10)}，${number(r.accounts)}名App活跃主账号产生${number(r.sessions)}次有效前台会话；人均 ${sessionDepthNumber(r.frequency,2)}次。时长合格样本${number(r.timedSessions)}次，P50 ${sessionDepthDuration(r.p50,r.timedSessions)}、P90 ${sessionDepthDuration(r.p90,r.timedSessions)}。使用次数与时长上升不直接表示留存改善；请结合日期分布核对，版本、用户类型和逐用户来源待补。`};}
   if(requestedId===7&&m(7).kind==='group'){const v=m(7).value;return {id:7,text:`当前累计注册 ${number(v.registered)} 人，其中当前绑定 ${number(v.boundOwners)} 人，当前无主设备绑定 ${number(v.registered-v.boundOwners)} 人。${v.registered>=30?`绑定占比 ${percent(v.boundOwners/v.registered)}。`:'绑定占比分母不足30人。'}月末与当前是存量快照，差值不代表新增注册批次的转化或流失；国家×App固定归属为合成设定。`};}
   if(page==='E'&&requestedId===36&&m(36).kind==='group') {
     const part=packPenetrationFacts();
@@ -5668,13 +5812,14 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(closed||!box.isConnected||!box.getClientRects().length||!box.clientWidth)continue;
       drawEvidenceChart(box,spec);
     }
-    const explorer=selectedActivityExplorer??selectedStatusExplorer??selectedStructureExplorer??legacy?.explorer;
+    const explorer=selectedActivityExplorer??selectedStatusExplorer??selectedStructureExplorer??evidence.explorer??legacy?.explorer;
     if(explorer&&!explorer.node.dataset.initialized&&explorer.node.getClientRects().length) {
       let visible=true;
       for(let node=explorer.node;node&&node!==workspace;node=node.parentElement)
         if(node.hidden||node.tagName==='DETAILS'&&!node.open){visible=false;break;}
       if(visible){explorer.init();explorer.node.dataset.initialized='true';}
     }
+    explorer?.refresh?.();
     updateScrollableTables();
     updateSectionNavigation();
   };

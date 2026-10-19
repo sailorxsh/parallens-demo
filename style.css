@@ -1007,3 +1007,10 @@ article.trial-sample-item {cursor:auto}
 .status-baseline-details {font-size:var(--text-sm);margin:.35rem 0 .8rem}
 .status-baseline-details>summary {color:#4d6d53;cursor:pointer}
 .status-baseline-details>.table-note {overflow-wrap:anywhere}
+
+/* Session depth: three distinct units stay readable without a combined axis. */
+.session-depth-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.8rem;margin:1rem 0;}
+.session-depth-value{background:var(--surface,#fff);border:1px solid var(--border,#dbe3d7);border-radius:0.65rem;padding:0.85rem;min-width:0;}
+.session-depth-value p{margin:0 0 .45rem;}.session-depth-value strong{font-size:1.35rem;}.session-depth-value .table-note{margin:.5rem 0 0;}
+.session-baseline-details{margin:.5rem 0;}.session-baseline-details summary,.session-raw-duration summary,.session-depth-rules summary{cursor:pointer;}
+.session-distributions .retention-month-control{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;}
