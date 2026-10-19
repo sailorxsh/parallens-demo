@@ -1,6 +1,6 @@
 {
-  "passed": 56,
-  "total": 56,
+  "passed": 57,
+  "total": 57,
   "checks": [
     {
       "rule": "catalog",
@@ -281,6 +281,11 @@
       "rule": "D33-monthly-unbinding-ledger",
       "passed": true,
       "detail": "12月、2625台合成设备与5555条关系事件；月初有效归属、重复解绑、观察窗口、2736范围与总体计数独立闭合"
+    },
+    {
+      "rule": "D34-risk-account-evidence",
+      "passed": true,
+      "detail": "216个合成账号、112日活跃和12期信号；2592份账号快照及900组筛选独立验算，108＋78－18＝168，Free48人"
     }
   ]
 }

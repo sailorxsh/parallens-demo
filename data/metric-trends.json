@@ -1648,8 +1648,8 @@
         "value": 168
       }
     ],
-    "note": "需要核对的风险用户周末快照；历史为演示构造值，最新点锚定底表168人。",
-    "source": "constructed-weekly-simulation"
+    "note": "保留旧版本12期计数作为验算锚点；当前展示由diagnostics.D.riskFacts按同源账号与快照重算，不用此数组独立筛选。",
+    "source": "legacy-risk-control-anchors"
   },
   "m53": {
     "labels": [

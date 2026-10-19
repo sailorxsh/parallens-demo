@@ -642,6 +642,14 @@ except (AssertionError, KeyError, TypeError, ValueError):
 check('D33-monthly-unbinding-ledger', unbinding_ok,
       '12月、2625台合成设备与5555条关系事件；月初有效归属、重复解绑、观察窗口、2736范围与总体计数独立闭合')
 
+try:
+    risk_audit = runpy.run_path(str(ROOT / 'scripts/verify_risk_source.py'))['summary']
+    risk_ok = risk_audit['status']=='PASS' and risk_audit['current']==168 and risk_audit['freeRisk']==48
+except (AssertionError, KeyError, TypeError, ValueError):
+    risk_ok = False
+check('D34-risk-account-evidence', risk_ok,
+      '216个合成账号、112日活跃和12期信号；2592份账号快照及900组筛选独立验算，108＋78－18＝168，Free48人')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

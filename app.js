@@ -25,6 +25,7 @@ let trialFactIndex;
 let filterState={};
 let retentionMonthRequest=[];
 let unbindingMonthRequest=[];
+let riskSnapshotRequest=[];
 let renewalMonthRequest=[];
 let deviceRetentionCohortRequest=[];
 let filterErrors=[];
@@ -160,7 +161,7 @@ function savedIssueTarget(key,record) {
   if(typeof page!=='string'||!Object.hasOwn(pages,page)||!Number.isInteger(id)||!supportsPageMetric(page,id))
     return {reason:'记录中的专题或指标当前不可用。'};
   if(!filters||typeof filters!=='object'||Array.isArray(filters))return {reason:'旧记录未保存筛选快照，无法可靠恢复原范围。'};
-  const allowed=[...relevantFilters(page),...(page==='B'&&id===24?['retentionMonth']:[]),...(page==='D'&&id===23?['renewalMonth']:[]),...(page==='C'&&id===43?['activationCohort']:[]),...(page==='F'&&id===51?['unbindingMonth']:[])];
+  const allowed=[...relevantFilters(page),...(page==='B'&&id===24?['retentionMonth']:[]),...(page==='D'&&id===23?['renewalMonth']:[]),...(page==='C'&&id===43?['activationCohort']:[]),...(page==='F'&&id===51?['unbindingMonth']:[]),...(['D','G'].includes(page)&&id===52?['riskSnapshot']:[])];
   if(Object.entries(filters).some(([name,value])=>!allowed.includes(name)||typeof value!=='string'||
     value!=='All'&&!availableOptions(page,name,filters).includes(value)))
     return {reason:'记录包含当前不支持的筛选值；保留原范围，不替换为总体。'};
@@ -220,7 +221,8 @@ function renderSavedIssues() {
       element('span','saved-issue-meta',`${pages[record.page]?.title??'历史专题'} · ${record.issueId??'旧记录未保存问题编号'}`));
     const details=element('details','saved-issue-details');details.append(element('summary','','查看保存详情'));
     for(const [field,label] of [['baseline','登记基线'],['baselineAt','基线周期'],['updatedAt','保存时间'],['note','处理说明'],['target','验收条件'],['reviewValue','复查实测值'],['reviewedAt','实际复查日'],['linkedSample','关联记录']])
-      if(typeof record[field]==='string'&&record[field])details.append(element('p','',`${label}：${record[field]}`));
+      if(field==='baseline'&&record.evidenceId===52&&record.baseline?.startsWith('风险证据v1：'))details.append(riskBaselineDetails(record.baseline));
+      else if(typeof record[field]==='string'&&record[field])details.append(element('p','',`${label}：${record[field]}`));
     if(details.children.length===1)details.append(element('p','','旧记录没有提供额外保存详情。'));
     metricCell.append(details);tr.append(metricCell,element('td','',typeof record.scope==='string'?record.scope:'旧记录未保存范围'),
       element('td','',typeof record.owner==='string'?record.owner:'未记录'),
@@ -296,6 +298,7 @@ function actionBaselineWindow(id) {
   if(id===23){const part=renewalProjection();return part.reason?'月度续订观察期待核验':`月度续订观察期末 ${new Date(Date.parse(part.current.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)} · 到期月 ${part.month}`;}
   if(id===24)return `完整月 ${retentionSelection().month}`;
   if(id===43)return deviceRetentionWindow();
+  if(id===52)return riskWindow();
   if(id===51)return unbindingWindow();
   const history=metricHistory(id),last=history?.labels.at(-1);
   if([41,44].includes(id))return `快照 ${sourceData.snapshot.asOf} · 设备行为口径v1 · ${id===41?'近30天活跃':`${metric(id).thresholdDays}天未使用`}`;
@@ -312,6 +315,7 @@ function baselineWindowEnd(window) {
   const observed=observedBaselineEnd(window);if(observed)return observed;
   // Only interpret the explicit saved window formats. Never substitute today's
   // metric window for an unknown historical baseline.
+  const risk=/^风险快照v1 · (\d{4}-\d\d-\d\dT00:00:00Z)（UTC）$/.exec(window);if(risk)return unbindingDates(risk[1])?risk[1].slice(0,10):null;
   const unbinding=/^解绑月v1 · (\d{4}-\d\d-01T00:00:00Z) → (\d{4}-\d\d-01T00:00:00Z) · 观察截至 (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)$/.exec(window);
   if(unbinding){const [start,end,asOf]=unbinding.slice(1);if(![start,end,asOf].every(unbindingDates)||Date.parse(end)!==Date.UTC(new Date(start).getUTCFullYear(),new Date(start).getUTCMonth()+1,1)||Date.parse(asOf)<Date.parse(end))return null;return asOf.slice(0,10);}
   const anomaly=/^(?:异常24小时v1|质量完整日v1) · (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ) → (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)（左含右不含）$/.exec(window);
@@ -385,9 +389,8 @@ const optionLabels={
 };
 const optionLabel=(key,value)=>key==='season'&&value==='Other'?'淡季':optionLabels[value]??value;
 const controlScopes={period:'时间',page:'页面范围',module:'模块细分',view:'分析视角',rule:'业务规则'};
-const riskSourceCoverage='当前为构造汇总与模拟维度分片；逐账号风险命中、信号交集及人群名单尚未提供，不能据此触达。';
-const metricFormula=(id,text)=>id===52?text?.replace('演示原型仅展示模拟名单，不触达真实用户。',riskSourceCoverage):text;
-const paidPlanMetricIds=new Set([2,3,6,17,18,19,21,23,32,33,34,35,52]);
+const riskSourceCoverage='同源合成账号与112日活跃；216只是原始演示群，不是全站分母。可核对规则、信号交集与合成名单，不预测真实流失概率。';
+const paidPlanMetricIds=new Set([2,3,6,17,18,19,21,23,32,33,34,35]);
 const trialFactDimensions=new Set(['week','country','appPlatform','productLine','subscriptionPlatform','plan','billingCycle']);
 function indexedTrialFacts() {
   const records=sourceData.trialFacts.records;
@@ -535,6 +538,7 @@ const relevantFilters=page=>page?Object.entries(sourceData?.filterPolicy?.contro
   .filter(([,config])=>config.pages.includes(page)).map(([key])=>key):['country','productLine','appPlatform'];
 const selectedFilters=()=>Object.entries(filterState).filter(([,value])=>value&&value!=='All');
 function availableOptions(page,key,state=filterState) {
+  if(key==='riskSnapshot')return riskIndex().rows?.map(r=>r.date)??[];
   if(key==='unbindingMonth')return unbindingIndex().rows?.map(r=>r.month)??[];
   if(key==='renewalMonth')return renewalIndex().rows?.map(row=>row.month)??[];
   if(key==='retentionMonth')return retentionIndex().rows?.map(row=>row.observedMonth)??[];
@@ -560,6 +564,7 @@ function routeHref(page='',metricId,evidencePanel) {
     params.delete(error.key);error.values.forEach(value=>params.append(error.key,value));
   }
   if (metricId) params.set('metric',String(metricId));
+  if(['D','G'].includes(page))riskSnapshotRequest.forEach(value=>params.append('riskSnapshot',value));
   if(page==='F')unbindingMonthRequest.forEach(value=>params.append('unbindingMonth',value));
   if(page==='D')renewalMonthRequest.forEach(value=>params.append('renewalMonth',value));
   if(page==='B')retentionMonthRequest.forEach(value=>params.append('retentionMonth',value));
@@ -587,6 +592,7 @@ function readRoute() {
   const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');
   const page=path.replace(/\/$/,'').toUpperCase();
   const params=new URLSearchParams(query);
+  riskSnapshotRequest=['D','G'].includes(page)?params.getAll('riskSnapshot'):[];
   unbindingMonthRequest=page==='F'?params.getAll('unbindingMonth'):[];
   renewalMonthRequest=page==='D'?params.getAll('renewalMonth'):[];
   retentionMonthRequest=page==='B'?params.getAll('retentionMonth'):[];
@@ -604,10 +610,11 @@ function activeFilterDescription() {
   return selectedFilters().map(([key,value])=>`${filterLabels[key]}：${key==='week'?`W${value}`:optionLabel(key,value)}`).join(' · ');
 }
 function formatIssueScope(entries) {
-  return entries.map(([key,value])=>`${key==='unbindingMonth'?'解绑观察月':key==='renewalMonth'?'续订观察月':key==='retentionMonth'?'留存观察月':key==='activationCohort'?'激活批次':filterLabels[key]}：${key==='week'?`W${value}`:['unbindingMonth','retentionMonth','renewalMonth','activationCohort'].includes(key)?value:optionLabel(key,value)}`).join(' · ')||'默认演示范围';
+  return entries.map(([key,value])=>`${key==='riskSnapshot'?'风险快照':key==='unbindingMonth'?'解绑观察月':key==='renewalMonth'?'续订观察月':key==='retentionMonth'?'留存观察月':key==='activationCohort'?'激活批次':filterLabels[key]}：${key==='week'?`W${value}`:['riskSnapshot','unbindingMonth','retentionMonth','renewalMonth','activationCohort'].includes(key)?value:optionLabel(key,value)}`).join(' · ')||'默认演示范围';
 }
 function issueFilters(page,id) {
   const result={...filterState};
+  if(['D','G'].includes(page)&&id===52&&riskSnapshotRequest.length&&!(riskSnapshotRequest.length===1&&riskSnapshotRequest[0]===riskIndex().defaultDate))result.riskSnapshot=riskSnapshotRequest.join(' / ');
   if(page==='F'&&id===51&&unbindingMonthRequest.length&&!(unbindingMonthRequest.length===1&&unbindingMonthRequest[0]===unbindingIndex().defaultMonth))result.unbindingMonth=unbindingMonthRequest.join(' / ');
   if(page==='D'&&id===23&&renewalMonthRequest.length&&!(renewalMonthRequest.length===1&&renewalMonthRequest[0]===renewalIndex().defaultMonth))result.renewalMonth=renewalMonthRequest.join(' / ');
   if(page==='B'&&id===24&&retentionMonthRequest.length&&
@@ -752,7 +759,7 @@ function changeFilter(page,key,value) {
   const currentMetric=Number(new URLSearchParams(location.hash.split('?')[1]??'').get('metric'))||null;
   const params=new URLSearchParams(location.hash.split('?')[1]??'');
   const previousErrors=new Set(filterErrors.map(error=>error.key));
-  if(!key){for(const field of relevantFilters(page))params.delete(field);params.delete('unbindingMonth');unbindingMonthRequest=[];params.delete('renewalMonth');renewalMonthRequest=[];params.delete('retentionMonth');retentionMonthRequest=[];params.delete('activationCohort');deviceRetentionCohortRequest=[];}
+  if(!key){for(const field of relevantFilters(page))params.delete(field);params.delete('riskSnapshot');riskSnapshotRequest=[];params.delete('unbindingMonth');unbindingMonthRequest=[];params.delete('renewalMonth');renewalMonthRequest=[];params.delete('retentionMonth');retentionMonthRequest=[];params.delete('activationCohort');deviceRetentionCohortRequest=[];}
   else if(value==='All')params.delete(key);
   else params.set(key,value);
   readFilters(page,params);
@@ -1790,7 +1797,7 @@ function qualityContextTable(spec) {
   if(!['数据质量与业务信号','异常信号与前期基线'].includes(spec.title))return spec;
   const p=qualityProjection();if(p.reason)return {...spec,rows:[['数据质量','—','—',p.reason]],note:qualityNote};
   const r=p.current,previous=p.previous,q=dataQualityState(metric(54));
-  return {...spec,rows:spec.rows.map(row=>row[0]==='流失高危主账号'?[row[0],...row.slice(1,-1),'构造汇总 · 名单待补']:row[0]==='埋点事件丢失率'?[row[0],qualityCount(r.lost),r.expected,qualityPercent(r.loss)]:row[0]==='ID-Mapping覆盖率'?[row[0],r.mapped,r.records,qualityPercent(r.mapping)]:row[0]==='数据状态'?[row[0],'演示判断','—',q.label]:row[0]==='埋点丢失率'?[row[0],previous.start.slice(0,10)+' '+qualityPercent(previous.loss),r.start.slice(0,10)+' '+qualityPercent(r.loss),'完整UTC日；演示阈值，不推断生产达标']:row),note:spec.note+' 质量子项：'+qualityWindow()};
+  return {...spec,rows:spec.rows.map(row=>row[0]==='流失高危主账号'?[row[0],metric(52).kind==='count'?metric(52).value:'—','—',metric(52).kind==='count'?'同源合成风险名单':'风险来源待核验']:row[0]==='埋点事件丢失率'?[row[0],qualityCount(r.lost),r.expected,qualityPercent(r.loss)]:row[0]==='ID-Mapping覆盖率'?[row[0],r.mapped,r.records,qualityPercent(r.mapping)]:row[0]==='数据状态'?[row[0],'演示判断','—',q.label]:row[0]==='埋点丢失率'?[row[0],previous.start.slice(0,10)+' '+qualityPercent(previous.loss),r.start.slice(0,10)+' '+qualityPercent(r.loss),'完整UTC日；演示阈值，不推断生产达标']:row),note:spec.note+' 质量子项：'+qualityWindow()};
 }
 
 const anomalyDimensions=['country','appPlatform','anomalyType'];
@@ -1965,6 +1972,63 @@ function unbindingList(p){const source=unbindingIndex().source,node=element('sec
  draw();return node;
 }
 
+
+// #52: one synthetic account population, daily activity and snapshot signals.
+const riskLedger=(()=>{const DAY=86400000,countries={US:'美国',UK:'英国',DE:'德国',Other:'其他'};
+function selection(s,at){const t=Date.parse(at),indexes=(lo,hi)=>s.dates.flatMap((d,i)=>{const time=Date.parse(d+'T00:00:00Z');return time>=lo&&time<hi?[i]:[];});return {recent:indexes(t-7*DAY,t),baseline:indexes(t-35*DAY,t-7*DAY)};}
+function evidence(r,at,s,cuts=selection(s,at)){const t=Date.parse(at),activity=s.activity[r.id],recent=cuts.recent.reduce((n,i)=>n+activity[i],0),baseline=cuts.baseline.reduce((n,i)=>n+activity[i],0),recentEvent=date=>date!==null&&Date.parse(date)>=t-30*DAY&&Date.parse(date)<t;
+ const intent=r.cancelAutoRenew||(recentEvent(r.trialEndedAt)&&!r.trialPaid)||recentEvent(r.expiredAt),behavior=baseline>0&&recent*8<baseline,device=r.devices.some(d=>Date.parse(d.boundAt)<=t&&t-Date.parse(d.lastOnlineAt)>=7*DAY),push=!r.pushEnabled,ignored=r.ignoredAlerts.filter(d=>Date.parse(d)>=t-30*DAY&&Date.parse(d)<t).length,attitude=ignored>=3,qualified=behavior&&(device||push||attitude);
+ return {intent,behavior,device,push,attitude,qualified,risk:!!(intent||qualified),recent,baseline,decline:baseline?1-recent/(baseline/4):null,ignored};}
+const matchesDefinition=(actual,want)=>actual&&Object.keys(actual).length===Object.keys(want).length&&Object.entries(want).every(([k,v])=>Object.hasOwn(actual,k)&&actual[k]===v);
+function validate(s){const evaluated=[];const iso=v=>typeof v==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().replace('.000Z','Z')===v;
+ if(s?.status!=='approved-synthetic'||s.version!=='synthetic-risk-account-evidence-v1'||s.classification!=='entirely_synthetic'||!iso(s.asOf)||s.snapshots?.length!==12||s.dates?.length!==112||Object.keys(s.activity??{}).length!==216)throw Error('风险候选来源不完整');
+ if(!matchesDefinition(s.models,{'K6':'Bird','Bird Lite':'Bird','Bird Pro':'Bird','Hunt Pro':'Hunting'}))throw Error('主型号与产品线归属不一致');
+ if(!matchesDefinition(s.rule,{intentLookbackDays:30,recentActivityDays:7,baselineActivityDays:28,declineStrictlyGreaterThan:.5,offlineHoursAtLeast:168,ignoredAlertLookbackDays:30,ignoredAlertCountAtLeast:3}))throw Error('候选规则版本与实现不一致');
+ for(let i=0;i<s.dates.length;i++)if(!/^\d{4}-\d\d-\d\d$/.test(s.dates[i])||i&&Date.parse(s.dates[i])-Date.parse(s.dates[i-1])!==DAY)throw Error('每日活跃日期不连续');
+ for(const values of Object.values(s.activity))if(values.length!==s.dates.length||values.some(v=>v!==0&&v!==1))throw Error('活跃日频数缺失');
+ for(const [i,w]of s.snapshots.entries()){if(!iso(w.at)||Date.parse(w.at)!==Date.parse(s.asOf)-(11-i)*7*DAY||w.accounts.length!==216||w.eligible!==216||new Set(w.accounts.map(r=>r.id)).size!==216)throw Error('快照日期或账号群不闭合');
+  const deviceIds=new Set();for(const r of w.accounts){if(!/^RISK-\d{3}$/.test(r.id)||!s.activity[r.id]||!Object.hasOwn(s.models,r.deviceModel)||!Object.hasOwn(countries,r.country)||!['iOS','Android'].includes(r.appPlatform)||r.productLine!==s.models[r.deviceModel]||!['Free','Starter','Plus','Pro'].includes(r.plan)||!['App Store','Google Play','Web'].includes(r.subscriptionPlatform)||r.plan==='Free'&&r.productLine!=='Bird'||r.plan==='Starter'&&r.productLine!=='Hunting'||![r.cancelAutoRenew,r.trialPaid,r.pushEnabled].every(v=>typeof v==='boolean')||![r.trialEndedAt,r.expiredAt].every(d=>d===null||iso(d)&&d<w.at)||!Array.isArray(r.devices)||!Array.isArray(r.ignoredAlerts)||new Set(r.ignoredAlerts).size!==r.ignoredAlerts.length||r.ignoredAlerts.some(d=>!iso(d)||d>=w.at))throw Error('账号归属或信号来源待核验');
+   if(r.devices.some(d=>deviceIds.has(d.id))||new Set(r.devices.map(d=>d.id)).size!==r.devices.length||r.devices.some(d=>!d.id||d.owner!==r.id||!iso(d.boundAt)||!iso(d.lastOnlineAt)||d.boundAt>w.at||d.lastOnlineAt>w.at))throw Error('设备归属或离线时点待核验');r.devices.forEach(d=>deviceIds.add(d.id));}
+  const cuts=selection(s,w.at);if(cuts.recent.length!==7||cuts.baseline.length!==28)throw Error('35日活跃观察不完整');const accounts=w.accounts.map(r=>({...r,...evidence(r,w.at,s,cuts)}));if(accounts.filter(r=>r.risk).length!==w.expectedRisk)throw Error('逐账号命中与控制数不闭合');evaluated.push({...w,date:w.at.slice(0,10),accounts});
+ }return evaluated;}
+
+return {evidence,validate};})();
+let riskSourceCache;
+const riskSignalNames={intent:'意图层',behavior:'活跃下降>50%',device:'设备离线≥7日',push:'推送关闭',attitude:'明确忽略≥3次'};
+const riskRuleNote='高危＝意图 ∪（行为 ∩（设备 ∪ 触达 ∪ 态度））；同号只计一次。意图／态度回看30日，行为近7完整UTC日对照此前28日周均，严格下降>50%；任一已绑定主设备离线满168小时。';
+function riskIndex(){const source=sourceData.diagnostics.D.riskFacts;if(riskSourceCache&&riskSourceCache.source===source)return riskSourceCache.result;let result;
+ try{const rows=riskLedger.validate(source);if(source.asOf!==sourceData.snapshot.asOf+'T00:00:00Z')throw Error('快照不一致');result={source,rows,defaultDate:source.asOf.slice(0,10)};}
+ catch{result={reason:'风险规则、账号归属或信号窗口待核验；未回退旧汇总、比例分片或生成名单。'};}riskSourceCache={source,result};return result;}
+function riskProjection(state=filterState,date=riskSnapshotRequest[0]??riskIndex().defaultDate){const index=riskIndex();if(index.reason)return index;
+ if(riskSnapshotRequest.length>1||!index.rows.some(w=>w.date===date))return {reason:'风险快照无效或包含多个日期，请重新选择一个完整观察快照。'};
+ const filters=effectiveFor(52,state);if(filters.some(([key])=>!['country','appPlatform','productLine','deviceModel','plan','subscriptionPlatform'].includes(key)))return {reason:'当前条件缺少同源风险归属。'};
+ const windows=index.rows.map(w=>riskSummarize(w.accounts.filter(r=>filters.every(([k,v])=>r[k]===v)),w.at));return {source:index.source.version,date,rows:windows,current:windows.find(w=>w.date===date)};}
+function riskSummarize(accounts,at){const risks=accounts.filter(r=>r.risk),intent=risks.filter(r=>r.intent).length,qualified=risks.filter(r=>r.qualified).length,both=risks.filter(r=>r.intent&&r.qualified).length;return {at,date:at.slice(0,10),accounts,risks,eligible:accounts.length,count:risks.length,intent,qualified,both,intentOnly:intent-both,behaviorOnly:qualified-both,neither:accounts.length-risks.length,signals:Object.fromEntries(Object.keys(riskSignalNames).map(k=>[k,risks.filter(r=>r[k]).length]))};}
+function riskMetric(state){const p=riskProjection(state);return p.reason?pending(p.reason):{kind:'count',value:p.current.count};}
+function riskWindow(){const p=riskProjection();return p.reason?'风险快照待核验':`风险快照v1 · ${p.current.at}（UTC）`;}
+function riskHistory(){const p=riskProjection();return p.reason?null:{title:'流失高危主账号 · 12期同源快照',unit:'人',labels:p.rows.map(w=>w.date),values:p.rows.map(w=>w.count),selectedPeriod:p.date,comparisonLabel:'较前快照',note:'各快照按当期单一主归属重算，同一账号逐日活跃与对应信号；216为原始合成演示群，不是全站分母。人数变化不是已流失或挽留效果。'};}
+function riskHistoryTable(rows=riskProjection().rows??[]){return {title:'高危主账号 · 快照人数验算',columns:['快照（UTC）','高危去重（人）','意图命中','行为叠加命中','两者交集','仅意图','仅行为叠加','有记录演示群'],rows:rows.map(w=>[w.at,w.count,w.intent,w.qualified,w.both,w.intentOnly,w.behaviorOnly,w.eligible]),note:'仅意图＋仅行为叠加＋交集＝高危去重。演示群不用于全站风险率；信号人数不能直接相加。'};}
+function riskBaseline(){const p=riskProjection(),i=p.rows.findIndex(w=>w.date===p.date),windows=p.rows.slice(Math.max(0,i-1),i+1).map(w=>{const {accounts,risks,...counts}=w;return {...counts,members:risks.map(r=>[r.id,r.country,r.appPlatform,r.productLine,r.deviceModel,r.plan,r.subscriptionPlatform,r.intent,r.behavior,r.qualified,r.device,r.push,r.attitude,r.recent,r.baseline,r.ignored])};});return '风险证据v1：'+JSON.stringify({source:p.source,rules:riskIndex().source.rule,windows});}
+function riskBaselineDetails(baseline){const detail=element('details','risk-baseline-details');detail.append(element('summary','','查看首次保存的风险规则、快照与命中计数'));
+ try{const saved=JSON.parse(baseline.slice('风险证据v1：'.length));detail.append(element('p','table-note',`来源 ${saved.source}；近${saved.rules.recentActivityDays}日对照前${saved.rules.baselineActivityDays}日，意图／忽略回看${saved.rules.intentLookbackDays}日。`),dataTable({...riskHistoryTable(saved.windows),title:'首次保存 · 风险快照计数'}));for(const w of saved.windows)detail.append(dataTable({title:`首次保存 · ${w.date}重叠信号`,columns:['信号','高危群内命中（人）'],rows:Object.entries(w.signals).map(([k,n])=>[riskSignalNames[k]??k,n])}));const members=element('details','');members.append(element('summary','','查看首次保存的账号命中名册'));for(const w of saved.windows)members.append(dataTable({title:`${w.date} · 已保存合成账号命中`,columns:['账号','国家／App','主型号／套餐','意图／行为叠加','近7日／前28日活跃'],rows:w.members.map(r=>[r[0],`${r[1]} / ${r[2]}`,`${r[4]} / ${r[5]}`,`${r[7]?'命中':'—'} / ${r[9]?'命中':'—'}`,`${r[13]} / ${r[14]}天`])}));detail.append(members);}
+ catch{detail.append(element('p','na-note','原风险证据无法解析，保留原文，不用当前数据替换。'),element('p','table-note',baseline));}return detail;}
+function riskControl(page){const wrap=element('div','retention-month-control'),label=element('label','','风险快照（仅#52）'),select=element('select','');select.name='riskSnapshot';select.setAttribute('aria-label','风险快照（仅#52）');const index=riskIndex(),p=riskProjection();if(p.reason){const o=element('option','','快照待修正');o.value='invalid';o.disabled=true;select.append(o);}for(const w of index.rows??[]){const o=element('option','',w.date);o.value=w.date;select.append(o);}select.value=p.reason?'invalid':p.date;
+ select.addEventListener('change',()=>{const params=new URLSearchParams(location.hash.split('?')[1]??'');params.delete('riskSnapshot');if(select.value!==index.defaultDate)params.set('riskSnapshot',select.value);pushRoute(`#/${page}?${params}`);renderRoute({preserveScroll:true});document.querySelector('[name=riskSnapshot]')?.focus({preventScroll:true});document.querySelector('#announcement').textContent=`风险快照已切换${select.value}，仅更新#52及其登记范围。`;});label.append(select);wrap.append(label);return wrap;}
+function riskEvidence(panel,appendPair,page){const p=riskProjection(),w=p.current,h=riskHistory(),proof=element('p','table-note risk-intersection',`互斥验算：仅意图${number(w.intentOnly)}人＋仅行为叠加${number(w.behaviorOnly)}人＋两者交集${number(w.both)}人＝高危${number(w.count)}人；有完整记录演示群${number(w.eligible)}人，未命中${number(w.neither)}人。`);proof.dataset.evidenceKind='change';panel.append(proof);
+ appendPair({...h,metricId:52,series:[{name:'高危主账号',values:h.values}],onPoint:i=>{const select=panel.querySelector('[name=riskSnapshot]');if(select&&p.rows[i]){select.value=p.rows[i].date;select.dispatchEvent(new Event('change'));}}},riskHistoryTable(p.rows),'change');
+ const counts=Object.keys(riskSignalNames).map(k=>[riskSignalNames[k],w.signals[k]]);appendPair({metricId:52,title:`${number(w.count)}位高危主账号 · 五层重叠信号`,unit:'人',labels:counts.map(r=>r[0]),series:[{name:'命中主账号',values:counts.map(r=>r[1])}],note:'各层可重叠，不能相加得到人数。行为层需叠加设备／触达／态度任一层；单有离线、关闭推送或忽略告警不判高危。',onPoint:i=>{const select=panel.querySelector('[aria-label="风险信号（仅清单）"]');if(select){select.value=Object.keys(riskSignalNames)[i];select.dispatchEvent(new Event('change'));select.focus({preventScroll:true});}}},{title:'高危群内信号验算',columns:['信号','主账号（人）'],rows:counts,note:riskRuleNote},'groups');
+ panel.append(riskAccountList(p,page));const full=dataTable(riskHistoryTable(p.rows),'risk-history-table');full.dataset.evidenceKind='data';panel.append(full);const rules=element('details','risk-rules');rules.dataset.evidenceKind='data';rules.append(element('summary','','同源规则与演示范围'));for(const note of riskIndex().source.notes)rules.append(element('p','table-note',note));panel.append(rules);}
+const riskListStates=new Map();
+function riskAccountList(p,page){const w=p.current,node=element('section','risk-account-list');node.dataset.evidenceKind='groups';node.append(element('h3','','高危合成账号 · 信号证据与名单'));
+ const key=recordScope(page,52),state=riskListStates.get(key)??{signal:'',query:'',page:0,selected:null};riskListStates.set(key,state);const controls=element('div','binding-list-controls'),label=element('label','','风险信号（仅清单）'),select=element('select','');select.setAttribute('aria-label','风险信号（仅清单）');for(const [k,text]of[['','全部高危'],['intent','意图层'],['qualified','行为叠加'],['behavior','活跃下降>50%'],['device','设备离线'],['push','推送关闭'],['attitude','明确忽略告警']]){const o=element('option','',text);o.value=k;select.append(o);}select.value=state.signal;label.append(select);controls.append(label);
+ const searchLabel=element('label','','查找账号'),search=element('input','');search.type='search';search.value=state.query;search.setAttribute('aria-label','搜索合成风险账号');searchLabel.append(search);controls.append(searchLabel);const reset=element('button','filter-reset','清除名单条件'),exportButton=element('button','filter-reset','');reset.type=exportButton.type='button';controls.append(reset);node.append(controls);
+ const status=element('p','table-note risk-list-status');status.setAttribute('aria-live','polite');const content=element('div',''),paging=element('div','binding-list-pagination');node.append(status,exportButton,content,paging,element('p','table-note','信号与搜索只筛清单，不改变顶部、趋势或问题单范围。CSV仅为合成证据，不连接触达渠道。'));let matched=[];
+ const draw=()=>{const query=state.query.trim().normalize('NFKC').toLowerCase();matched=w.risks.filter(r=>(!state.signal||r[state.signal])&&(!query||[r.id,optionLabel('country',r.country),r.deviceModel,r.plan,r.appPlatform].join(' ').normalize('NFKC').toLowerCase().includes(query)));state.page=Math.min(state.page,Math.max(0,Math.ceil(matched.length/20)-1));const rows=matched.slice(state.page*20,state.page*20+20);status.textContent=`匹配${number(matched.length)} / 当前高危${number(w.count)}人；有完整记录演示群${number(w.eligible)}人。${!matched.length?'无匹配高危账号，不代表缺失记录或全站没有风险。':''}`;exportButton.textContent=`导出全部匹配的合成证据（${number(matched.length)}人）`;exportButton.disabled=!matched.length;
+ const table=dataTable({title:'高危合成账号 · 每页20人',columns:['账号','国家／主型号','套餐／平台','意图命中','行为叠加'],rows:rows.map(r=>[r.id,`${optionLabel('country',r.country)} / ${r.deviceModel}`,`${r.plan} / ${r.subscriptionPlatform}`,r.intent?'命中':'—',r.qualified?'命中':'—']),note:'点击账号原位核对命中依据；同账号多台设备只命中一次。'});[...table.querySelectorAll('tbody tr')].forEach((tr,i)=>{const r=rows[i],b=element('button','retention-device-select',r.id);b.type='button';b.dataset.riskId=r.id;b.setAttribute('aria-pressed',String(state.selected===r.id));b.setAttribute('aria-controls',`${page}-workspace-device`);b.addEventListener('click',()=>{state.selected=r.id;node.querySelectorAll('[data-risk-id]').forEach(n=>n.setAttribute('aria-pressed',String(n.dataset.riskId===r.id)));node.dispatchEvent(new CustomEvent('risk-account-select',{bubbles:true,detail:{record:r,at:w.at,trigger:b}}));document.querySelector('#announcement').textContent=`已选择${r.id}，原位显示风险证据，问题单未改变。`;});tr.firstChild.replaceChildren(b);});content.replaceChildren(table);paging.replaceChildren();const prev=element('button','filter-reset','上一页'),next=element('button','filter-reset','下一页');prev.type=next.type='button';prev.disabled=state.page===0;next.disabled=(state.page+1)*20>=matched.length;for(const [b,d]of[[prev,-1],[next,1]])b.addEventListener('click',()=>{state.page+=d;draw();paging.querySelector(d<0?'button:first-child':'button:last-child')?.focus({preventScroll:true});});paging.append(prev,element('span','table-note',`第${state.page+1} / ${Math.max(1,Math.ceil(matched.length/20))}页`),next);if(state.selected&&!matched.some(r=>r.id===state.selected)){state.selected=null;node.dispatchEvent(new CustomEvent('risk-account-clear',{bubbles:true}));}updateScrollableTables();};
+ select.addEventListener('change',()=>{state.signal=select.value;state.page=0;draw();});search.addEventListener('input',()=>{state.query=search.value;state.page=0;draw();});reset.addEventListener('click',()=>{state.signal=state.query='';select.value=search.value='';state.page=0;draw();reset.focus({preventScroll:true});});exportButton.addEventListener('click',()=>{if(riskIndex().reason){status.textContent='风险来源待核验，未导出名单。';return;}const headers=['合成账号','快照UTC','国家','App','产品线','主型号','套餐','订阅平台','意图命中','行为叠加命中','近7日活跃天数','前28日活跃天数','设备离线命中','推送关闭','30日明确忽略次数','规则来源'],rows=matched.map(r=>[r.id,w.at,r.country,r.appPlatform,r.productLine,r.deviceModel,r.plan,r.subscriptionPlatform,r.intent,r.qualified,r.recent,r.baseline,r.device,r.push,r.ignored,p.source]),quote=v=>'"'+String(v).replace(/"/g,'""')+'"',csv='\uFEFF'+[headers,...rows].map(r=>r.map(quote).join(',')).join('\r\n'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=element('a','');a.href=url;a.download=`parallens-synthetic-risk-${w.date}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);document.querySelector('#announcement').textContent=`已导出全部匹配的${matched.length}名合成风险账号。`;});draw();return node;}
+function riskAccountDetail(r,at,onBack){const node=element('section','risk-account-detail'),back=element('button','binding-device-back','返回账号清单');back.type='button';back.addEventListener('click',onBack);node.append(back,element('p','inspector-kicker',`合成账号 / ${r.id}`),element('h3','','风险命中证据'),element('p','table-note',`${at} · ${r.intent&&r.qualified?'意图与行为叠加同时命中，只计1人':r.intent?'意图层命中，只计1人':'行为下降且叠加其他层，只计1人'}`));
+ const facts=element('dl','inspector-facts');for(const [k,v]of[['归属',`${optionLabel('country',r.country)} / ${r.appPlatform} / ${r.deviceModel}`],['套餐／订阅平台',`${r.plan} / ${r.subscriptionPlatform}`],['意图依据',r.cancelAutoRenew?'当前关闭自动续订':r.trialEndedAt?`试用结束未付费 ${r.trialEndedAt}`:r.expiredAt?`权益过期 ${r.expiredAt}`:'未命中'],['近7日复合活跃',`${r.recent}天`],['前28日活跃',`${r.baseline}天，折合${(r.baseline/4).toFixed(1)}天/周`],['相对周均变化',r.decline===null?'基线为0，不算无限下降':r.decline===0?'持平；行为层需下降严格>50%':`${r.decline>0?'下降':'上升'}${(Math.abs(r.decline)*100).toFixed(1)}%；行为层需下降严格>50%`],['推送',r.push?'已关闭':'已开启'],['明确忽略告警',`${r.ignored}次 / 最近30日`]]){const row=element('div','');row.append(element('dt','',k),element('dd','',v));facts.append(row);}const devices=element('dl','inspector-facts');for(const d of r.devices){const row=element('div','');row.append(element('dt','',d.id),element('dd','',`${d.lastOnlineAt.replace('T',' ').replace('Z',' UTC')} · 距快照${((Date.parse(at)-Date.parse(d.lastOnlineAt))/3600000).toFixed(1)}小时`));devices.append(row);}node.append(facts,element('h4','','当前绑定主设备 · 最近在线'),devices,element('p','table-note','任一绑定主设备离线满168小时命中设备层，多台只计该主账号一次。'),element('p','table-note','只解释是否命中演示规则，不预测流失概率；付费中可标高危，不加入沉睡分层。查看账号不替换问题单。'));return node;}
+
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -2004,6 +2068,7 @@ function projectMetric(id,state=filterState) {
   if(id===13&&model==='Hunt Pro')return na('7日价值激活率只定义观鸟线；Hunt Pro属于狩猎线，当前口径不适用');
   if(scoped.plan==='Free'&&paidPlanMetricIds.has(id))
     return na('Free不是付费试用、订阅或续费套餐，不构成该指标的分母');
+  if(id===52)return riskMetric(state);
   if(id===22&&scoped.plan&&scoped.plan!=='Free')return na('本项只统计观鸟Free权益');
   if(scoped.plan&&id===5) return pending('套餐适用，但底表缺少按套餐拆分的互斥订阅状态人数');
   if(id===27&&scoped.functionType) {
@@ -2124,7 +2189,7 @@ function dataQualityState(value) {
     reason:`演示阈值：事件丢失率≤${percent(thresholds.eventLossMax)}，ID映射覆盖率≥${percent(thresholds.idMappingMin)}；尚未确认生产达标标准。${complete?'':'至少一项比例不可核验，保留独立可用指标，不判为正常。'}`};
 }
 function projectDataset() {
-  unbindingSourceCache=null;
+  unbindingSourceCache=null;riskSourceCache=null;
   if(filterErrors.length) {
     dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>
       [`m${String(c.id).padStart(2,'0')}`,{...na('筛选条件无效，请修正或主动清除后查看。'),availability:'invalid-filter'}]))};
@@ -2182,7 +2247,7 @@ function definition(id,label=catalogItem(id)?.name ?? '指标') {
     heading.append(close);popover.append(heading);
     const body=element('div','definition-popover-body');body.tabIndex=0;
     body.setAttribute('role','region');body.setAttribute('aria-label',`${label}定义、计算与来源`);
-    for (const [name,value] of [['定义',item?.definition],['计算方法',metricFormula(id,item?.formula)],['数据粒度',item?.grain],['数据来源',item?.source]]) {
+    for (const [name,value] of [['定义',item?.definition],['计算方法',item?.formula],['数据粒度',item?.grain],['数据来源',item?.source]]) {
       if (!value) continue;
       const row=element('div','definition-popover-row');
       row.append(element('span','',name),element('p','',value));body.append(row);
@@ -2358,6 +2423,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  if(id===52)return riskHistory()?.values??null;
   if(id===54){const p=qualityProjection();return p.rows?p.rows.map(r=>r.loss===null?null:r.loss*100):null;}
   if(id===53){const part=anomalyProjection();return part.rows?part.rows.map(w=>w.count):null;}
   if(id===7){const part=accountStockHistory();return part.rows?part.rows.map(r=>r.registered):null;}
@@ -2756,6 +2822,7 @@ function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
   if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
+  if(id===52)return riskHistory();
   if(id===54)return qualityHistory();
   if(id===53){const p=anomalyProjection();return p.rows?{comparisonLabel:'较前24小时',title:'异常发现',unit:'条',nearestLinePoint:true,labels:p.rows.map(w=>w.endExclusive.slice(0,10)),values:p.rows.map(w=>w.count),note:'每点为当日12:00 UTC截止的完整24小时窗口，起含止不含；'+anomalyNote}:null;}
   if(id===26){const p=sessionDepthProjection();return p.rows?{comparisonLabel:'较前日',title:'人均有效会话',unit:'次/人',labels:p.rows.map(r=>r.end.slice(0,10)),values:p.rows.map(r=>r.frequency),note:'84个完整UTC日；独立刻度，不代表留存或打开间隔。'}:null;}
@@ -3569,7 +3636,7 @@ function renderHome() {
   const alertCards=element('div','alert-grid');
   [
     {id:15,label:'绑定未激活设备',page:'A',value:displayValue(15),unit:metricCountUnits[15],note:'已绑定超过3天，仍无首图',alert:true,critical:true},
-    {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),unit:metricCountUnits[52],note:'构造风险汇总 · 规则明细待补',alert:true,critical:true},
+    {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),unit:metricCountUnits[52],note:'同源规则命中 · 合成账号',alert:true,critical:true},
     {id:29,label:'季节阈值未使用主账号',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',unit:'人',note:`连续${metric(29).thresholdDays??21}天`,alert:true},
     {id:22,label:'Free权益用满主账号',page:'D',value:metric(22).kind==='group'?number(metric(22).value.anyExhausted.numerator):'不适用',unit:'人',note:'观鸟线 · 升级机会',alert:true},
   ].forEach(item=>alertCards.append(miniCard(item)));
@@ -3883,7 +3950,7 @@ function metricCardSummary(id) {
   const contexts={3:'月化经常性收入，非本月实际收款',4:'最近30天复合活跃主账号去重',
     10:'已满72小时观察的新注册批次',13:'已满7日观察的观鸟注册批次',15:'绑定已超过3天，仍未产出首图',
     34:'当前有效付费权益，含订阅或增值Pack',48:'绑定2台及以上的主账号占比',49:'至少共享给1人的主账号绑定设备占比',
-    52:'命中流失风险信号的主账号去重',53:'截至9/24 12:00 UTC；不代表受影响人数'};
+    52:'同源五层演示规则 · 主账号去重',53:'截至9/24 12:00 UTC；不代表受影响人数'};
   summary.context=contexts[id]??'';
   if(id===23){const part=renewalProjection();if(!part.reason)summary.context=`${part.month} · 到期后7天合成观察窗`;}
   if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)summary.context=`${row.baseMonth} → ${row.observedMonth} · 完整自然月` ;}
@@ -3949,6 +4016,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===52&&metric(52).kind==='count')return riskBaseline();
   if(id===51&&metric(51).kind==='group')return unbindingBaseline();
   if(id===54&&metric(54).kind==='group')return qualityBaseline();
   if(id===53&&metric(53).kind==='count')return anomalyBaseline();
@@ -4747,14 +4815,15 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===51?'12月同源合成解绑台账':id===54?'30个完整UTC日 · 独立质量计数':id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===52?'同源合成账号 · 12期风险快照':id===51?'12月同源合成解绑台账':id===54?'30个完整UTC日 · 独立质量计数':id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
-  const evidenceWindow=id===51?unbindingWindow():observed&&!observed.reason?`W${observed.week} · ${observed.start}—${observed.end}；观察截至 ${observed.observedThrough}（UTC）`:contract.window;
+  const evidenceWindow=id===52?riskWindow():id===51?unbindingWindow():observed&&!observed.reason?`W${observed.week} · ${observed.start}—${observed.end}；观察截至 ${observed.observedThrough}（UTC）`:contract.window;
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${evidenceWindow} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
-  if(id===52)intro.append(element('span','metric-filter-scope risk-source-coverage',riskSourceCoverage));
+  if(id===52)intro.append(element('span','metric-filter-scope risk-source-coverage',value.kind==='na'?'风险来源不可用，不生成名单或导出。':riskSourceCoverage));
   panel.append(intro);
+  if(id===52)panel.append(riskControl(page));
   if(id===51)panel.append(unbindingControl());
   if(id===23)panel.append(renewalControl());
   if(id===24)panel.append(retentionControl());
@@ -4785,6 +4854,7 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===52){riskEvidence(panel,appendEvidencePair,page);return {node:panel,specs};}
   if(id===51){unbindingEvidence(panel,appendEvidencePair);return {node:panel,specs};}
   if(id===54){const explorer=qualityEvidence(panel,appendEvidencePair);return {node:panel,specs,explorer};}
   if(id===53){const part=anomalyProjection(),history=metricHistory(53);
@@ -5066,7 +5136,7 @@ function metricEvidence(id,page) {
     }
   }
   const fullValue=dataTable(id===38?structureMetricTable():id===39?modelCalculationTable():compactMetricValueTable({title:`${item.name} · 当前筛选完整值`,columns:['子项',id===5?'主账号人数（人）':'分子 / 数量','分母','结果 / 说明'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
-    note:`计算口径：${metricFormula(id,contract.formula).replace(/。+$/,'')}。${[11,13].includes(id)?'本表、成功率趋势与耗时按同一合成频数汇总。':id===15?'本表、趋势和清单由同一合成设备台账计数。':[41,44].includes(id)?'本表、趋势和分组按同一合成行为间隔重算；回流使用独立历史入组。':id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===38?'structure-calculation':id===39?'model-calculation':'');
+    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${[11,13].includes(id)?'本表、成功率趋势与耗时按同一合成频数汇总。':id===15?'本表、趋势和清单由同一合成设备台账计数。':[41,44].includes(id)?'本表、趋势和分组按同一合成行为间隔重算；回流使用独立历史入组。':id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===38?'structure-calculation':id===39?'model-calculation':'');
   fullValue.dataset.evidenceKind='data';panel.append(fullValue);
   return {node:panel,specs};
 }
@@ -5296,13 +5366,15 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  const riskBaselineSaved=evidenceId===52&&baseline.startsWith('风险证据v1：');
   const unbindingBaselineSaved=evidenceId===51&&baseline.startsWith('解绑月证据v1：');
   const qualityBaselineSaved=evidenceId===54&&baseline.startsWith('质量日证据v1：');
   const anomalyBaselineSaved=evidenceId===53&&baseline.startsWith('异常事件证据v1：');
   const deviceStateBaseline=evidenceId===50&&baseline.startsWith('设备状态计数：');
   const sessionBaseline=evidenceId===26&&baseline.startsWith('会话日证据v1：');
   const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${unbindingBaselineSaved?'解绑月计数与分组证据':qualityBaselineSaved?'两日质量计数证据':anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${riskBaselineSaved?'风险规则、快照与计数证据':unbindingBaselineSaved?'解绑月计数与分组证据':qualityBaselineSaved?'两日质量计数证据':anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(riskBaselineSaved)form.append(riskBaselineDetails(baseline));
   if(unbindingBaselineSaved)form.append(unbindingBaselineDetails(baseline));
   if(qualityBaselineSaved)form.append(qualityBaselineDetails(baseline));
   if(anomalyBaselineSaved)form.append(anomalyBaselineDetails(baseline));
@@ -5340,6 +5412,10 @@ function actionRecord(page,evidenceId) {
   const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
+  else if(evidenceId===52&&(current.baseline||draft?.baseline)){
+    if(!riskBaselineSaved)form.append(element('p','action-baseline-note risk-legacy-note','旧登记只保存风险汇总，未保存逐账号规则与快照计数。当前数据与登记基线不同；原编号、范围、基线、周期与草稿保留，不补写历史。'));
+    else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note risk-evidence-change','当前规则、快照、信号交集或账号命中与首次保存不同，即使总人数相同也需核对；保存处理进度保留首次证据。'));
+  }
   else if(evidenceId===51&&(current.baseline||draft?.baseline)){
     if(!unbindingBaselineSaved)form.append(element('p','action-baseline-note unbinding-legacy-note','当前数据与登记基线不同：本项现按同源月台账计算。旧登记未保存台账计数与分组；原编号、范围、基线、周期与草稿保留，不补写历史。'));
     else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note unbinding-evidence-change','当前月窗、计数、成熟性或分组证据与首次保存不同，即使百分比相同也需核对；保存进度保留首次证据。'));
@@ -5752,6 +5828,7 @@ function metricInspector(id,page) {
   if(id===23){const part=renewalProjection();if(!part.reason){const r=part.current;fact('到期月 / 最晚观察日',`${part.month} / ${new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)}`);fact('发生权益流失 / 期初',`${number(r.lostDuring)} / ${number(r.opening)}人`);fact('主动取消 / 期初',`${number(r.cancelled)} / ${number(r.opening)}人`);}}
   if([11,13,18].includes(id)){const c=cohortObservation(id);fact('本批次 / 观察截止',c.reason?c.reason:`W${c.week} · ${c.start}—${c.end} / ${c.observedThrough}（UTC）`);}
   if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)fact('基期 → 观察期',`${row.baseMonth} → ${row.observedMonth}`);}
+  if(id===52&&value.kind==='count'){const p=riskProjection(),w=p.current;fact('风险快照',w.at);fact('意图／行为叠加',`${w.intent} / ${w.qualified}人，交集${w.both}人`);fact('互斥人数验算',`${w.intentOnly}＋${w.behaviorOnly}＋${w.both}＝${w.count}人`);fact('有记录演示群',`${w.eligible}人，非全站分母`);}
   if(id===51&&value.kind==='group'){const p=unbindingProjection();fact('解绑设备率',unbindingDevicePercent(p.rate));fact('30日回绑计数',unbindingBasis(p.D30));fact('30日成熟性',p.D30.status);}
   if(id===43&&value.kind==='group'){const c=deviceRetentionCurrent();fact('激活批次',`${c.start}—${c.end}`);fact('观察截至',`${sourceData.deviceRetentionFacts.asOf} UTC`);for(const key of ['D7','D30'])fact(`${key}留存设备`,`${deviceRetentionText(c.measures[key])} · ${c.measures[key].numerator===null?'批次观察未结束':`${number(c.measures[key].numerator)} / ${number(c.denominator)} 台`}`);}
   if(id===54&&value.kind==='group') {
@@ -6135,8 +6212,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const record=element('div','income-record');record.id=`${page}-workspace-record`;
   record.append(element('p','workspace-record-hint','本地问题单 · 保存仅保留在此浏览器'),form);
   right.append(rightControls,finding,record);
-  const device=[15,43].includes(selectedMetric)?element('div',selectedMetric===15?'binding-device-detail':'retention-device-rail'):null;
-  const deviceButton=device?element('button','','当前设备'):null;
+  const device=[15,43,52].includes(selectedMetric)?element('div',selectedMetric===52?'risk-account-rail':selectedMetric===15?'binding-device-detail':'retention-device-rail'):null;
+  const deviceButton=device?element('button','',selectedMetric===52?'当前账号':'当前设备'):null;
   let currentRightMode='observation';
   if(device){device.id=`${page}-workspace-device`;deviceButton.type='button';deviceButton.disabled=true;deviceButton.setAttribute('aria-controls',device.id);rightControls.append(deviceButton);right.append(device);}
   const showRight=mode=>{
@@ -6147,6 +6224,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   };
   if(device) {
     deviceButton.addEventListener('click',()=>showRight('device'));
+    if(selectedMetric===52){workspace.addEventListener('risk-account-select',event=>{const {record:r,at,trigger}=event.detail,viewport={left:scrollX,top:scrollY,behavior:'instant'};deviceButton.disabled=false;device.replaceChildren(riskAccountDetail(r,at,()=>{const target=trigger?.isConnected?trigger:left.querySelector('.risk-account-list input');target?.focus({preventScroll:true});scrollTo(viewport);}));showRight('device');requestAnimationFrame(()=>{if(!workspace.isConnected||currentRightMode!=='device')return;const bounds=device.getBoundingClientRect();if(bounds.top>=innerHeight-80||bounds.bottom<=0){right.scrollIntoView({block:'start',behavior:'instant'});device.querySelector('.binding-device-back')?.focus({preventScroll:true});}});});workspace.addEventListener('risk-account-clear',()=>{deviceButton.disabled=true;if(currentRightMode==='device')showRight('observation');});}
     if(selectedMetric===43)workspace.addEventListener('device-retention-select',event=>{
       const {record:row,trigger}=event.detail,viewport={left:scrollX,top:scrollY,behavior:'instant'};deviceButton.disabled=false;
       device.replaceChildren(deviceRetentionDetail(row,()=>{const target=trigger?.isConnected?trigger:left.querySelector('.device-retention-list input');target?.focus({preventScroll:true});scrollTo(viewport);}));showRight('device');

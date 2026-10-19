@@ -1211,7 +1211,7 @@
       "id": 52,
       "page": "D",
       "entity": "用户",
-      "window": "2026-09-24 流失风险信号命中主账号快照；部分规则回看30天",
+      "window": "同源风险快照；意图／忽略回看30日，行为近7完整UTC日对照此前28日周均",
       "businessDimensions": [
         "appPlatform",
         "country",
