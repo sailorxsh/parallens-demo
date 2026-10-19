@@ -16,7 +16,9 @@ async parent=>{
   await p.locator('.action-record [name=owner]').fill('按页加载验收');
   await p.locator('.action-record').getByRole('button',{name:'保存本地记录',exact:true}).click();
   const original=await p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY));
-  await p.goto(base);await p.reload();await ready();
+  // Fresh documents avoid starting an unused home fetch and immediately reloading it;
+  // WebKit can report those canceled old-document requests as page errors.
+  await p.goto('about:blank');await p.goto(base);await ready();
   check(await p.evaluate(()=>!preparedRoutes.has('D')),'Cold overview eagerly prepares D');
   const gateD=new Promise(r=>releaseD=r);await p.route('**/data/route-D.json*',async r=>{await gateD;await r.continue();});
   await p.locator('#open-saved-issues').click();await p.locator('#saved-issues-query').fill('按页加载验收');
@@ -32,7 +34,7 @@ async parent=>{
   check(await p.locator('.action-record [name=note]').inputValue()==='延迟载入后的未保存草稿','Cached navigation loses the session draft');
   await p.unroute('**/data/route-D.json*');
   // A late B payload may be cached, but must never replace the newer E view.
-  await p.goto(base);await p.reload();await ready();
+  await p.goto('about:blank');await p.goto(base);await ready();
   const gateB=new Promise(r=>releaseB=r);await p.route('**/data/route-B.json*',async r=>{await gateB;await r.continue();});
   await nav('B');await p.locator('#load-meter').waitFor();await nav('E');await ready();
   const before=await p.evaluate(()=>({hash:location.hash,title:document.title,announcement:document.querySelector('#announcement').textContent,focus:document.activeElement.id}));
