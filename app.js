@@ -579,7 +579,11 @@ const selectedFilters=()=>Object.entries(filterState).filter(([,value])=>value&&
 function availableOptions(page,key,state=filterState) {
   // The verified option index lets saved scopes be found before their topic is loaded.
   // Opening the topic still loads and validates its actual source before showing evidence.
-  if(routeCore?.options[key]&&!preparedRoutes.has(page))return routeCore.options[key];
+  const optionSource={userCohortType:sourceData?.diagnostics?.B?.userRetentionFacts,userCohort:sourceData?.diagnostics?.B?.userRetentionFacts,
+    riskSnapshot:sourceData?.diagnostics?.D?.riskFacts,unbindingMonth:sourceData?.diagnostics?.F?.unbindingFacts,
+    renewalMonth:sourceData?.monthlyRenewalFacts,retentionMonth:sourceData?.metricTrends?.m24,
+    activationCohort:sourceData?.deviceRetentionFacts};
+  if(routeCore?.options[key]&&!optionSource[key])return routeCore.options[key];
   if(key==='userCohortType')return Object.keys(userRetentionTypeLabels);
   if(key==='userCohort')return [...new Set((userRetentionIndex().rows??[]).map(c=>c.id))];
   if(key==='riskSnapshot')return riskIndex().rows?.map(r=>r.date)??[];

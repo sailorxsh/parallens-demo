@@ -38,6 +38,11 @@ async parent=>{
   const before=await p.evaluate(()=>({hash:location.hash,title:document.title,announcement:document.querySelector('#announcement').textContent,focus:document.activeElement.id}));
   releaseB();await p.waitForFunction(()=>preparedRoutes.has('B'));await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   check(JSON.stringify(await p.evaluate(()=>({hash:location.hash,title:document.title,announcement:document.querySelector('#announcement').textContent,focus:document.activeElement.id})))===JSON.stringify(before)&&await p.evaluate(()=>activeDataPage)==='E','An obsolete route overwrites the newest page');
+  check(await p.evaluate(()=>{
+    const filters={userCohort:'2026-08-10'},scope=formatIssueScope(Object.entries(filters)),key=`record:B:${scope}:28`;
+    return !sourceData.diagnostics.B.userRetentionFacts&&availableOptions('B','userCohort').includes(filters.userCohort)&&
+      savedIssueTarget(key,{page:'B',evidenceId:28,filters,scope,issueId:issueIdForKey(key,'B',28)}).href?.includes('userCohort=2026-08-10');
+  }),'Cached but inactive topic makes a saved dated scope read-only');
   await p.unroute('**/data/route-B.json*');
   // Failure removes old evidence, keeps the direct URL, and retries only the failed topic.
   await p.route('**/data/route-C.json*',r=>r.abort());
