@@ -2,6 +2,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+node scripts/prepare_route_data.mjs --check
+node scripts/verify_route_data.mjs
 mkdir -p dist/data dist/vendor dist/assets
 cp index.html app.js style.css favicon.svg dist/
 cp data/*.json dist/data/

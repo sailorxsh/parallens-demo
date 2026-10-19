@@ -68,7 +68,7 @@ async(parent)=>{
  const dataGate=new Promise(r=>{releaseData=r;}),libraryGate=new Promise(r=>{releaseLibrary=r;});
  try{
   await p.route('**/vendor/echarts.min.js*',async route=>{await libraryGate;await route[libraryOutcome]();});
-  await p.route('**/data/weekly.json',async route=>{await dataGate;await route.abort();});
+  await p.route('**/data/route-core.json*',async route=>{await dataGate;await route.abort();});
   await p.goto(base,{waitUntil:'commit'});
   await p.waitForFunction(()=>document.querySelector('#load-meter')?.value===document.querySelector('#load-meter')?.max-1,{},{polling:50});
   check(await p.getByRole('button',{name:'先查看数据表',exact:true}).count()===0&&
@@ -76,8 +76,8 @@ async(parent)=>{
   releaseData();await p.getByRole('button',{name:'重新加载',exact:true}).waitFor();
   check(await p.getByRole('button',{name:'先查看数据表',exact:true}).count()===0&&await p.locator('.home-results').count()===0,
    'Failed data exposes a partial dashboard or data-first choice');
-  await p.unroute('**/data/weekly.json');
-  await p.getByRole('button',{name:'重新加载',exact:true}).click();
+  await p.unroute('**/data/route-core.json*');
+  await p.getByRole('button',{name:'重新加载',exact:true}).focus();await p.keyboard.press('Enter');
   await p.getByRole('button',{name:'先查看数据表',exact:true}).click();
   await p.locator('.home-results').waitFor();
   check(await p.locator('.trend-table-wrap').evaluate(n=>n.open)&&

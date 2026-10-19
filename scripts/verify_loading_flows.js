@@ -27,7 +27,7 @@ async(page)=>{
   } finally {releaseLibrary();}
   await p.locator('#statusChart svg').waitFor();
   await p.unroute('**/vendor/echarts.min.js*');
-  await p.route('**/data/*.json',async route=>{await new Promise(resolve=>setTimeout(resolve,250));await route.continue();});
+  await p.route('**/data/*.json*',async route=>{await new Promise(resolve=>setTimeout(resolve,250));await route.continue();});
   for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
    await p.setViewportSize({width,height});
    await p.goto(base,{waitUntil:'domcontentloaded'});await p.locator('#load-meter').waitFor();
@@ -45,12 +45,12 @@ async(page)=>{
    check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Startup causes horizontal overflow');
    results.push({width,height,...startup});
   }
-  await p.unroute('**/data/*.json');
+  await p.unroute('**/data/*.json*');
   let releaseSlow,notifyLast;
   const slowGate=new Promise(resolve=>{releaseSlow=resolve;}),lastStarted=new Promise(resolve=>{notifyLast=resolve;});
-  await p.route('**/data/*.json',async route=>{
-   if(route.request().url().endsWith('/trial-facts.json'))await slowGate;
-   if(route.request().url().endsWith('/onboarding-duration-facts.json'))notifyLast();
+  await p.route('**/data/*.json*',async route=>{
+   if(route.request().url().includes('/route-home.json'))await slowGate;
+   if(route.request().url().includes('/route-core.json'))notifyLast();
    await route.continue();
   });
   try {
@@ -62,16 +62,16 @@ async(page)=>{
    check(await p.locator('#load-meter').evaluate(node=>node.value<node.max),'Progress falsely completes while a required file is pending');
   } finally {releaseSlow();}
   await p.locator('#statusChart svg').waitFor();
-  await p.unroute('**/data/*.json');
-  await p.route('**/data/weekly.json',route=>route.abort());
+  await p.unroute('**/data/*.json*');
+  await p.route('**/data/route-core.json*',route=>route.abort());
   await p.goto(`${base}#/D?country=US&metric=18&issue=18`,{waitUntil:'domcontentloaded'});
   await p.reload({waitUntil:'domcontentloaded'});
   await p.getByRole('button',{name:'重新加载',exact:true}).waitFor();
   check(await p.locator('#main').getAttribute('aria-busy')==='false','Error leaves the main busy');
   check(p.url().includes('country=US')&&p.url().includes('issue=18'),'Failure discarded direct scope and issue');
-  await p.unroute('**/data/weekly.json');
+  await p.unroute('**/data/route-core.json*');
   const progress=[];let active=0,peak=0;
-  await p.route('**/data/*.json',async route=>{
+  await p.route('**/data/*.json*',async route=>{
    active++;peak=Math.max(peak,active);await new Promise(resolve=>setTimeout(resolve,100));
    await route.continue();active--;
   });
@@ -81,12 +81,12 @@ async(page)=>{
   await p.getByRole('button',{name:'重新加载',exact:true}).click();
   await p.locator('#metric-evidence-18').waitFor();
   progress.push(...await p.evaluate(()=>window.__progress??[]));
-  check(progress.includes(17),'Retry progress does not reach all 17 datasets');
+  check(progress.includes(2),'Retry progress does not reach both required route datasets');
   check(progress.every((value,index)=>!index||value>=progress[index-1]),'Retry progress goes backwards');
-  check(peak===6,'Startup does not use the intended bounded concurrency');
+  check(peak===2,'Startup does not use the intended bounded concurrency');
   check((await p.locator('.action-record-header').innerText()).includes('DEMO-D-18-'),'Retry opens another issue');
   check(p.url().includes('country=US')&&p.url().includes('metric=18')&&p.url().includes('issue=18'),'Retry loses direct URL');
-  await p.unroute('**/data/*.json');
+  await p.unroute('**/data/*.json*');
   // A failed library can finish before the delayed app; neither engine may wait forever.
   await p.route('**/app.js*',async route=>{await new Promise(resolve=>setTimeout(resolve,500));await route.continue();});
   await p.route('**/vendor/echarts.min.js*',route=>route.abort());
@@ -103,6 +103,6 @@ async(page)=>{
   await p.locator('.income-panel:not([hidden]) .workspace-calculation > summary').first().click();
   check(await p.locator('.income-panel:not([hidden]) .workspace-calculation table').first().isVisible(),'Fallback loses calculation evidence');
   check(errors.length===0,errors.join('; '));
-  return {status:'PASS',results,peakRequests:peak,progress,checks:['data loads while chart library is pending','complete data waits for charts with explicit feedback','chart library failure retains tables and navigation','stable main and footer at 3 desktop sizes','CLS below .05 where observable','busy state','bounded concurrency','slow file does not block later requests or present partial data','failed fetch and retry','monotonic progress','direct filter, metric and issue URL preserved']};
+  return {status:'PASS',results,peakRequests:peak,progress,checks:['data loads while chart library is pending','complete data waits for charts with explicit feedback','chart library failure retains tables and navigation','stable main and footer at 3 desktop sizes','CLS below .05 where observable','busy state','two independent initial requests; one atomic topic payload','slow file does not block later requests or present partial data','failed fetch and retry','monotonic progress','direct filter, metric and issue URL preserved']};
  }finally{await context.close();}
 }

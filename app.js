@@ -21,6 +21,18 @@ document.querySelector('.skip-link')?.addEventListener('click',event=>{
 });
 let dataset;
 let sourceData;
+let routeCore;
+let homeReadModel;
+let routeProjectionIds=null;
+let activeDataPage;
+const preparedRoutes=new Map();
+const routeRequests=new Map();
+let routeLoadRevision=0;
+let loadingRouteHash;
+const currentRoutePage=()=>{const page=location.hash.replace(/^#\/?/,'').split(/[/?]/)[0].toUpperCase();return Object.hasOwn(pages,page)?page:'';};
+const homeScopeKey=state=>['country','productLine','appPlatform'].map(key=>state[key]&&state[key]!=='All'?state[key]:'').join('|');
+function homeProjection(){return homeReadModel&&currentRoutePage()===''&&!filterErrors.length?homeReadModel.scopes[homeScopeKey(filterState)]:null;}
+
 let trialFactIndex;
 let filterState={};
 let retentionMonthRequest=[];
@@ -33,6 +45,7 @@ let deviceRetentionCohortRequest=[];
 let filterErrors=[];
 const filterDisclosure=new Map();
 let startupInProgress=false;
+let dataFirstRequested=false;
 let appEventsBound=false;
 let lastRenderedHash;
 let diagnosticWorkspaceView='change';
@@ -239,14 +252,15 @@ function renderSavedIssues() {
       open.addEventListener('click',()=>{
         const current=savedIssueTarget(key,simulatedActionState[key]);
         if(!current.href){renderSavedIssues();return;}
-        document.querySelector('#saved-issues').close('record');pushRoute(current.href);renderRoute({focusEvidence:false});
-        const entry=currentReadingEntry;
-        requestAnimationFrame(()=>{
+        document.querySelector('#saved-issues').close('record');pushRoute(current.href);
+        const pending=renderRoute({focusEvidence:false}),entry=currentReadingEntry;
+        const finish=()=>requestAnimationFrame(()=>{
           if(entry!==currentReadingEntry||location.hash!==current.href||document.activeElement!==main||document.querySelector('dialog:modal'))return;
           main.querySelector('.income-workspace')?.scrollIntoView({block:'start',behavior:'instant'});
           focusIssueOwner();
           document.querySelector('#announcement').textContent=`已打开${title}的原范围问题单；登记基线和会话草稿保留。`;
         });
+        if(pending)pending.then(finish);else finish();
       });action.append(open);
     } else action.append(element('span','saved-issue-readonly',target.reason));
     tr.append(action);body.append(tr);
@@ -475,6 +489,7 @@ function trialGroupContributions(periodRows) {
   return {overall,groups,changes,effects};
 }
 function homeTrialEvidence(comparison) {
+  const overview=homeProjection();if(overview)return comparison.id===18?overview.trialEvidence:null;
   if(comparison.id!==18||filterState.week||Math.abs(comparison.delta)<.05)return null;
   const parts=trialGroupContributions(['previous','current'].map(period=>trialRows(filterState,period).rows));
   if(!parts||['before','after'].some((key,index)=>
@@ -562,6 +577,9 @@ const relevantFilters=page=>page?Object.entries(sourceData?.filterPolicy?.contro
   .filter(([,config])=>config.pages.includes(page)).map(([key])=>key):['country','productLine','appPlatform'];
 const selectedFilters=()=>Object.entries(filterState).filter(([,value])=>value&&value!=='All');
 function availableOptions(page,key,state=filterState) {
+  // The verified option index lets saved scopes be found before their topic is loaded.
+  // Opening the topic still loads and validates its actual source before showing evidence.
+  if(routeCore?.options[key]&&!preparedRoutes.has(page))return routeCore.options[key];
   if(key==='userCohortType')return Object.keys(userRetentionTypeLabels);
   if(key==='userCohort')return [...new Set((userRetentionIndex().rows??[]).map(c=>c.id))];
   if(key==='riskSnapshot')return riskIndex().rows?.map(r=>r.date)??[];
@@ -849,6 +867,7 @@ function deviceEventContributionTable() {
     note:'各周期汇总合成事件计数再计算比例。总体42%→58%；K6固件2.8每周增加1,600次空触发，占总体每周10,000次触发的16个百分点。其他型号拆分为构造样本，不作因果归因。'};
 }
 function deviceEventGroupChanges(comparison=weeklyRateComparison(42)) {
+  const overview=homeProjection();if(overview)return overview.deviceChanges;
   if(!comparison)return {reason:filterState.week==='1'?'所选W1没有前一完整周，暂不生成分组变化贡献。':'当前范围缺少两期可比触发计数，暂不生成分组变化贡献。'};
   const scoped=Object.fromEntries(effectiveFor(42));
   const index=comparison.selectedWeek?sourceData.weekly.findIndex(w=>w.week===comparison.selectedWeek):-1;
@@ -2321,7 +2340,10 @@ function projectDataset() {
       [`m${String(c.id).padStart(2,'0')}`,{...na('筛选条件无效，请修正或主动清除后查看。'),availability:'invalid-filter'}]))};
     return;
   }
-  dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>[`m${String(c.id).padStart(2,'0')}`,projectMetric(c.id)]))};
+  const overview=homeProjection();
+  if(overview){dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>{const key=`m${String(c.id).padStart(2,'0')}`;return [key,overview.metrics[key]?JSON.parse(JSON.stringify(overview.metrics[key])):pending('请进入所属专题准备并核验指标明细。')];}))};return;}
+  dataset={...sourceData,metrics:Object.fromEntries(sourceData.contract.map(c=>[`m${String(c.id).padStart(2,'0')}`,
+    !routeProjectionIds||routeProjectionIds.includes(c.id)?projectMetric(c.id):pending('请进入所属专题准备并核验指标明细。')]))};
   const statuses=dataset.metrics.m05,subscribers=dataset.metrics.m02,subscriptionRate=dataset.metrics.m06,flow=dataset.metrics.m21;
   if(statuses.kind==='group'&&subscribers.kind==='count') {
     const total=Object.values(statuses.value).reduce((sum,line)=>sum+line.paidCurrent+line.cancelledButEntitled,0);
@@ -2549,6 +2571,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  const overview=homeProjection();if(overview)return overview.trends[id]??null;
   if([9,10,12].includes(id))return registrationHistory(id)?.values??null;
   if(id===52)return riskHistory()?.values??null;
   if(id===54){const p=qualityProjection();return p.rows?p.rows.map(r=>r.loss===null?null:r.loss*100):null;}
@@ -2948,6 +2971,7 @@ function savedMonthLabel(period) {
 
 const headlineTrendIds=new Set([2,3,4,7,9,10,11,13,15,17,18,23,24,25,26,27,34,35,41,42,44,46,48,49,52,53,54]);
 function metricHistory(id) {
+  const overview=homeProjection();if(overview)return overview.histories[id]??null;
   if([9,10,12].includes(id)&&metric(id).kind!=='na')return registrationHistory(id);
   if(id===27&&metric(27).kind!=='na')return featureUsageHistory();
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
@@ -3001,6 +3025,7 @@ function metricHistory(id) {
     note:`${id===42?'周×型号×固件合成触发计数逐周汇总；保留原有总体及K6固件2.8分组，其他型号分配为构造样本。':history?.note??(id===18?'合成试用明细逐周聚合。':'原有12个完整周模拟汇总。')}${estimated}`};
 }
 function weeklyRateDetails(id) {
+  const overview=homeProjection();if(overview)return overview.details[id]??[];
   if(id===11||id===13)return sourceData.weekly.map(week=>{const value=projectMetric(id,{...filterState,week:String(week.week)});return value.kind==='rate'?{...value,numeratorUnit:id===11?'次':'人',denominatorUnit:id===11?'次':'人'}:null;});
   if(id===13&&(filterState.productLine==='Hunting'||filterState.deviceModel==='Hunt Pro'))return sourceData.weekly.map(()=>null);
   if(id===42)return sourceData.weekly.map(week=>{const value=deviceEventMetric(filterState,week.week);return value.kind==='rate'?{...value,numeratorUnit:'次',denominatorUnit:'次'}:null;});
@@ -3016,6 +3041,7 @@ function weeklyRateDetails(id) {
   });
 }
 function weeklyRateComparison(id,split=id===18?9:8,respectWeek=true) {
+  const overview=homeProjection();if(overview)return overview.comparisons[id]??null;
   const series=trendValues(id);
   if(metric(id)?.kind!=='rate'||!series)return null;
   const rows=weeklyRateDetails(id);
@@ -6761,9 +6787,21 @@ function showMetricEvidence(id,{focus=true,behavior='auto'}={}) {
   if(focus&&heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}
   target.scrollIntoView({block:'start',behavior});
 }
-function renderRoute({preserveScroll=false,focusEvidence=true}={}) {
-  selectReadingEntry();readingRevision++;
+function renderRoute(options={}) {
+  if(!routeCore)return;
   document.querySelector('#metric-search')?.close();
+  const page=currentRoutePage();
+  if(preparedRoutes.has(page)) {
+    loadingRouteHash=undefined;routeLoadRevision++;
+    activateRouteData(page);
+    renderRouteNow(options);
+    main.setAttribute('aria-busy','false');
+    return;
+  }
+  return prepareRoute(options);
+}
+function renderRouteNow({preserveScroll=false,focusEvidence=true}={}) {
+  selectReadingEntry();readingRevision++;
   const {page:route,metricId}=readRoute();
   projectDataset();
   closeDefinitionPopover();
@@ -6795,12 +6833,13 @@ function renderRoute({preserveScroll=false,focusEvidence=true}={}) {
   }
   else if(!preserveScroll)scrollTo({top:0,behavior:'instant'});
   requestAnimationFrame(updateSectionNavigation);
-  document.querySelector('#announcement').textContent=filterErrors.length?'筛选条件无效，经营数据暂停展示。请修正或主动清除。':route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
+  if(!document.querySelector('dialog:modal'))document.querySelector('#announcement').textContent=filterErrors.length?'筛选条件无效，经营数据暂停展示。请修正或主动清除。':route && pages[route] ? `已打开${pages[route].title}诊断页` : '已返回经营总览';
   lastRenderedHash=location.hash;
 }
 function handleRouteChange(event) {
   // A traversal can emit both events; only popstate restores an existing reading entry.
   const traversal=event?.type==='popstate',changed=location.hash!==lastRenderedHash;
+  if(loadingRouteHash===location.hash)return;
   if(!changed&&!traversal)return;
   const view=traversal?readingViews.get(history.state?.parallensReadingEntry):null;
   rememberReadingView();selectReadingEntry();
@@ -6808,11 +6847,12 @@ function handleRouteChange(event) {
   if(restore?.homeSelection) {
     homeTrendFocus=restore.homeSelection.focus;homeSelectionMode=restore.homeSelection.mode;
   }
-  if(changed)renderRoute({preserveScroll:Boolean(restore)});
-  if(restore)restoreReadingView(restore);
+  const pending=changed?renderRoute({preserveScroll:Boolean(restore)}):null;
+  if(restore) {
+    if(pending)pending.then(()=>{if(restore.hash===location.hash&&lastRenderedHash===location.hash)restoreReadingView(restore);});
+    else restoreReadingView(restore);
+  }
 }
-const dataParts=['metric-catalog','metric-values','weekly','snapshot','stories','diagnostics','filter-contract','filter-policy','filter-slices','trial-facts','model-market','metric-trends','entity-samples','function-usage','inactivity-cohorts','technical-facts','subscription-flow','binding-device-facts','device-activity-facts','onboarding-duration-facts','device-retention-facts','monthly-renewal-facts','activity-window-facts'];
-const dataBatchSize=6;
 let chartLibraryReady;
 function waitForChartLibrary() {
   if(window.echarts)return Promise.resolve(true);
@@ -6825,51 +6865,111 @@ function waitForChartLibrary() {
   });
   return chartLibraryReady;
 }
-function showLoadingState() {
+function showLoadingState(page=currentRoutePage(),total=1) {
+  disposeCharts();closeDefinitionPopover();
   const panel=element('section','load-panel');panel.setAttribute('aria-labelledby','load-title');
-  const heading=element('h1','','正在准备经营数据');heading.id='load-title';
-  const status=element('p','load-status',`已准备 0 / ${dataParts.length} 组数据`);status.id='load-status';
-  const meter=element('progress','load-meter');meter.id='load-meter';meter.max=dataParts.length;meter.value=0;
+  const heading=element('h1','',page?`正在准备${pages[page].title}`:'正在准备经营数据');heading.id='load-title';
+  const status=element('p','load-status',`已准备 0 / ${total} 组数据`);status.id='load-status';
+  const meter=element('progress','load-meter');meter.id='load-meter';meter.max=total;meter.value=0;
   meter.setAttribute('aria-label','数据准备进度');meter.setAttribute('aria-describedby','load-status');
   panel.append(element('p','section-kicker','PARALLENS / OPERATIONS REVIEW'),heading,status,meter,
-    element('p','load-hint','首次打开需要准备完整模拟样本，请稍候。'));
-  main.replaceChildren(panel);
+    element('p','load-hint','正在准备当前页面的数据；完成核验后显示指标与证据。'));
+  main.replaceChildren(panel);main.setAttribute('aria-busy','true');
 }
 async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),20000);
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261019-177`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
-    } catch(error) {
-      if(attempt===1)throw error;
-    } finally {
-      clearTimeout(timeout);
-    }
+    } catch(error) {if(attempt===1)throw error;}
+    finally {clearTimeout(timeout);}
     await new Promise(resolve=>setTimeout(resolve,150));
   }
 }
-async function loadDataParts(onReady) {
-  const parts=new Array(dataParts.length);
-  let nextIndex=0;
-  let failure;
-  async function worker() {
-    while(!failure&&nextIndex<dataParts.length) {
-      const index=nextIndex++;
-      try {
-        parts[index]=await fetchDataPart(dataParts[index]);
-        onReady();
-      } catch(error) {
-        failure??=error;
-      }
+function requestRouteData(page) {
+  if(preparedRoutes.has(page))return Promise.resolve(preparedRoutes.get(page));
+  if(routeRequests.has(page))return routeRequests.get(page);
+  const request=fetchDataPart(`route-${page||'home'}`).then(payload=>{
+    if(payload.version!==1||payload.revision!==routeCore.revision||payload.page!==page)
+      throw new Error('当前页数据版本不一致，请重新加载。');
+    preparedRoutes.set(page,payload);return payload;
+  }).finally(()=>routeRequests.delete(page));
+  routeRequests.set(page,request);return request;
+}
+function activateRouteData(page) {
+  if(activeDataPage===page)return;
+  activeDataPage=page;
+  const payload=preparedRoutes.get(page);
+  if(page===''&&!homeReadModel)homeReadModel={...payload,scopes:Object.fromEntries(Object.entries(payload.scopes).map(([key,scope])=>[key,
+    Object.fromEntries(Object.entries(scope).map(([field,value])=>[field,['trialEvidence','deviceChanges'].includes(field)?payload.pool[value]:Object.fromEntries(Object.entries(value).map(([id,index])=>[id,payload.pool[index]]))]))]))};
+  else {
+    Object.assign(sourceData,payload.sources);
+    Object.assign(sourceData.diagnostics,payload.diagnostics);
+  }
+  routeProjectionIds=page?routeCore.metricIds[page]:null;
+}
+function showLoadError(error,page,options,revision) {
+  if(revision!==routeLoadRevision)return;
+  const panel=element('section','load-panel load-error');panel.setAttribute('role','alert');
+  panel.append(element('h1','',page?`${pages[page].title}暂时无法显示`:'数据未能完整加载'),
+    element('p','','请检查网络后重试。当前地址、筛选条件和已登记问题均已保留。'));
+  const retry=element('button','load-retry','重新加载');retry.type='button';
+  retry.addEventListener('click',()=>routeCore?prepareRoute(options):start());panel.append(retry);
+  main.replaceChildren(panel);main.setAttribute('aria-busy','false');
+  document.querySelector('#announcement').textContent='当前页面数据加载失败，可重试或切换专题。';
+  console.error(error);
+}
+async function prepareRoute(options={}) {
+  const page=currentRoutePage(),revision=++routeLoadRevision;
+  loadingRouteHash=location.hash;
+  readRoute();
+  document.querySelectorAll('.sidebar-nav .nav-link').forEach(link=>{
+    const code=link.dataset.page;link.href=routeHref(code);
+    link.classList.toggle('active',code===page);
+    if(code===page)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+  });
+  selectReadingEntry();readingRevision++;
+  showLoadingState(page);
+  if(!document.querySelector('dialog:modal')){main.focus({preventScroll:true});if(!options.preserveScroll)scrollTo({top:0,behavior:'instant'});}
+  const loadingFocus=document.activeElement;
+  document.querySelector('#announcement').textContent=page?`正在准备${pages[page].title}数据`:'正在准备经营数据';
+  try {
+    await requestRouteData(page);
+    if(revision!==routeLoadRevision)return;
+    activateRouteData(page);
+    document.querySelector('#load-meter').value=1;
+    document.querySelector('#load-status').textContent='当前页数据已齐，正在准备图表…';
+    const viewDataFirst=await chooseDataFirst();
+    if(revision!==routeLoadRevision)return;
+    const newerInteraction=document.querySelector('dialog:modal')||document.activeElement!==loadingFocus&&!main.contains(document.activeElement);
+    renderRouteNow({...options,preserveScroll:options.preserveScroll||Boolean(newerInteraction)});main.setAttribute('aria-busy','false');
+    if(viewDataFirst)openInitialDataTable();
+  } catch(error){showLoadError(error,page,options,revision);}
+  finally{if(revision===routeLoadRevision)loadingRouteHash=undefined;}
+}
+async function chooseDataFirst() {
+  if(window.echarts||dataFirstRequested)return false;
+  document.querySelector('#load-title').textContent='经营数据已准备好';
+  document.querySelector('.load-hint').textContent='可以继续等待图表，或先用完整数据表核对指标。';
+  const viewData=element('button','load-retry','先查看数据表');viewData.type='button';
+  const dataRequested=new Promise(resolve=>viewData.addEventListener('click',()=>resolve('data'),{once:true}));
+  document.querySelector('.load-panel').append(viewData);
+  const requested=await Promise.race([waitForChartLibrary(),dataRequested])==='data';
+  if(requested)dataFirstRequested=true;return requested;
+}
+function openInitialDataTable() {
+  const dataTab=main.querySelector('.income-tabs [aria-controls$="-panel-data"]');
+  if(dataTab)dataTab.click();
+  else {
+    const trendTable=main.querySelector('.trend-table-wrap');
+    if(trendTable) {
+      trendTable.open=true;const summary=trendTable.querySelector('summary');
+      summary?.focus({preventScroll:true});summary?.scrollIntoView({block:'center',behavior:'instant'});
+      document.querySelector('#announcement').textContent='已打开近12周趋势数据表，可继续核对过程指标。';
     }
   }
-  // Drain in-flight requests before the error view or a retry can replace progress.
-  await Promise.all(Array.from({length:Math.min(dataBatchSize,dataParts.length)},worker));
-  if(failure)throw failure;
-  return parts;
 }
 function bindAppEvents() {
   if(appEventsBound)return;
@@ -6955,58 +7055,31 @@ function bindAppEvents() {
 async function start() {
   if(startupInProgress)return;
   startupInProgress=true;
+  const revision=++routeLoadRevision,page=currentRoutePage();
+  showLoadingState(page,2);waitForChartLibrary();
+  // Both requests start together; no event-level topic data blocks the overview.
   let ready=0;
-  let dataLoaded=false;
-  let viewDataFirst=false;
+  const progress=()=>{if(revision!==routeLoadRevision)return;ready++;
+    document.querySelector('#load-meter').value=ready;
+    document.querySelector('#load-status').textContent=`已准备 ${ready} / 2 组数据`;};
   try {
-    showLoadingState();
-    main.setAttribute('aria-busy','true');
-    document.querySelector('#announcement').textContent='正在准备经营数据';
-    // Attach before the later deferred library executes; data downloads can start now.
-    const libraryReady=waitForChartLibrary();
-    const parts=await loadDataParts(()=>{
-      ready++;
-      document.querySelector('#load-meter').value=ready;
-      document.querySelector('#load-status').textContent=`已准备 ${ready} / ${dataParts.length} 组数据`;
-    });
-    sourceData=Object.fromEntries(dataParts.map((name,index)=>[name==='metric-catalog'?'catalog':name==='metric-values'?'metrics':name==='filter-contract'?'contract':name==='filter-policy'?'filterPolicy':name==='filter-slices'?'slices':name==='trial-facts'?'trialFacts':name==='model-market'?'modelMarket':name==='metric-trends'?'metricTrends':name==='entity-samples'?'entitySamples':name==='function-usage'?'functionUsage':name==='inactivity-cohorts'?'inactivityCohorts':name==='technical-facts'?'technicalFacts':name==='subscription-flow'?'subscriptionFlow':name==='binding-device-facts'?'bindingDeviceFacts':name==='device-activity-facts'?'deviceActivityFacts':name==='onboarding-duration-facts'?'onboardingDurationFacts':name==='device-retention-facts'?'deviceRetentionFacts':name==='monthly-renewal-facts'?'monthlyRenewalFacts':name==='activity-window-facts'?'activityWindowFacts':name,parts[index]]));
-    dataLoaded=true;
-    if(!window.echarts) {
-      document.querySelector('#load-title').textContent='经营数据已准备好';
-      document.querySelector('#load-status').textContent='经营数据已齐，正在准备图表…';
-      document.querySelector('.load-hint').textContent='可以继续等待图表，或先用完整数据表核对指标。';
-      const viewData=element('button','load-retry','先查看数据表');viewData.type='button';
-      const dataRequested=new Promise(resolve=>viewData.addEventListener('click',()=>resolve('data'),{once:true}));
-      document.querySelector('.load-panel').append(viewData);
-      viewDataFirst=await Promise.race([libraryReady,dataRequested])==='data';
-    } else await libraryReady;
+    const parts=await Promise.allSettled([
+      fetchDataPart('route-core').then(value=>{progress();return value;}),
+      fetchDataPart(`route-${page||'home'}`).then(value=>{progress();return value;}),
+    ]);
+    const failed=parts.find(part=>part.status==='rejected');if(failed)throw failed.reason;
+    const core=parts[0].value,payload=parts[1].value;
+    if(core.version!==1||payload.version!==1||payload.revision!==core.revision||payload.page!==page)
+      throw new Error('当前页面数据版本不一致，请重新加载。');
+    routeCore=core;sourceData=core.sources;preparedRoutes.set(page,payload);activateRouteData(page);
     bindAppEvents();
-    renderRoute();
-    if(viewDataFirst) {
-      const dataTab=main.querySelector('.income-tabs [aria-controls$="-panel-data"]');
-      if(dataTab)dataTab.click();
-      else {
-        const trendTable=main.querySelector('.trend-table-wrap');
-        if(trendTable) {
-          trendTable.open=true;
-          const summary=trendTable.querySelector('summary');
-          summary?.focus({preventScroll:true});
-          summary?.scrollIntoView({block:'center',behavior:'instant'});
-          document.querySelector('#announcement').textContent='已打开近12周趋势数据表，可继续核对过程指标。';
-        }
-      }
-    }
-  } catch(error) {
-    const panel=element('section','load-panel load-error');panel.setAttribute('role','alert');
-    panel.append(element('h1','',dataLoaded?'看板暂时无法显示':'数据未能完整加载'),
-      element('p','',dataLoaded?'请重试。若仍无法打开，请联系看板维护者。':'请检查网络连接后重试。页面地址中的筛选条件已保留。'));
-    const retry=element('button','load-retry','重新加载');retry.type='button';retry.addEventListener('click',()=>start());
-    panel.append(retry);
-    main.replaceChildren(panel);
-    console.error(error);
-  } finally {
-    main.setAttribute('aria-busy','false');
-    startupInProgress=false;
-  }
+    if(currentRoutePage()!==page){await prepareRoute();return;}
+    document.querySelector('#load-status').textContent='当前页数据已齐，正在准备图表…';
+    const viewDataFirst=await chooseDataFirst();
+    if(revision!==routeLoadRevision)return;
+    renderRouteNow();main.setAttribute('aria-busy','false');
+    if(viewDataFirst)openInitialDataTable();
+  } catch(error){showLoadError(error,page,{},revision);}
+  finally {startupInProgress=false;}
 }
 start();

@@ -73,6 +73,9 @@ async(parent)=>{
     const rapidRecord=saved.find(([,r])=>r.page==='D'&&r.filters.country==='US')[1];
     for(const motion of ['reduce','no-preference'])for(const width of [1366,1600,1920]) {
       await p.emulateMedia({reducedMotion:motion});await p.setViewportSize({width,height:900});await p.reload();await ready();
+      // These 66 same-paint interactions cover already visited views. Cold-route
+      // cancellation, readiness and modal ownership are tested in page_loading.
+      await p.evaluate(()=>Promise.all(['',...Object.keys(pages)].map(requestRouteData)));
       for(const next of ['', 'A','B','C','E','F','G','metric-search','saved-issues','filter','metric-search-close']) {
         await open('A');await list();await query().fill(rapidRecord.issueId);
         const sample=await p.evaluate(next=>{
@@ -100,7 +103,12 @@ async(parent)=>{
         const final=sample.frames.at(-1);
         check(sample.frames.every(frame=>frame.hash===sample.immediate.hash&&Math.abs(frame.top-sample.immediate.top)<1.5),
           `Old issue navigation moves the newer view: ${width} ${next} ${JSON.stringify(sample)}`);
-        check(sample.frames.every(frame=>frame.focus===sample.immediate.focus&&frame.announcement===sample.immediate.announcement),
+        // An uncached destination may legitimately finish preparing between paints;
+        // its completion must keep the current focus and must never announce the old issue.
+        const requestedCode=sample.immediate.hash.replace(/^#\/?/,'').split('?')[0];
+        const completion=requestedCode?`已打开${({A:'新客与激活',B:'活跃与留存',C:'设备健康',D:'订阅转化',E:'付费价值',F:'用户与设备结构',G:'异常与数据质量'})[requestedCode]}诊断页`:'已返回经营总览';
+        check(sample.frames.every(frame=>frame.focus===sample.immediate.focus&&
+          (frame.announcement===sample.immediate.announcement||frame.announcement===completion)),
           `Old issue navigation steals focus or announces a stale scope: ${JSON.stringify(sample)}`);
         if(next==='metric-search'||next==='saved-issues') {
           check(final.modal===next,'New modal was displaced by the previous record opening');
