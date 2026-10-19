@@ -4286,7 +4286,7 @@ function chartValue(value,unit) {
   return `${number(numeric)}${unit??''}`;
 }
 const chartLabelColor=color=>({'#bf762b':'#97541c','#b87021':'#97541c','#7593a0':'#496876','#e5484d':'#b82d37'})[color]??color;
-const chartTooltipStyle=()=>({confine:true,backgroundColor:'#fffefa',borderColor:'#cddbc7',
+const chartTooltipStyle=()=>({confine:true,enterable:true,className:'chart-tooltip',backgroundColor:'#fffefa',borderColor:'#cddbc7',
   textStyle:{fontFamily:'DM Sans, PingFang SC, Microsoft YaHei, sans-serif',fontSize:chartText(13),lineHeight:chartText(20),color:'#263d2e'}});
 function chartPointDetail(spec,line,index) {
   if(!['%','美元/人'].includes(spec.unit)&&!spec.structureComposition)return null;
@@ -6884,7 +6884,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261019-178`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261019-179`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}
@@ -7043,6 +7043,19 @@ function bindAppEvents() {
         return;
       }
       if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k') {event.preventDefault();openSearch();return;}
+      if(event.key==='Escape') {
+        // Dismiss hover content without moving the pointer, focus or reading position.
+        for(const instance of [chart,statusChart,...sparklines,...detailCharts]) {
+          if(!instance||instance.isDisposed())continue;
+          // ECharts keeps enterable content open while it is hovered. Clear that
+          // guard through its public option API, then restore the reading behavior.
+          const hovered=instance.getDom().querySelector('.chart-tooltip:hover');
+          const hideDelay=instance.getOption().tooltip?.[0]?.hideDelay??100;
+          if(hovered)instance.setOption({tooltip:{enterable:false,hideDelay:0}});
+          instance.dispatchAction({type:'hideTip'});
+          if(hovered)instance.setOption({tooltip:{enterable:true,hideDelay}});
+        }
+      }
       if(event.key==='Escape'&&savedIssues.open) {event.preventDefault();savedIssues.close();return;}
       if(event.key==='Escape'&&search.open) {event.preventDefault();search.close();return;}
       if(event.key==='Escape'&&definitionPopoverIsOpen()) {

@@ -54,9 +54,15 @@ async (page) => {
     check(p.url().includes('country=US')&&p.url().includes('metric=25'),'Alias selection lost the supported filter or metric');
     check(!await dialog.evaluate(node=>node.open),'Search remained open after selection');
     await p.keyboard.press('Control+k');await lookup('事件丢失率');await p.keyboard.press('Enter');
-    await p.locator('#G-metric-availability-54').waitFor();
-    check(p.url().includes('country=US')&&p.url().includes('metric=54'),'Unavailable metric lookup discarded its scope');
-    check((await p.locator('#G-metric-availability-54').innerText()).startsWith('待补数据：'),'Search disguised missing data');
+    // #54 now has approved country×App facts; verify its real evidence, then
+    // keep the missing-data check on #42, whose country attribution is still absent.
+    await p.locator('#G-panel-change .detail-chart svg').first().waitFor();
+    check(p.url().includes('country=US')&&p.url().includes('metric=54')&&
+      await p.evaluate(()=>filterState.country==='US'&&metric(54).kind==='group'),'Supported quality lookup lost its country evidence');
+    await p.keyboard.press('Control+k');await lookup('空触发率');await p.keyboard.press('Enter');
+    await p.locator('#C-metric-availability-42').waitFor();
+    check(p.url().includes('country=US')&&p.url().includes('metric=42'),'Unavailable metric lookup discarded its scope');
+    check((await p.locator('#C-metric-availability-42').innerText()).startsWith('待补数据：'),'Search disguised missing data');
     await p.goto(`${base}#/C?functionType=Upload`);await p.locator('.detail-kpi').first().waitFor();
     await p.keyboard.press('Control+k');
     check((await lookup('直播成功率')).includes(46),'A selected function hides another searchable subitem');
