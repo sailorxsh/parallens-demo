@@ -937,7 +937,7 @@ article.trial-sample-item {cursor:auto}
 .binding-device-link {background:none;border:0;padding:.15rem 0;color:#315d42;font:inherit;text-decoration:underline;text-underline-offset:.2em;cursor:pointer;white-space:nowrap}
 .binding-device-selected {background:#e8f0df}
 .binding-list-pagination {display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.65rem;margin:.65rem 0;font-size:var(--text-sm)}
-.binding-list-pagination button {border:1px solid #bdcebc;background:var(--paper);color:#315d42;border-radius:.25rem;padding:.35rem .65rem;font:inherit;cursor:pointer}
+.binding-list-pagination button {border:1px solid #bdcebc;background:var(--paper);color:#315d42;border-radius:.25rem;padding:.35rem .65rem;font:inherit;cursor:pointer;scroll-margin-block:9rem 1rem}
 .binding-list-pagination button:disabled {opacity:.55;cursor:default}
 .binding-device-link:focus-visible,.binding-list-controls input:focus-visible,.binding-list-controls select:focus-visible,.binding-list-pagination button:focus-visible {outline:2px solid var(--focus);outline-offset:2px}
 .binding-device-detail h3 {font-size:1.05rem;overflow-wrap:anywhere;margin:.7rem 0}
