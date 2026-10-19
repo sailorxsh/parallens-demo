@@ -2,17 +2,17 @@
 async (parent) => {
   const check=(condition,message)=>{if(!condition)throw new Error(message);};
   const base=new URL('.',parent.url()).href;
-  const context=await parent.context().browser().newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'});
-  const p=await context.newPage(),errors=[],results=[];
+  let context=await parent.context().browser().newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'});
+  let p=await context.newPage();const errors=[],results=[];
   p.on('pageerror',error=>errors.push(error.message));
   const open=async(route)=>{
     await p.goto(`${base}#/${route}`);
-    await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main')?.getAttribute('aria-busy')==='false');
+    try{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main')?.getAttribute('aria-busy')==='false');}catch(error){const state=await p.evaluate(()=>({url:location.href,rendered:typeof lastRenderedHash==='string'?lastRenderedHash:null,busy:document.querySelector('#main')?.getAttribute('aria-busy'),heading:document.querySelector('h1')?.textContent}));throw Error('Destination did not settle: '+JSON.stringify({state,errors})+'; '+error.message);}
     await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   };
   const selected=page=>p.locator(`#${page}-tab-data`);
-  const tableCases=[['A',7],['A',12],['B',26],['B',28],['B',31],['C',8],['C',43],['C',45],
-    ['D',20],['D',22],['D',32],['D',33],['E',36],['E',37],['E',38],['E',40],['F',51]];
+  const tableCases=[['A',12],['B',28],['B',31],['C',8],['C',45],
+    ['D',20],['D',22],['D',32],['D',33],['E',37],['E',40],['F',51]];
   try {
     for(const width of [1366,1600,1920]) {
       await p.setViewportSize({width,height:1000});
@@ -25,10 +25,24 @@ async (parent) => {
         check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`#${id} introduces page overflow`);
         results.push({width,page,id,view:'data'});
       }
+      for(const [page,id,view,title,points]of [['A',7,'change','注册与当前绑定主账号',13],['B',26,'change','人均有效会话',84],['C',43,'change','D7／D30留存',12],['C',46,'change','30个完整日',30],['E',36,'groups','五类Pack',5],['E',38,'groups','用户与设备构成',4]]) {
+        await open(`${page}?metric=${id}`);
+        check(await p.locator(`#${page}-tab-${view}`).getAttribute('aria-selected')==='true',`#${id} hides its approved ${view} evidence`);
+        const root=p.locator(`#metric-evidence-${id}`),visible=p.locator(`#${page}-panel-${view}`);
+        check((await visible.innerText()).includes(title),`#${id} opens unrelated evidence`);
+        const chart=visible.locator(`:is(.evidence-pair,.detail-chart-panel)[data-evidence-metric="${id}"] .detail-chart`).first();
+        await chart.locator('svg').waitFor();check(await chart.isVisible(),`#${id} chart is closed`);
+        const plot=await chart.evaluate(node=>{const o=echarts.getInstanceByDom(node).getOption();return {series:o.series.map(s=>s.data),axes:o.xAxis[0].data,y:o.yAxis[0].data};});
+        check((id===43?plot.y?.length:plot.axes?.length)===points,`#${id} loses approved source categories or history points`);
+        if(id===7)check(plot.series[0].at(-1)===128600&&plot.series[1].at(-1)===82400,'Account stock chart loses current counts');
+        if(id===36)check(plot.series[0].every(v=>Number.isFinite(v)&&v>=0&&v<=100),'Pack shares have invalid units');
+        if(id===38)check(plot.series[0].reduce((a,b)=>a+b,0)===128600,'Population composition loses registered-account denominator');
+        results.push({width,page,id,view,title,points});
+      }
       for(const [page,id,title] of [['A',14,'绑定→首图时长 · 演示分布'],['D',5,'产品线订阅状态 · 当前快照'],['D',21,'有效订阅人数流转 · 9/1–9/24'],['F',50,'设备交叉状态 · 当前快照']]) {
         await open(`${page}?metric=${id}`);
         check(await p.locator(`#${page}-tab-groups`).getAttribute('aria-selected')==='true',`#${id} hides its real chart`);
-        const chart=p.locator(`#${page}-panel-groups .detail-chart-panel[data-evidence-metric="${id}"] .detail-chart`);
+        const chart=p.locator(`#${page}-panel-groups :is(.detail-chart-panel,.evidence-pair)[data-evidence-metric="${id}"] .detail-chart`);
         await chart.locator('svg').waitFor();check(await chart.isVisible(),`#${id} chart is under a closed context`);
         const state=await chart.evaluate((node,{page,id})=>{
           const option=echarts.getInstanceByDom(node).getOption(),values=option.series.filter(s=>s.type!=='scatter').map(s=>s.data);
@@ -60,6 +74,24 @@ async (parent) => {
       }
     }
     await p.setViewportSize({width:1600,height:1000});
+    const catalog=await p.evaluate(()=>sourceData.catalog.filter(r=>r.id>=2));
+    check(catalog.length===53,'Destination inventory omits a metric');
+    // Independent page inventories get separate sessions: WebKit rejects more
+    // than 100 History API writes in 10 seconds. Keep each real task intact.
+    await context.close();
+    for(const code of ['A','B','C','D','E','F','G']){
+      const inventoryContext=await parent.context().browser().newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'});p=await inventoryContext.newPage();p.on('pageerror',error=>errors.push(error.message));
+      try{for(const item of catalog.filter(r=>r.page===code)){
+      if(new URL(p.url()).hash.split('?')[0]===`#/${item.page}`){await p.getByRole('button',{name:'全部指标',exact:true}).click();await p.locator('.metric-inventory-link').getByText(item.name,{exact:true}).click();try{await p.waitForFunction(id=>new URLSearchParams(location.hash.split('?')[1]??'').get('metric')===String(id)&&lastRenderedHash===location.hash,item.id);}catch(error){const actual=await p.evaluate(()=>({hash:location.hash,rendered:lastRenderedHash,busy:document.querySelector('#main')?.getAttribute('aria-busy'),subject:document.querySelector('.income-context .detail-finding')?.dataset.metricId}));await p.screenshot({path:'output/playwright/v168-destination-native-failure.png'});throw Error('Native metric destination failed: '+JSON.stringify({expected:item.id,actual,errors})+'; '+error.message);}}else await open(`${item.page}?metric=${item.id}`);
+      const root=p.locator(`#metric-evidence-${item.id}`),right=p.locator('.income-context .detail-finding').first();
+      check(await root.count()===1&&await right.getAttribute('data-metric-id')===String(item.id),`#${item.id} explanation belongs to another subject`);
+      await p.locator(`#${item.page}-tab-data`).click();
+      check((await p.locator(`#${item.page}-panel-data`).innerText()).trim().length>20,`#${item.id} lacks inspectable numeric evidence`);
+      check(await p.locator(`#${item.page}-panel-data > .data-table-scroll table tbody tr`).count()>0,`#${item.id} complete data is empty`);
+      results.push({page:item.page,id:item.id,allCatalog:true});
+      }}finally{await inventoryContext.close();}
+    }
+    context=await parent.context().browser().newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'});p=await context.newPage();p.on('pageerror',error=>errors.push(error.message));await p.goto(base);await p.waitForFunction(()=>document.querySelector('#main[aria-busy=false]'));
     // A reader's explicit request to compare other evidence remains valid.
     await open('D?metric=5&panel=groups');
     check(await p.locator('#D-tab-groups').getAttribute('aria-selected')==='true','Explicit group selection is overridden');
@@ -74,23 +106,23 @@ async (parent) => {
     await p.locator('#D-tab-groups[aria-selected="true"]').waitFor();
     await p.keyboard.press('Control+k');await p.getByRole('searchbox').fill('新设备D7');await p.keyboard.press('Enter');
     await p.locator('#metric-evidence-43').waitFor();
-    check(await selected('C').getAttribute('aria-selected')==='true','Search opens unrelated technical failure evidence for device retention');
+    check(await p.locator('#C-tab-change').getAttribute('aria-selected')==='true'&&await p.locator('#metric-evidence-43 .evidence-pair[data-evidence-metric="43"] svg').count()>0,'Search hides the approved cohort history/control');
     // Retention registration and its draft do not change when opening auxiliary evidence.
     await p.locator('#metric-evidence-43 .issue-register').click();
     await p.locator('.action-record [name="owner"]').fill('留存核查');
     await p.locator('.action-record [name="note"]').fill('所选指标的证据落点测试');
     await p.keyboard.press('Control+k');await p.getByRole('searchbox').fill('关键功能成功率');await p.keyboard.press('Enter');
     await p.locator('#metric-evidence-46').waitFor();
-    check(await p.locator('#C-tab-groups').getAttribute('aria-selected')==='true','Technical success evidence lost its own group plot');
+    check(await p.locator('#C-tab-change').getAttribute('aria-selected')==='true'&&(await p.locator('#C-panel-change').innerText()).includes('30个完整日'),'Technical success evidence hides its approved 30-day trend');
     check(await p.locator('.action-record [name="issueMetric"]').inputValue()==='43'&&
       await p.locator('.action-record [name="note"]').inputValue()==='所选指标的证据落点测试','Auxiliary evidence replaces the retention issue or discards its draft');
     // A filtered table-only metric does not borrow a different metric's filtered chart.
     await open('C?metric=43&country=US');
-    check(await selected('C').getAttribute('aria-selected')==='true'&&
+    check(await p.locator('#C-tab-change').getAttribute('aria-selected')==='true'&&
       (await p.locator('#metric-evidence-43 .evidence-meta').innerText()).includes('国家/市场 美国'),'Filtered retention destination loses its scope');
     check(!errors.length,errors.join('; '));
-    return {status:'PASS',checks:['seventeen table-only metrics at three widths','four source-related charts at three widths','activity composition source cells and explicit data at three widths',
+    return {status:'PASS',checks:['twelve table-only metrics at three widths','six approved historical/composition destinations at three widths','four source-related charts at three widths','activity composition source cells and explicit data at three widths',
       'A–G default trends','explicit panel and refresh','keyboard tabs and history','catalog and search destinations',
-      'auxiliary evidence preserves issue and draft','filtered table-only destination'],results};
+      'auxiliary evidence preserves issue and draft','filtered cohort destination','all 53 owned numeric tables and subject explanations'],results};
   } finally {await context.close();}
 }

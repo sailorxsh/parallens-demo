@@ -18,6 +18,10 @@ async(parent)=>{
   check((await p.locator('#metric-evidence-36').innerText()).includes('有效增值Pack权益快照'),'Pack current snapshot is still labeled a full month');
   await chart().scrollIntoViewIfNeeded();await chart().locator('svg').waitFor();const o=await chart().evaluate(n=>{const o=echarts.getInstanceByDom(n).getOption();return {labels:o.xAxis[0].data,values:o.series[0].data,max:o.yAxis[0].max,min:o.yAxis[0].min};});
   check(o.labels.length===5&&o.values.every((v,i)=>Math.abs(v-[1200,1000,800,600,450][i]/12550*100)<1e-9)&&o.min===0&&o.max<=15,'Pack bars do not use exact source counts and a readable zero-based scale');
+  await p.locator('#E-tab-data').click();await ready();const full=p.locator('#E-panel-data > .pack-penetration-calculation');
+  check(await full.count()===1&&await full.isVisible(),'Complete data omits the selected Pack metric');
+  const rows=await full.locator('tbody tr').allTextContents();check(rows.length===6&&rows.at(-1).includes('3,150')&&[1200,1000,800,600,450].every((n,i)=>rows[i].includes(n.toLocaleString('en-US'))),'Complete Pack data loses union, product counts or denominator');
+  check(rows.every(r=>r.includes('12,550')),'Complete Pack data uses another metric denominator');check(await stored()===saved,'Viewing full Pack counts changes issue records');await p.locator('#E-tab-groups').click();await ready();
   // Real pointer click opens matching numeric evidence, retaining business scope.
   const pos=await chart().evaluate(n=>{const e=echarts.getInstanceByDom(n),r=n.getBoundingClientRect(),b=e.getModel().getSeriesByIndex(0).getData().getItemLayout(2);return {x:r.left+b.x+b.width/2,y:r.top+b.y+b.height/2};});
   await p.mouse.click(pos.x,pos.y);await ready();check(await p.locator('#metric-evidence-36 .workspace-calculation').evaluate(n=>n.open),'Pack pointer does not reveal its numeric evidence');

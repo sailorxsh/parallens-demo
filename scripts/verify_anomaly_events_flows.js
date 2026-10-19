@@ -7,6 +7,14 @@ async parent=>{
  const explorer=()=>p.locator('.anomaly-event-workspace'),records=()=>explorer().locator('tbody tr'),search=()=>explorer().getByRole('searchbox'),windowSelect=()=>explorer().getByLabel('清单窗口'),stored=()=>p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY));
  const old=JSON.parse(fs.readFileSync('scripts/fixtures/anomaly-before-source.json','utf8')).records;
  try{
+ await open('');
+ // A count of discoveries has no approved good/bad direction, for either sign.
+ for(const [q,sign]of [['',1],['country=DE',-1]]){
+  await open(q);const delta=p.locator('.detail-kpi[data-metric-id="53"] .metric-delta');
+  check(await delta.count()===1&&await delta.evaluate(n=>!n.classList.contains('improving')&&!n.classList.contains('adverse')),'Unrated discovery counts imply improvement or worsening');
+  check(Math.sign(await p.locator('.detail-kpi[data-metric-id="53"] .headline-trend').getAttribute('data-delta'))===sign,'Neutral tone hides the actual count direction');
+  check((await delta.getAttribute('title')).includes('不表示严重程度'),'Discovery-count interpretation is missing');
+ }
  await open('');await p.evaluate(r=>localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(r)),old);await p.reload();await ready();const initial=await stored();
  for(const q of['','country=US','appPlatform=iOS','country=UK&appPlatform=iOS','anomalyType=Device','country=DE&anomalyType=Quality']){
   await open(q+'&panel=groups');const expected=await p.evaluate(()=>anomalyProjection().current.count);check(await records().count()===expected,'Current list does not match the scoped headline');check(await stored()===initial,'Inspection writes saved issues');

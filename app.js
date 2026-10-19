@@ -1355,31 +1355,32 @@ function activeWindowPeriod(days) {
   const source=activeWindowIndex();if(source.reason)return '窗口待核验';
   return `${new Date(Date.parse(source.asOf)-days*86400000).toISOString().slice(0,10)} → ${source.asOf.slice(0,10)} UTC零时（左含右不含）`;
 }
-function activeWindowTable() {
+function activeWindowTable(days) {
   const part=activeWindowProjection();if(part.reason)return {title:'活跃窗口待核验',columns:['状态'],rows:[[part.reason]]};
+  if(days===30)return {title:'84日 · 近30天复合与App活跃人数',columns:['截至日（UTC零时）','复合近30天（人）','App近30天（人）','窗口起点（UTC零时）'],rows:part.rows.map(r=>[r.at.slice(0,10),r.counts.MAU,r.counts.appMAU,new Date(Date.parse(r.at)-30*86400000).toISOString().slice(0,10)]),note:'同一UTC零时截止向前30天，左含右不含；App是复合子集，跨日窗口重叠，人数及快照不能相加。合成频数，不是逐账号轨迹。'};
   return {title:'84日 · 同源活跃窗口人数',columns:['截至日（UTC零时）','复合近1天（人）','App近1天（人）','复合近7天（人）','App近7天（人）','复合近30天（人）','App近30天（人）'],rows:part.rows.map(r=>[r.at.slice(0,10),...activityWindows.flatMap(w=>[r.counts[w.composite],r.counts[w.app]])]),note:'窗口从截至时点向前1／7／30天，起含止不含。App是复合子集，1天⊆7天⊆30天；人数不可相加，跨日快照也不可相加为独立人数。全部为合成频数，无跨日账号身份。'};
 }
-function activityExplorer(onSelect) {
-  const section=element('section','activity-window-explorer');section.dataset.evidenceMetric='25';
+function activityExplorer(onSelect,{metricId=25,fixedDays=null}={}) {
+  const section=element('section','activity-window-explorer');section.dataset.evidenceMetric=String(metricId);
   const tabs=element('div','structure-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','活跃滚动窗口');
-  const panel=element('div','activity-window-panel');panel.id='activity-window-panel';panel.setAttribute('role','tabpanel');
-  const buttons=activityWindows.map((w,i)=>{const b=element('button','structure-tab',w.name);b.type='button';b.id=`activity-window-${i}`;b.setAttribute('role','tab');b.setAttribute('aria-controls',panel.id);tabs.append(b);return b;});
-  section.append(tabs,panel);
+  const panel=element('div','activity-window-panel');panel.id='activity-window-panel';panel.setAttribute('role',fixedDays?'region':'tabpanel');if(fixedDays)panel.setAttribute('aria-label',`近${fixedDays}天活跃历史`);
+  const buttons=(fixedDays?[]:activityWindows).map((w,i)=>{const b=element('button','structure-tab',w.name);b.type='button';b.id=`activity-window-${i}`;b.setAttribute('role','tab');b.setAttribute('aria-controls',panel.id);tabs.append(b);return b;});
+  section.append(...(fixedDays?[panel]:[tabs,panel]));
   function select(i) {
-    activityWindowView=i;section.dataset.initialized='true';buttons.forEach((b,j)=>{b.setAttribute('aria-selected',String(i===j));b.tabIndex=i===j?0:-1;});panel.setAttribute('aria-labelledby',buttons[i].id);
+    if(!fixedDays)activityWindowView=i;section.dataset.initialized='true';buttons.forEach((b,j)=>{b.setAttribute('aria-selected',String(i===j));b.tabIndex=i===j?0:-1;});if(!fixedDays)panel.setAttribute('aria-labelledby',buttons[i].id);
     for(const box of panel.querySelectorAll('.detail-chart')){const instance=window.echarts?.getInstanceByDom(box);if(instance){destroyChart(instance);const p=detailCharts.indexOf(instance);if(p>=0)detailCharts.splice(p,1);}}
     const projection=activeWindowProjection(),w=activityWindows[i],part=projection.current,previous=projection.rows.at(-2),delta=key=>part.counts[key]-previous.counts[key];
     const grid=element('div','evidence-charts-grid');panel.replaceChildren(element('p','table-note activity-window-period',`${activeWindowPeriod(w.days)}；复合 ${number(part.counts[w.composite])} 人，App ${number(part.counts[w.app])} 人。分别较前日快照 ${delta(w.composite)>=0?'+':''}${number(delta(w.composite))}／${delta(w.app)>=0?'+':''}${number(delta(w.app))} 人；变化不是当日新增人数。两图独立纵轴，规模以人数核对。`),grid);
     for(const [j,[field,label]] of [[w.composite,'复合活跃'],[w.app,'App主动活跃']].entries()) {
       const spec={nearestLinePoint:true,title:`${label} · ${w.name} · 84日快照`,unit:'人',labels:projection.rows.map(r=>r.at.slice(0,10)),series:[{name:label,values:projection.rows.map(r=>r.counts[field]),color:j?'#356d51':'#bf762b'}],note:'UTC零时截止；向前滚动窗口，非自然周／月。App为复合子集；合成每日频数，不提供跨日身份。'};
-      const shell=element('section','detail-chart-panel workspace-chart-panel');shell.dataset.evidenceMetric='25';shell.append(element('h3','',spec.title));
+      const shell=element('section','detail-chart-panel workspace-chart-panel');shell.dataset.evidenceMetric=String(metricId);shell.append(element('h3','',spec.title));
       const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',`${spec.title}；${spec.note}`);shell.append(box);const scale=chartScaleNote(spec);if(scale)shell.append(element('p','chart-scale-note',scale));
       const detail=element('details','chart-data');detail.append(element('summary','','查看窗口人数与精确UTC起止'),dataTable({title:spec.title,columns:['截至日（UTC零时）','人数（人）','窗口起点（UTC零时）'],rows:projection.rows.map(r=>[r.at.slice(0,10),r.counts[field],new Date(Date.parse(r.at)-w.days*86400000).toISOString().slice(0,10)]),note:spec.note}));shell.append(detail);grid.append(shell);drawEvidenceChart(box,spec);
     }
     onSelect?.();updateScrollableTables();
   }
   buttons.forEach((b,i)=>{b.addEventListener('click',()=>select(i));b.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;buttons[next].focus();select(next);});});
-  return {node:section,init:()=>select(activityWindowView)};
+  return {node:section,init:()=>select(fixedDays?activityWindows.findIndex(w=>w.days===fixedDays):activityWindowView)};
 }
 
 // Pack counts describe current entitlements, not monthly purchasers. Validate
@@ -2920,10 +2921,11 @@ function metricValueRow(id,valueNode,trend) {
     const label=trend.querySelector('.headline-trend-label');
     if(label){
       const delta=Number(trend.dataset.delta);
-      const adverseWhenHigh=new Set([15,29,42,52,53,54]);
+      const adverseWhenHigh=new Set([15,29,42,52,54]);
       const favorableWhenHigh=new Set([2,3,4,9,10,11,13,17,18,23,24,27,34,41,46]);
       const direction=adverseWhenHigh.has(id)?-1:favorableWhenHigh.has(id)?1:0;
       label.className=`metric-delta${direction&&Math.abs(delta)>.05?delta*direction>0?' improving':' adverse':''}`;
+      if(id===53)label.title='事件发现数的增减，不表示严重程度、影响人数或业务变好／变坏。';
       row.append(label);
     }
   } else if(id===21&&metric(21).kind==='group') {
@@ -4612,9 +4614,11 @@ function metricEvidence(id,page) {
       labelRotation:0,categoryLabels:part.products.map(r=>r.name.replace(/ Pack$/,'\nPack')),
       series:[{name:'当前有效Pack持有人 / 付费权益主账号',values:part.products.map(r=>r.numerator/r.denominator*100),details:part.products.map(r=>({...r,numeratorUnit:'人',denominatorUnit:'人'}))}],
       note:table.note},table);
+    if(value.kind!=='na'){const counts=dataTable(table,'pack-penetration-calculation');counts.dataset.evidenceKind='data';panel.append(counts);}
     return {node:panel,specs};
   }
   if(id===23){renewalEvidence(panel,appendEvidencePair);if(value.kind==='na')return {node:panel,specs};}
+  if(id===4){const table=dataTable(activeWindowTable(30),'activity-window-calculation');table.dataset.evidenceKind='data';panel.append(table);}
   if(id===25){
     const table=dataTable(activeWindowTable(),'activity-window-calculation');table.dataset.evidenceKind='data';panel.append(table);
     for(const dimension of ['country','appPlatform']) {
@@ -4659,7 +4663,7 @@ function metricEvidence(id,page) {
     else {const missing=element('p','na-note binding-failure-unavailable',failure.reason);missing.dataset.evidenceKind='groups';panel.append(missing);}
 
   }
-  const history=[7,46].includes(id)?null:metricHistory(id);
+  const history=[4,7,25,46].includes(id)?null:metricHistory(id);
   const primaryId=page==='G'&&!metricHistory(54)?53:primaryTrendMetric[page];
   if(history&&(id!==primaryId||id===13||id===54||page==='F'&&!hasDataFilters(page))&&(id!==18||selectedFilters().length)) {
     const qualityDetails=id===54?history.details?.map(detail=>detail?{...detail,
@@ -5832,8 +5836,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     panels.get('data').append(historyData);
   }
   let selectedActivityExplorer;
-  if(page==='B'&&selectedMetric===25&&metric(25).kind==='group'){
-    selectedActivityExplorer=activityExplorer(()=>{const old=finding.querySelector('.detail-finding[data-metric-id="25"]');if(old)old.replaceWith(diagnosticFinding('B',25,filteredFinding('B',25)));});
+  if(page==='B'&&[4,25].includes(selectedMetric)&&metric(selectedMetric).kind!=='na'){
+    selectedActivityExplorer=activityExplorer(selectedMetric===25?()=>{const old=finding.querySelector('.detail-finding[data-metric-id="25"]');if(old)old.replaceWith(diagnosticFinding('B',25,filteredFinding('B',25)));}:undefined,{metricId:selectedMetric,fixedDays:selectedMetric===4?30:null});
     panels.get('change').prepend(selectedActivityExplorer.node);
   }
   let selectedStructureExplorer;
@@ -5879,11 +5883,11 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(ownsSelectedChart)disclosure.open=true;
       disclosure.append(element('summary','',label),node);panels.get(key).append(disclosure);
     };
-    const hasSelectedHistory=selectedMetric===25||Boolean(panels.get('change').querySelector('.detail-chart,.na-note'));
+    const hasSelectedHistory=[4,25].includes(selectedMetric)||Boolean(panels.get('change').querySelector('.detail-chart,.na-note'));
     const mainIsTrend=legacy.specs.some(([box,spec])=>legacy.analysisMain.contains(box)&&isTimelineSpec(spec));
     if(!hasSelectedHistory&&mainIsTrend&&[primaryTrendMetric[page],defaultFindingMetric[page]].includes(selectedMetric))
       panels.get('change').prepend(legacy.analysisMain);
-    else if(selectedMetric!==50)contextual(legacy.analysisMain,mainIsTrend?'change':'groups','专题概况与主线对照');
+    else if(![4,25,50].includes(selectedMetric))contextual(legacy.analysisMain,mainIsTrend?'change':'groups','专题概况与主线对照');
     const supplemental=node=>{
       if(node.matches('.section-top'))return;
       if(node.matches('.trial-readiness')){panels.get('change').append(node);return;}
@@ -5971,7 +5975,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   const hasSelectedGroupChart=[...panels.get('groups').querySelectorAll(
     `.evidence-pair[data-evidence-metric="${selectedMetric}"],.detail-chart-panel[data-evidence-metric="${selectedMetric}"]`)]
     .some(node=>!node.closest('details:not([open])'));
-  const initialView=routeParams.has('panel')?diagnosticWorkspaceView:selectedMetric===15?'data':selectedMetric===25?'change':
+  const initialView=routeParams.has('panel')?diagnosticWorkspaceView:selectedMetric===15?'data':[4,25].includes(selectedMetric)?'change':
     panels.get('change').querySelector(':scope > .evidence-pair,:scope > .na-note,:scope > .analysis-main,:scope > .onboarding-duration')?'change':
       hasSelectedGroupChart?'groups':'data';
   function syncWorkspaceLinks() {
