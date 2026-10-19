@@ -11,7 +11,37 @@ async(parent)=>{
  const form=()=>p.locator('.action-record'),input=name=>form().locator(`[name="${name}"]`),save=()=>form().getByRole('button',{name:'保存本地记录',exact:true});
  const stored=()=>p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'));
  const record=async id=>Object.values(JSON.parse(await stored())).find(r=>r.evidenceId===id);
- const fresh=async id=>{await p.goto('about:blank');await p.goto(base);await p.evaluate(()=>localStorage.clear());await p.goto('about:blank');await open(id);};
+ const fresh=async id=>{await p.goto('about:blank');await p.goto(base);await ready();await p.evaluate(()=>localStorage.clear());await p.goto('about:blank');await open(id);};
+ // Inject the sources inside the transport the current app actually reads.
+ // Each changed source must be observed in a requested route package; original
+ // JSON endpoints remain available for independent expected-value calculations.
+ const injectedSources=new Map(),injectionHits=new Map();
+ const inject=(name,data)=>{injectedSources.set(name,structuredClone(data));injectionHits.set(name,0);};
+ const restore=name=>injectedSources.delete(name);
+ const applied=name=>check(injectionHits.get(name)>0,'Backfill never reached an actual route package: '+name);
+ await p.route('**/data/route-*.json*',async route=>{
+  if(!injectedSources.size){await route.continue();return;}
+  const response=await route.fetch(),payload=await response.json();
+  for(const[name,data]of injectedSources){
+   let changed=false;
+   if(name==='diagnostics'){
+    // Keep the page boundary: replace existing fields only, without putting
+    // other topics' heavy event facts into the shared core.
+    for(const target of[payload.sources?.diagnostics,payload.diagnostics]){
+     if(!target)continue;
+     for(const[code,part]of Object.entries(target))for(const key of Object.keys(part)){
+      if(!Object.hasOwn(data[code]??{},key))continue;
+      part[key]=structuredClone(data[code][key]);changed=true;
+     }
+    }
+   }else{
+    const key=name.replace(/-([a-z])/g,(_,c)=>c.toUpperCase());
+    if(Object.hasOwn(payload.sources??{},key)){payload.sources[key]=structuredClone(data);changed=true;}
+   }
+   if(changed)injectionHits.set(name,injectionHits.get(name)+1);
+  }
+  await route.fulfill({response,json:payload});
+ });
  const sum=(rows,key)=>rows.reduce((n,r)=>n+r[key],0);
  const expected=id=>{
   if(id===35)return diagnostics.E.paymentMonths.rows.slice(-2).map(r=>[r.netIncome,r.payers]);
@@ -54,8 +84,8 @@ async(parent)=>{
    if(id===13){const facts=structuredClone(onboarding);facts.activation.cohorts.slice(0,8).forEach(cohort=>{
     let left=10;for(const row of cohort.records)for(const cell of row.durationCounts){const count=Math.min(left,cell[1]);cell[1]-=count;row.notActivatedWithin7d+=count;left-=count;}
     check(left===0,'Historical backfill fixture lacks ten successes');
-   });await p.route('**/data/onboarding-duration-facts.json',r=>r.fulfill({json:facts}));}
-   await p.route(`**/data/${path}.json`,r=>r.fulfill({json:data}));await p.reload();await ready();
+   });inject('onboarding-duration-facts',facts);}
+   inject(path,data);await p.reload();await ready();applied(path);if(id===13)applied('onboarding-duration-facts');
    check((await form().locator('> .table-note').innerText()).includes(before.baseline),'Controlled historical backfill changed the latest single-point baseline');
    const warning=form().locator('.comparison-evidence-warning');check(await warning.isVisible()&&(await warning.innerText()).includes('比较证据已变化'),'Unchanged latest value hides changed historical evidence');
    check(await stored()===bytes,'Reading changed evidence rewrites saved record');
@@ -77,8 +107,8 @@ async(parent)=>{
     await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.setViewportSize({width:1600,height:1000});await ready();
     await p.screenshot({path:`output/playwright/v120-audit/06-archive-backfill-${browser.browserType().name()}.png`,scale:'css'});
    }
-   if(id===13)await p.unroute('**/data/onboarding-duration-facts.json');
-   await p.unroute(`**/data/${path}.json`);await p.reload();await ready();
+   if(id===13)restore('onboarding-duration-facts');
+   restore(path);await p.reload();await ready();
    check(await form().locator('.comparison-evidence-warning').count()===0,'Restored data retains stale discrepancy warning');
    states.push({id,kind:'historical-backfill',baseline:before.baseline});
   }
@@ -87,10 +117,10 @@ async(parent)=>{
    const rows=w.deviceEventsBird.records,target=rows.find(r=>r.model==='K6'&&r.firmware==='2.8'),other=rows.find(r=>r!==target&&r.empty+100<=r.triggers);
    target.empty-=100;other.empty+=100;
   });
-  await p.route('**/data/weekly.json',r=>r.fulfill({json:changedGroups}));await p.reload();await ready();
+  inject('weekly',changedGroups);await p.reload();await ready();applied('weekly');
   check(await form().locator('.comparison-evidence-warning').isVisible()&&
    (await form().locator('.comparison-evidence-warning').innerText()).includes('分组贡献或计数'),'Changed group contribution with identical overall periods is missed');
-  check(await stored()===bytes,'Group refresh alters the saved archive');await p.unroute('**/data/weekly.json');
+  check(await stored()===bytes,'Group refresh alters the saved archive');restore('weekly');
   await p.reload();await ready();
   // Failed writes remain transactional, including the comparison archive.
   await p.evaluate(()=>{window.archiveSetItem=Storage.prototype.setItem;Storage.prototype.setItem=()=>{throw Error('archive test storage failure');};});
@@ -99,11 +129,11 @@ async(parent)=>{
   await p.evaluate(()=>Storage.prototype.setItem=window.archiveSetItem);
   await p.reload();await ready();
   const unavailable=structuredClone(weekly);unavailable.forEach(w=>w.deviceEventsBird.records=[]);
-  await p.route('**/data/weekly.json',r=>r.fulfill({json:unavailable}));await p.reload();await ready();
+  inject('weekly',unavailable);await p.reload();await ready();applied('weekly');
   check((await form().locator('.comparison-evidence-warning').innerText()).includes('当前缺少可比证据'),'Missing current data is reported as unchanged');
   await input('owner').fill('当前缺数仍保留原证据');await save().click();
   check(JSON.stringify((await record(42)).comparisonEvidence)===JSON.stringify(original.comparisonEvidence),'Missing current data overwrites saved evidence');
-  await p.unroute('**/data/weekly.json');await p.reload();await ready();
+  restore('weekly');await p.reload();await ready();
   // Old records and unknown/corrupt archives keep their original bytes on read and metadata on edit.
   for(const kind of ['legacy','unknown-version','bad-contribution']){
    await p.evaluate(kind=>{const data=JSON.parse(localStorage.getItem('parallens-demo-actions-v1')),r=Object.values(data)[0];
@@ -123,9 +153,9 @@ async(parent)=>{
   check((await form().locator('.comparison-evidence-status').innerText()).includes('首次保存时无可比数据'),'Unavailable first save is mislabelled as a historical comparison');
   const small=structuredClone(weekly);small.forEach(w=>{w.deviceEventsBird.records=[{model:'K6',firmware:'2.8',empty:3,triggers:7},
    {model:'Bird Pro',firmware:'Other',empty:50,triggers:100}];w.deviceEventsBird.empty=53;w.deviceEventsBird.triggers=107;});
-  await p.route('**/data/weekly.json',r=>r.fulfill({json:small}));await fresh(42);await save().click();
+  inject('weekly',small);await fresh(42);applied('weekly');await save().click();
   const low=await record(42);check(low.comparisonEvidence.groups.length===0&&low.comparisonEvidence.groupNote.includes('少于30次'),'Small groups create archived contributions');
-  await p.unroute('**/data/weekly.json');
+  restore('weekly');
   await fresh(42);await open(42,'deviceModel=K6&firmware=2.8');await save().click();
   const scoped=await record(42);check(JSON.stringify(scoped.comparisonEvidence.filters)===JSON.stringify([['deviceModel','K6'],['firmware','2.8']]),'Archive loses applied device scope');
   await fresh(42);await input('owner').fill('首次保存失败核验');
@@ -135,6 +165,6 @@ async(parent)=>{
   check((await record(42)).comparisonEvidence.version===1,'Retry after failed first save does not create evidence');
   check(!errors.length,errors.join('; '));return {status:'PASS',states,checks:['four metrics and independently summed aggregates','16 desktop and enlarged layouts',
    'native disclosure preserves open state','all four historical backfills with same latest baseline','group-only change detection','no archive overwrite on progress save',
-   'transactional storage failure','legacy/unknown/corrupt archive preservation','first-week no invented comparison','cross-page draft and original baseline'],errors};
+   'real route-package fault injection is observed','transactional storage failure','legacy/unknown/corrupt archive preservation','first-week no invented comparison','cross-page draft and original baseline'],errors};
  }finally{await c.close();}
 }
