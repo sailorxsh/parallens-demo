@@ -7,7 +7,7 @@ async(page)=>{
   p.on('pageerror',error=>errors.push(error.message));
   const panel=()=>p.locator('.trial-readiness');
   const batch=end=>panel().locator(`[data-batch-end="${end}"]`);
-  const open=async hash=>{await p.goto(`${base}#/${hash}`);await panel().waitFor();};
+  const open=async hash=>{await p.goto(`${base}#/${hash}`);await panel().waitFor({state:'attached'});};
   try {
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
       await p.setViewportSize({width,height});await open('D?metric=18');
@@ -52,7 +52,10 @@ async(page)=>{
       json.readiness.records[0].received_outcomes=null;
       await route.fulfill({response,json});
     });
-    await p.reload();await panel().waitFor();
+    await p.reload();await panel().waitFor({state:'attached'});
+    const other=p.locator('#D-panel-change > .workspace-context').filter({hasText:'其他指标核对 · #18 试用批次数据可用性'});
+    check(await other.count()===1&&!await other.evaluate(n=>n.open),'Another metric promotes trial readiness as its own evidence');
+    await other.locator('> summary').click();await panel().waitFor();
     check((await batch('2026-09-20').innerText()).includes('已齐数量待核验'),'Unknown count converted to zero');
     check((await batch('2026-09-20').innerText()).includes('结果待齐'),'Completed observation mistaken for unfinished window');
     check(errors.length===0,`Browser errors: ${errors.join('; ')}`);

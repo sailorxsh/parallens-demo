@@ -65,7 +65,9 @@ async(page)=>{
     await open('C');await tab('C','groups').click();
     check(await p.locator('.entity-workspace').isVisible(),'Device samples are missing');
     await open('G');await tab('G','groups').click();
-    check(await p.locator('.entity-workspace').isVisible(),'Event samples are missing');
+    check(await p.locator('.quality-explorer').isVisible(),'Default quality metric loses its own grouped counts');
+    await open('G?metric=53');await tab('G','groups').click();
+    check(await p.locator('.anomaly-event-workspace').isVisible(),'Explicit event metric loses its same-source list');
     check(errors.length===0,errors.join('; '));
     return {status:'PASS',desktopWorkspaces:results.length,checks:['paired evidence and observation','default trends','reachable registration','drafts and saved issues','keyboard tabs','URL/back/forward','complete metric catalog','trial readiness and sample linkage','device/event samples'],results};
   } finally {await context.close();}

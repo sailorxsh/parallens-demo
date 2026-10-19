@@ -490,7 +490,7 @@ function trialReadiness(state=filterState) {
 function trialReadinessPanel() {
   const panel=element('section','entity-workspace trial-readiness');
   panel.append(element('h3','','批次数据可用性'),element('p','table-note',
-    `快照 ${sourceData.snapshot.asOf} · 独立合成样例。业务条件沿用试用转正指标；统计周仅控制上方 W1–W12 成熟趋势，本区按下列批次日期核对。`));
+    `快照 ${sourceData.snapshot.asOf} · 独立合成样例。业务条件沿用 #18 试用转正指标；统计周只应用于该指标的 W1–W12 成熟批次，本区按下列批次日期核对。`));
   const ignored=selectedFilters().filter(([key])=>key!=='week'&&!policyFor(18).businessDimensions.includes(key));
   if(ignored.length)panel.append(element('p','table-note',`${ignored.map(([key])=>filterLabels[key]).join('、')}不适用于试用批次，本区不应用这些条件。`));
   const result=trialReadiness();
@@ -3715,7 +3715,7 @@ const groupSummary={
   33:v=>`恢复 ${percent(v.recovery.value)}`,
   35:v=>`$${Number(v.ARPPU).toFixed(2)}`,
   36:v=>`任一Pack ${percent(v.anyPack.value)}`,
-  37:v=>`${number(v.firstPurchase)} / ${number(v.repeatOrRenewal)}`,
+  37:v=>`首购 ${number(v.firstPurchase)}人 · 复购/续购 ${number(v.repeatOrRenewal)}人`,
   38:v=>`美国 ${percent(v.countryShare.US)}`,
   39:v=>{const [name,item]=Object.entries(v).sort((a,b)=>b[1].subscriptionRate-a[1].subscriptionRate)[0];return `${name} · ${percent(item.subscriptionRate)}`;},
   40:v=>{const names=Object.keys(v);return names.length===1?`${names[0]} ${number(v[names[0]].owners)}人`:`${names.length}个自报渠道样本`;},
@@ -5624,6 +5624,7 @@ function metricInspector(id,page) {
   summary.fields.forEach(([label,text])=>fact(label,text));
   fact('统计对象',metricEntityLabel(contract.entity));
   fact('时间窗口',contract.window);
+  if(id===37&&value.kind==='group')fact('数据覆盖','原模拟汇总未明确月份；暂不计算月度变化或结构占比');
   if(id===23){const part=renewalProjection();if(!part.reason){const r=part.current;fact('到期月 / 最晚观察日',`${part.month} / ${new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)}`);fact('发生权益流失 / 期初',`${number(r.lostDuring)} / ${number(r.opening)}人`);fact('主动取消 / 期初',`${number(r.cancelled)} / ${number(r.opening)}人`);}}
   if([11,13,18].includes(id)){const c=cohortObservation(id);fact('本批次 / 观察截止',c.reason?c.reason:`W${c.week} · ${c.start}—${c.end} / ${c.observedThrough}（UTC）`);}
   if(id===24){const part=retentionProjection(),row=part.rows?.find(r=>r.observedMonth===part.month);if(row)fact('基期 → 观察期',`${row.baseMonth} → ${row.observedMonth}`);}
@@ -5970,9 +5971,16 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     if(currentAvailable&&!hasSelectedHistory&&mainIsTrend&&[primaryTrendMetric[page],defaultFindingMetric[page]].includes(selectedMetric))
       panels.get('change').prepend(legacy.analysisMain);
     else if(![4,25,50].includes(selectedMetric))contextual(legacy.analysisMain,mainIsTrend?'change':'groups',currentAvailable?'专题概况与主线对照':`其他指标对照 · ${legacy.specs.find(([box])=>legacy.analysisMain.contains(box))?.[1]?.title??'专题证据'}`);
+    const referenceData=element('details','workspace-context topic-reference-data');
+    referenceData.append(element('summary','',`查看${pages[page].title}专题补充参考数据`),element('p','table-note','以下为专题补充对照；各表按自身统计对象、周期和分母解释。与当前指标不同的表格不作为本项计算依据。'));
     const supplemental=node=>{
       if(node.matches('.section-top'))return;
-      if(node.matches('.trial-readiness')){panels.get('change').append(node);return;}
+      if(node.matches('.trial-readiness')){
+        if(selectedMetric===18)panels.get('change').append(node);
+        else contextual(node,'change','其他指标核对 · #18 试用批次数据可用性');
+        return;
+      }
+      if(node.matches('.anomaly-event-workspace')&&selectedMetric!==53){contextual(node,'groups','其他指标清单 · #53 异常发现');return;}
       if(node.matches('.entity-workspace,.structure-explorer')){panels.get('groups').append(node);return;}
       if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
       if(node.matches('.detail-chart-panel')) {
@@ -5982,9 +5990,10 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
         else panels.get('groups').append(node);
         return;
       }
-      panels.get('data').append(node);
+      referenceData.append(node);
     };
     [...legacy.evidence.children].forEach(supplemental);
+    if(referenceData.children.length>2)panels.get('data').append(referenceData);
   }
   const queue=actionQueue(page,selectedMetric);
   let form=queue.querySelector('.action-record');
