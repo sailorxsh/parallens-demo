@@ -11,10 +11,12 @@ async (parent) => {
     await p.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   };
   const selected=page=>p.locator(`#${page}-tab-data`);
-  const tableCases=[['A',12],['B',28],['B',31],['C',8],['C',45],
+  const tableCases=[['B',31],['C',8],['C',45],
     ['D',20],['D',22],['D',32],['D',33],['E',37],['E',40]];
   try {
     for(const width of [1366,1600,1920]) {
+      // Each size is an independent reading task; reset WebKit's per-document History API quota.
+      await p.goto('about:blank');
       await p.setViewportSize({width,height:1000});
       for(const [page,id] of tableCases) {
         await open(`${page}?metric=${id}`);
@@ -25,7 +27,7 @@ async (parent) => {
         check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`#${id} introduces page overflow`);
         results.push({width,page,id,view:'data'});
       }
-      for(const [page,id,view,title,points]of [['F',51,'change','解绑设备率',12],['A',7,'change','注册与当前绑定主账号',13],['B',26,'change','人均有效会话',84],['C',43,'change','D7／D30留存',12],['C',46,'change','30个完整日',30],['E',36,'groups','五类Pack',5],['E',38,'groups','用户与设备构成',4]]) {
+      for(const [page,id,view,title,points]of [['A',9,'change','新增注册',12],['A',10,'change','注册后72h／7天绑定',12],['A',12,'change','注册后7／30天首图',12],['B',27,'change','三类功能使用率',84],['B',28,'change','D1／D7／D30',12],['F',51,'change','解绑设备率',12],['A',7,'change','注册与当前绑定主账号',13],['B',26,'change','人均有效会话',84],['C',43,'change','D7／D30留存',12],['C',46,'change','30个完整日',30],['E',36,'groups','五类Pack',5],['E',38,'groups','用户与设备构成',4]]) {
         await open(`${page}?metric=${id}`);
         check(await p.locator(`#${page}-tab-${view}`).getAttribute('aria-selected')==='true',`#${id} hides its approved ${view} evidence`);
         const root=p.locator(`#metric-evidence-${id}`),visible=p.locator(`#${page}-panel-${view}`);
@@ -33,7 +35,9 @@ async (parent) => {
         const chart=visible.locator(`:is(.evidence-pair,.detail-chart-panel)[data-evidence-metric="${id}"] .detail-chart`).first();
         await chart.locator('svg').waitFor();check(await chart.isVisible(),`#${id} chart is closed`);
         const plot=await chart.evaluate(node=>{const o=echarts.getInstanceByDom(node).getOption();return {series:o.series.map(s=>s.data),axes:o.xAxis[0].data,y:o.yAxis[0].data};});
-        check((id===43?plot.y?.length:plot.axes?.length)===points,`#${id} loses approved source categories or history points`);
+        check(([28,43].includes(id)?plot.y?.length:plot.axes?.length)===points,`#${id} loses approved source categories or history points`);
+        if(id===12)check(plot.series[1].slice(-3).every(v=>v===null)&&plot.series[0].at(-1)===64,'Registration horizon loses immature gaps or latest 7-day anchor');
+        if(id===28)check(JSON.stringify(plot.axes)==='["D1","D7","D30"]'&&plot.series[1].length>0,'User retention loses three exact days or observation states');
         if(id===7)check(plot.series[0].at(-1)===128600&&plot.series[1].at(-1)===82400,'Account stock chart loses current counts');
         if(id===36)check(plot.series[0].every(v=>Number.isFinite(v)&&v>=0&&v<=100),'Pack shares have invalid units');
         if(id===38)check(plot.series[0].reduce((a,b)=>a+b,0)===128600,'Population composition loses registered-account denominator');

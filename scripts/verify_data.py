@@ -650,6 +650,14 @@ except (AssertionError, KeyError, TypeError, ValueError):
 check('D34-risk-account-evidence', risk_ok,
       '216个合成账号、112日活跃和12期信号；2592份账号快照及900组筛选独立验算，108＋78－18＝168，Free48人')
 
+try:
+    approved = runpy.run_path(str(ROOT / 'scripts/verify_approved_cohorts.py'))['summary']
+    approved_ok = approved['status']=='PASS' and approved['featureScopeDays']==1260 and approved['retentionScopeCohorts']==360 and approved['registrationScopeCohorts']==540
+except (AssertionError, KeyError, TypeError, ValueError):
+    approved_ok = False
+check('D35-approved-feature-user-registration-cohorts', approved_ok,
+      '已确认功能672组、新客861组与注册576组；1260／360／540范围周期独立闭合，旧锚点与完整观察规则保留')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

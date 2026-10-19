@@ -697,18 +697,19 @@
       "demonstrableDimensions": [
         "appPlatform",
         "country",
+        "functionType"
+      ],
+      "unavailableDimensions": [
         "deviceModel",
         "deviceStatus",
-        "functionType",
         "productLine"
-      ],
-      "unavailableDimensions": []
+      ]
     },
     {
       "id": 28,
       "page": "B",
-      "entity": "用户Cohort",
-      "window": "完整观察窗内的指定批次",
+      "entity": "用户",
+      "window": "所选首次设备激活主账号／新注册用户批次，入组后第1／7／30个UTC自然日，分别完整观察",
       "businessDimensions": [
         "appPlatform",
         "country"

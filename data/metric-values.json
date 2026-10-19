@@ -231,21 +231,21 @@
     "value": {
       "D1": {
         "kind": "rate",
-        "numerator": 1900,
-        "denominator": 2500,
-        "value": 0.76
+        "numerator": 1530,
+        "denominator": 1800,
+        "value": 0.85
       },
       "D7": {
         "kind": "rate",
-        "numerator": 1500,
-        "denominator": 2500,
-        "value": 0.6
+        "numerator": 1458,
+        "denominator": 1800,
+        "value": 0.81
       },
       "D30": {
         "kind": "rate",
-        "numerator": 1100,
-        "denominator": 2500,
-        "value": 0.44
+        "numerator": 1314,
+        "denominator": 1800,
+        "value": 0.73
       }
     }
   },

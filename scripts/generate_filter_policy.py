@@ -59,6 +59,8 @@ for item in contract:
     if mid == 21:
         demonstrable.add("productLine")
     business = demonstrable | BUSINESS_ADD.get(mid, set())
+    if mid == 27:
+        demonstrable.intersection_update({'country','appPlatform','functionType'})
     if mid == 29:
         business.add("season")
     if mid == 44:
@@ -81,10 +83,9 @@ for item in contract:
         demonstrable.difference_update({"plan", "productLine"})
     if mid == 53:
         demonstrable.intersection_update({"country", "appPlatform", "anomalyType"})
-    if mid == 51:
-        # Historical populations need status at entry, not today's status.
-        # Keep the business dimension visible while that linked field is absent.
-        demonstrable.discard("deviceStatus")
+    if mid == 54:
+        # Approved daily quality facts carry country and App only.
+        demonstrable.intersection_update({'country', 'appPlatform'})
     metric_policy.append({
         "id": mid,
         "page": item["page"],
@@ -94,6 +95,13 @@ for item in contract:
         "demonstrableDimensions": sorted(demonstrable),
         "unavailableDimensions": sorted(business - demonstrable),
     })
+    if mid == 54:
+        metric_policy[-1]['demonstrableDimensions'] = ['country', 'appPlatform']
+    if mid == 51:
+        # The approved monthly ledger freezes status at cohort entry.
+        metric_policy[-1]['businessDimensions'] = list(item['dimensions'])
+        metric_policy[-1]['demonstrableDimensions'] = list(item['dimensions'])
+
 
 assert len(metric_policy) == 53
 assert {item["id"] for item in metric_policy} == set(range(2, 55))

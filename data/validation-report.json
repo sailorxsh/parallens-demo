@@ -1,6 +1,6 @@
 {
-  "passed": 57,
-  "total": 57,
+  "passed": 58,
+  "total": 58,
   "checks": [
     {
       "rule": "catalog",
@@ -286,6 +286,11 @@
       "rule": "D34-risk-account-evidence",
       "passed": true,
       "detail": "216个合成账号、112日活跃和12期信号；2592份账号快照及900组筛选独立验算，108＋78－18＝168，Free48人"
+    },
+    {
+      "rule": "D35-approved-feature-user-registration-cohorts",
+      "passed": true,
+      "detail": "已确认功能672组、新客861组与注册576组；1260／360／540范围周期独立闭合，旧锚点与完整观察规则保留"
     }
   ]
 }
