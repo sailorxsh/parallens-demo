@@ -36,7 +36,10 @@ async(parent)=>{
   for(const [width,font]of [[1366,16],[1600,16],[1920,16],[1366,32]]){
    await p.setViewportSize({width,height:1000});await open('',4);await p.evaluate(n=>document.documentElement.style.fontSize=n+'px',font);await ready();
    const plots=p.locator('.activity-window-panel .detail-chart');check(await plots.count()===2,'MAU rendering lost a source series');
-   for(const plot of await plots.all()){await plot.locator('svg').waitFor();const bounds=await plot.evaluate(n=>{const svg=n.querySelector('svg').getBoundingClientRect(),labels=[...n.querySelectorAll('text')].map(t=>({r:t.getBoundingClientRect(),size:parseFloat(getComputedStyle(t).fontSize)}));return {overflow:labels.some(x=>x.r.left<svg.left-2||x.r.right>svg.right+2),font:Math.max(...labels.map(x=>x.size))};});check(!bounds.overflow&&bounds.font>=font*.65,'MAU chart clips labels or ignores desktop text size');}
+   // ResizeObserver redraws asynchronously; require the current typography and
+   // container size before making strict SVG boundary assertions.
+   await p.waitForFunction(font=>[...document.querySelectorAll('.activity-window-panel .detail-chart')].every(n=>{const chart=window.echarts?.getInstanceByDom(n),axis=chart?.getOption().xAxis?.[0];return chart&&Math.abs(chart.getWidth()-n.clientWidth)<1&&axis?.axisLabel?.fontSize===font*.75;}),font);await p.evaluate(()=>document.fonts.ready);
+   for(const plot of await plots.all()){await plot.locator('svg').waitFor();const bounds=await plot.evaluate(n=>{const svg=n.querySelector('svg').getBoundingClientRect(),labels=[...n.querySelectorAll('text')].map(t=>({r:t.getBoundingClientRect(),size:parseFloat(getComputedStyle(t).fontSize)}));return {overflow:labels.some(x=>x.r.left<svg.left-2||x.r.right>svg.right+2),font:Math.max(...labels.map(x=>x.size))};});check(!bounds.overflow&&bounds.font>=font*.65,'MAU chart clips labels or ignores desktop text size: '+JSON.stringify({width,font,bounds}));}
    check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'MAU introduces page overflow');states.push({metric:4,width,font,layout:'readable'});
   }
   await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.setViewportSize({width:1600,height:1000});
