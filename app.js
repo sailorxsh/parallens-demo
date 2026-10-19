@@ -385,6 +385,8 @@ const optionLabels={
 };
 const optionLabel=(key,value)=>key==='season'&&value==='Other'?'淡季':optionLabels[value]??value;
 const controlScopes={period:'时间',page:'页面范围',module:'模块细分',view:'分析视角',rule:'业务规则'};
+const riskSourceCoverage='当前为构造汇总与模拟维度分片；逐账号风险命中、信号交集及人群名单尚未提供，不能据此触达。';
+const metricFormula=(id,text)=>id===52?text?.replace('演示原型仅展示模拟名单，不触达真实用户。',riskSourceCoverage):text;
 const paidPlanMetricIds=new Set([2,3,6,17,18,19,21,23,32,33,34,35,52]);
 const trialFactDimensions=new Set(['week','country','appPlatform','productLine','subscriptionPlatform','plan','billingCycle']);
 function indexedTrialFacts() {
@@ -1788,7 +1790,7 @@ function qualityContextTable(spec) {
   if(!['数据质量与业务信号','异常信号与前期基线'].includes(spec.title))return spec;
   const p=qualityProjection();if(p.reason)return {...spec,rows:[['数据质量','—','—',p.reason]],note:qualityNote};
   const r=p.current,previous=p.previous,q=dataQualityState(metric(54));
-  return {...spec,rows:spec.rows.map(row=>row[0]==='埋点事件丢失率'?[row[0],qualityCount(r.lost),r.expected,qualityPercent(r.loss)]:row[0]==='ID-Mapping覆盖率'?[row[0],r.mapped,r.records,qualityPercent(r.mapping)]:row[0]==='数据状态'?[row[0],'演示判断','—',q.label]:row[0]==='埋点丢失率'?[row[0],previous.start.slice(0,10)+' '+qualityPercent(previous.loss),r.start.slice(0,10)+' '+qualityPercent(r.loss),'完整UTC日；演示阈值，不推断生产达标']:row),note:spec.note+' 质量子项：'+qualityWindow()};
+  return {...spec,rows:spec.rows.map(row=>row[0]==='流失高危主账号'?[row[0],...row.slice(1,-1),'构造汇总 · 名单待补']:row[0]==='埋点事件丢失率'?[row[0],qualityCount(r.lost),r.expected,qualityPercent(r.loss)]:row[0]==='ID-Mapping覆盖率'?[row[0],r.mapped,r.records,qualityPercent(r.mapping)]:row[0]==='数据状态'?[row[0],'演示判断','—',q.label]:row[0]==='埋点丢失率'?[row[0],previous.start.slice(0,10)+' '+qualityPercent(previous.loss),r.start.slice(0,10)+' '+qualityPercent(r.loss),'完整UTC日；演示阈值，不推断生产达标']:row),note:spec.note+' 质量子项：'+qualityWindow()};
 }
 
 const anomalyDimensions=['country','appPlatform','anomalyType'];
@@ -2180,7 +2182,7 @@ function definition(id,label=catalogItem(id)?.name ?? '指标') {
     heading.append(close);popover.append(heading);
     const body=element('div','definition-popover-body');body.tabIndex=0;
     body.setAttribute('role','region');body.setAttribute('aria-label',`${label}定义、计算与来源`);
-    for (const [name,value] of [['定义',item?.definition],['计算方法',item?.formula],['数据粒度',item?.grain],['数据来源',item?.source]]) {
+    for (const [name,value] of [['定义',item?.definition],['计算方法',metricFormula(id,item?.formula)],['数据粒度',item?.grain],['数据来源',item?.source]]) {
       if (!value) continue;
       const row=element('div','definition-popover-row');
       row.append(element('span','',name),element('p','',value));body.append(row);
@@ -3567,7 +3569,7 @@ function renderHome() {
   const alertCards=element('div','alert-grid');
   [
     {id:15,label:'绑定未激活设备',page:'A',value:displayValue(15),unit:metricCountUnits[15],note:'已绑定超过3天，仍无首图',alert:true,critical:true},
-    {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),unit:metricCountUnits[52],note:'去重风险信号命中',alert:true,critical:true},
+    {id:52,label:'流失高危主账号',page:'D',value:displayValue(52),unit:metricCountUnits[52],note:'构造风险汇总 · 规则明细待补',alert:true,critical:true},
     {id:29,label:'季节阈值未使用主账号',page:'B',value:metric(29).kind==='rate'?number(metric(29).numerator):'不适用',unit:'人',note:`连续${metric(29).thresholdDays??21}天`,alert:true},
     {id:22,label:'Free权益用满主账号',page:'D',value:metric(22).kind==='group'?number(metric(22).value.anyExhausted.numerator):'不适用',unit:'人',note:'观鸟线 · 升级机会',alert:true},
   ].forEach(item=>alertCards.append(miniCard(item)));
@@ -4751,6 +4753,7 @@ function metricEvidence(id,page) {
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
   const evidenceWindow=id===51?unbindingWindow():observed&&!observed.reason?`W${observed.week} · ${observed.start}—${observed.end}；观察截至 ${observed.observedThrough}（UTC）`:contract.window;
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${evidenceWindow} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
+  if(id===52)intro.append(element('span','metric-filter-scope risk-source-coverage',riskSourceCoverage));
   panel.append(intro);
   if(id===51)panel.append(unbindingControl());
   if(id===23)panel.append(renewalControl());
@@ -5063,7 +5066,7 @@ function metricEvidence(id,page) {
     }
   }
   const fullValue=dataTable(id===38?structureMetricTable():id===39?modelCalculationTable():compactMetricValueTable({title:`${item.name} · 当前筛选完整值`,columns:['子项',id===5?'主账号人数（人）':'分子 / 数量','分母','结果 / 说明'],rows:flattenMeasure(value.kind==='group'?value.value:value,value.kind==='group'?'':metricCardLabels[id]??item.name),
-    note:`计算口径：${contract.formula.replace(/。+$/,'')}。${[11,13].includes(id)?'本表、成功率趋势与耗时按同一合成频数汇总。':id===15?'本表、趋势和清单由同一合成设备台账计数。':[41,44].includes(id)?'本表、趋势和分组按同一合成行为间隔重算；回流使用独立历史入组。':id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===38?'structure-calculation':id===39?'model-calculation':'');
+    note:`计算口径：${metricFormula(id,contract.formula).replace(/。+$/,'')}。${[11,13].includes(id)?'本表、成功率趋势与耗时按同一合成频数汇总。':id===15?'本表、趋势和清单由同一合成设备台账计数。':[41,44].includes(id)?'本表、趋势和分组按同一合成行为间隔重算；回流使用独立历史入组。':id===42?'本表与卡片、趋势、分组均按同一合成触发计数汇总。':id===18?'本表与图表均由合成试用记录计算。':selectedFilters().length?'本表与图表使用相同的筛后分片。':'本表为演示底表值。'}`}),id===38?'structure-calculation':id===39?'model-calculation':'');
   fullValue.dataset.evidenceKind='data';panel.append(fullValue);
   return {node:panel,specs};
 }
@@ -5785,7 +5788,7 @@ function metricInspector(id,page) {
   if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
-    id===51?'月初绑定群与关系事件来自同一合成台账，按首次解绑锚定观察期；型号、原因与设备记录可逐层核对，未回绑不等于已流失。':id===7?'同一国家×App互斥合成存量逐行汇总；较上月末是月内存量变化，不是新增注册批次转化率或逐账号历史。':id===38?'现有总体人数、分母与底表比例已逐项核对；不代表付费人群，当前没有12个月历史。':
+    id===52?riskSourceCoverage:id===51?'月初绑定群与关系事件来自同一合成台账，按首次解绑锚定观察期；型号、原因与设备记录可逐层核对，未回绑不等于已流失。':id===7?'同一国家×App互斥合成存量逐行汇总；较上月末是月内存量变化，不是新增注册批次转化率或逐账号历史。':id===38?'现有总体人数、分母与底表比例已逐项核对；不代表付费人群，当前没有12个月历史。':
     id===43?'按首图激活周、国家、型号与自报渠道合成频数重算；状态按入组时冻结，后续停用不剔除。D30不是D7子集，不能解释为连续使用率。':
     id===23?'按完整到期月的合成频数重算，7天为演示观察窗；取消与发生权益流失可重叠，不等于离开产品。':[4,25,30].includes(id)?'按84日同源窗口频数及当前七类互斥构成核对；国家×平台固定归属，1／7／30天与App子集不相加。':id===24?'按所选完整自然月、国家与基期App平台汇总同一合成分组；人数重算留存率，不平均分组率。不是逐账号事件日志或真实经营历史。':
     [11,13].includes(id)?'按当前批次与筛选交集汇总同一合成频数；成功率与耗时同源，不是独立分片估算，仍非真实经营日志。':
@@ -6103,11 +6106,12 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
         return;
       }
       if(node.matches('.anomaly-event-workspace')&&selectedMetric!==53){contextual(node,'groups','其他指标清单 · #53 异常发现');return;}
+      if(selectedMetric===52&&node.matches('.trial-samples')){contextual(node,'groups','其他指标样本 · #18 试用支付失败');return;}
       if(node.matches('.entity-workspace,.structure-explorer')){panels.get('groups').append(node);return;}
       if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
       if(node.matches('.detail-chart-panel')) {
         const spec=legacy.specs.find(([box])=>node.contains(box))?.[1];
-        if(selectedMetric===50&&spec)contextual(node,'groups',`其他指标对照 · ${spec.title}`);
+        if((selectedMetric===50||selectedMetric===52&&spec?.metricId!==52)&&spec)contextual(node,'groups',`其他指标对照 · ${spec.title}`);
         else if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
         else panels.get('groups').append(node);
         return;
