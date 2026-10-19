@@ -286,10 +286,28 @@ const searchBeforeFilters=searchIds('直播成功率');project({country:'US',fun
 assert.deepEqual(searchIds('直播成功率'),searchBeforeFilters,'Metric search depends on the current data availability');
 project({});
 assert.equal(evaluate('metric(54).value.status'),'演示正常');
-for(const filters of [{country:'US'},{productLine:'Bird'},{appPlatform:'iOS'}]) {
-  project(filters);
-  assert.equal(evaluate('dataQualityState(metric(54)).label'),'待补数据',JSON.stringify(filters));
+for(const filters of [{productLine:'Bird'},{deviceModel:'K6'}]) {
+  project(filters);assert.equal(evaluate('dataQualityState(metric(54)).label'),'待补数据',JSON.stringify(filters));
 }
+for(const country of ['', 'US','UK','DE','Other'])for(const appPlatform of ['', 'iOS','Android'])for(const eventType of ['', 'Account','Content','Notification']){
+ const filters=Object.fromEntries(Object.entries({country,appPlatform}).filter(([,v])=>v));project(filters);
+ const actual=JSON.parse(JSON.stringify(evaluate(`qualityProjection(filterState,${JSON.stringify(eventType)}).rows`)));
+ const expected=fixtures.diagnostics.G.qualityFacts.days.map(d=>{
+  const match=r=>Object.entries(filters).every(([k,v])=>r[k]===v),events=d.eventGroups.filter(r=>match(r)&&(!eventType||r.eventType===eventType)),maps=d.mappingGroups.filter(match),sum=(rows,k)=>rows.reduce((n,r)=>n+r[k],0);
+  const expected=sum(events,'expected'),ingested=sum(events,'ingested'),reliable=events.every(r=>r.expectedReliable),lost=reliable?expected-ingested:null,records=sum(maps,'records'),mapped=sum(maps,'mapped');
+  return {start:d.startInclusive,end:d.endExclusive,expected,ingested,lost,records,mapped,reliable,loss:reliable&&expected>0?lost/expected:null,mapping:records>0?mapped/records:null};
+ });assert.deepEqual(actual,expected);
+}
+project({});assert.equal(evaluate('metric(54).value.eventLoss.numerator'),220);assert.equal(evaluate('metric(54).value.idMapping.numerator'),9650);
+assert.equal(evaluate('metricHistory(54).labels.length'),30);assert.equal(evaluate('qualityHistory("mapping").values.length'),30);
+assert.equal(evaluate('baselineWindowEnd(actionBaselineWindow(54))'),'2026-09-24');
+project({appPlatform:'Android'});assert.equal(evaluate('metric(54).value.eventLoss.numerator'),177);assert.equal(evaluate('metric(54).value.idMapping.numerator'),4540);assert.equal(evaluate('metric(54).value.status'),'演示预警');
+for(const mutation of ['s.days[0].eventGroups.pop()','s.days[0].mappingGroups[0].mapped=-1','s.days[0].eventGroups[0].expectedReliable=null','s.days[0].endExclusive=s.days[1].endExclusive','s.days[0].eventGroups[1]=s.days[0].eventGroups[0]']){
+ evaluate(`sourceData=JSON.parse(JSON.stringify(__fixtures));{const s=sourceData.diagnostics.G.qualityFacts;${mutation}}`);project({});assert.equal(evaluate('metric(54).availability'),'pending');
+}
+evaluate('sourceData=JSON.parse(JSON.stringify(__fixtures));sourceData.diagnostics.G.qualityFacts.days.at(-1).eventGroups.forEach(r=>r.expectedReliable=false)');project({});
+assert.equal(evaluate('metric(54).value.eventLoss.value'),null);assert.equal(evaluate('metric(54).value.idMapping.value'),.965);assert.equal(evaluate('dataQualityState(metric(54)).label'),'待核验');
+evaluate('sourceData=__fixtures');project({});
 for(const key of evaluate('policyFor(54).businessDimensions'))
   assert.ok(fixtures.filterPolicy.controls[key].pages.includes('G'),`Quality evidence has no filter control for its business dimension ${key}`);
 project({});
@@ -618,7 +636,8 @@ assert.equal(evaluate('actionBaselineValue(35)'),
 assert.match(evaluate('actionBaselineValue(25)'),/近1天.*12,600人.*8,400人.*近7天.*29,800人.*20,500人.*近30天.*68,000人.*46,800人/);
 assert.match(evaluate('actionBaselineValue(8)'),/累计首图激活设备.*台.*当前绑定设备：.*台/);
 assert.match(evaluate('actionBaselineValue(46)'),/关键功能最低成功率.*成功率：/);
-assert.match(evaluate('actionBaselineValue(54)'),/事件丢失率.*ID映射覆盖率：/);
+assert.match(evaluate('actionBaselineValue(54)'),/^质量日证据v1：/);
+assert.equal(JSON.parse(evaluate('actionBaselineValue(54)').slice('质量日证据v1：'.length)).windows[1].mapped,9650);
 project({country:'US'});
 const payerBaseline=evaluate('metric(35).value');
 assert.ok(evaluate('actionBaselineValue(35)').includes(`${payerBaseline.monthlySubscriptionPayers.toLocaleString('zh-CN')}人`));

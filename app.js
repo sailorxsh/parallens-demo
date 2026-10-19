@@ -11,7 +11,7 @@ const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
 const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
 const findingRuleVersion='demo-2026-10-18-v5';
-const findingSource=id=>({4:'同源每日活跃窗口频数v1',25:'同源每日活跃窗口频数v1',30:'同源活跃频数与七类互斥构成v1',11:'同源合成绑定频数v1',13:'同源合成激活频数v1',15:'合成设备台账逐台计数',41:'合成设备行为间隔聚合',44:'合成设备行为间隔与独立回流群',18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
+const findingSource=id=>({54:'30个完整UTC日同源质量计数v1',4:'同源每日活跃窗口频数v1',25:'同源每日活跃窗口频数v1',30:'同源活跃频数与七类互斥构成v1',11:'同源合成绑定频数v1',13:'同源合成激活频数v1',15:'合成设备台账逐台计数',41:'合成设备行为间隔聚合',44:'合成设备行为间隔与独立回流群',18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 main?.addEventListener('toggle',()=>updateScrollableTables(),true);
 document.querySelector('.skip-link')?.addEventListener('click',event=>{
@@ -287,6 +287,7 @@ function observedBaselineEnd(window) {
 function actionBaselineWindow(id) {
   if(metric(id)?.kind==='na')return '当前范围暂无可用基线周期';
   if([11,13,18].includes(id)){const c=cohortObservation(id);return c.reason?'当前批次观察截止待核验':`完整周 W${c.week} · ${c.start}—${c.end} · 观察截至 ${c.observedThrough}（UTC）`;}
+  if(id===54)return qualityWindow();
   if(id===53)return anomalyWindow();
   if(id===26)return sessionDepthWindow();
   if([4,25,30].includes(id))return `快照 ${sourceData.snapshot.asOf} · 活跃窗口v1 · UTC零时截止`;
@@ -313,8 +314,8 @@ function baselineWindowEnd(window) {
   const observed=observedBaselineEnd(window);if(observed)return observed;
   // Only interpret the explicit saved window formats. Never substitute today's
   // metric window for an unknown historical baseline.
-  const anomaly=/^异常24小时v1 · (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ) → (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)（左含右不含）$/.exec(window);
-  if(anomaly){if(Date.parse(anomaly[2])-Date.parse(anomaly[1])!==86400000||anomaly.slice(1).some(d=>!Number.isFinite(Date.parse(d))||new Date(d).toISOString().replace('.000Z','Z')!==d))return null;return anomaly[2].slice(0,10);}
+  const anomaly=/^(?:异常24小时v1|质量完整日v1) · (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ) → (\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ)（左含右不含）$/.exec(window);
+  if(anomaly){if(window.startsWith('质量完整日')&&anomaly.slice(1).some(d=>!d.endsWith('T00:00:00Z')))return null;if(Date.parse(anomaly[2])-Date.parse(anomaly[1])!==86400000||anomaly.slice(1).some(d=>!Number.isFinite(Date.parse(d))||new Date(d).toISOString().replace('.000Z','Z')!==d))return null;return anomaly[2].slice(0,10);}
   const session=/^会话日口径v1 · (\d{4}-\d{2}-\d{2}) → (\d{4}-\d{2}-\d{2}) UTC零时（左含右不含）$/.exec(window);
   if(session){if(Date.parse(session[2])-Date.parse(session[1])!==86400000||session.slice(1).some(d=>!Number.isFinite(Date.parse(d))||new Date(d).toISOString().slice(0,10)!==d))return null;return session[2];}
   const dated=/^(?:完整周 W[1-9]\d* · |快照 )(\d{4}-\d{2}-\d{2})(?:(?: · 设备行为口径v1 · (?:近30天活跃|(?:21|30)天未使用))|(?: · 活跃窗口v1 · UTC零时截止))?$/.exec(window);
@@ -1718,6 +1719,74 @@ function relationshipContextTable(spec) {
     ['绑定设备合计',part.shared,part.boundCurrent-part.shared,part.boundCurrent]],note:part.note};
 }
 
+const qualityCount=v=>v===null?'待核验':number(v);
+const qualityPercent=v=>v===null||v===undefined?'待核验':percent(v);
+const qualityNote='30个完整UTC日，横轴为起始日，起含止不含；采集事件与ID关联记录分母独立。国家×App为新合成归属；事件类型只切换丢失率证据，不改变顶部整体质量状态。无可靠预期不计算丢失数或率。';
+function qualityProjection(state=filterState,eventType='') {
+  const source=sourceData.diagnostics.G.qualityFacts,invalid=()=>({reason:'质量日窗、来源或计数待核验，未回退旧汇总'}),filters=effectiveFor(54,state);
+  if(filters.some(([key])=>!['country','appPlatform'].includes(key)))return {reason:'质量记录缺少当前维度归属；不能用总体或0代替'};
+  const whole=n=>Number.isSafeInteger(n)&&n>=0,iso=v=>typeof v==='string'&&/^\d{4}-\d\d-\d\dT00:00:00Z$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().replace('.000Z','Z')===v;
+  if(source?.status!=='approved-synthetic'||source.version!=='synthetic-quality-utc-v1'||source.classification!=='entirely_synthetic'||!iso(source.asOf)||!Array.isArray(source.days)||source.days.length!==30||Object.keys(source.eventTypes??{}).sort().join()!=='Account,Content,Notification'||eventType&&!Object.hasOwn(source.eventTypes,eventType))return invalid();
+  const rows=[],match=r=>filters.every(([key,value])=>r[key]===value),sum=(rs,key)=>rs.reduce((n,r)=>n+r[key],0);
+  for(const [i,d]of source.days.entries()){
+    if(!iso(d.startInclusive)||!iso(d.endExclusive)||Date.parse(d.endExclusive)!==Date.parse(source.asOf)-(29-i)*86400000||Date.parse(d.endExclusive)-Date.parse(d.startInclusive)!==86400000||!Array.isArray(d.eventGroups)||d.eventGroups.length!==24||!Array.isArray(d.mappingGroups)||d.mappingGroups.length!==8)return invalid();
+    const events=new Set(),maps=new Set(),group=r=>r&&['US','UK','DE','Other'].includes(r.country)&&['iOS','Android'].includes(r.appPlatform);
+    for(const r of d.eventGroups){const key=`${r?.country}:${r?.appPlatform}:${r?.eventType}`;if(!group(r)||!Object.hasOwn(source.eventTypes,r.eventType)||events.has(key)||![r.expected,r.ingested].every(whole)||r.ingested>r.expected||typeof r.expectedReliable!=='boolean')return invalid();events.add(key);}
+    for(const r of d.mappingGroups){const key=`${r?.country}:${r?.appPlatform}`;if(!group(r)||maps.has(key)||![r.records,r.mapped].every(whole)||r.mapped>r.records)return invalid();maps.add(key);}
+    const selected=d.eventGroups.filter(r=>match(r)&&(!eventType||r.eventType===eventType)),mapping=d.mappingGroups.filter(match),reliable=selected.every(r=>r.expectedReliable),expected=sum(selected,'expected'),ingested=sum(selected,'ingested'),records=sum(mapping,'records'),mapped=sum(mapping,'mapped'),lost=reliable?expected-ingested:null;
+    rows.push({start:d.startInclusive,end:d.endExclusive,expected,ingested,lost,records,mapped,reliable,loss:reliable&&expected>0?lost/expected:null,mapping:records>0?mapped/records:null});
+  }
+  return {rows,current:rows.at(-1),previous:rows.at(-2),source:source.version,note:qualityNote,eventType};
+}
+function qualityMetric(state=filterState) {
+  const p=qualityProjection(state);if(p.reason)return pending(p.reason);const r=p.current;
+  const rate=(n,d,v,reason)=>v===null?{kind:'na',value:null,numerator:n,denominator:d,reason}:{kind:'rate',value:v,numerator:n,denominator:d};
+  const value={kind:'group',value:{eventLoss:rate(r.lost,r.expected,r.loss,r.reliable?'无合格预期事件':'预期事件数来源不可靠'),idMapping:rate(r.mapped,r.records,r.mapping,'无待关联记录')}};value.value.status=dataQualityState(value).label;return value;
+}
+function qualityHistory(key='loss',state=filterState,eventType='') {
+  const p=qualityProjection(state,eventType);if(p.reason)return null;const loss=key==='loss',type=sourceData.diagnostics.G.qualityFacts.eventTypes[eventType],title=loss?`${type?type+' · ':''}事件丢失率`:'ID映射覆盖率';
+  return {comparisonLabel:'较前完整日',nearestLinePoint:true,title,unit:'%',labels:p.rows.map(r=>r.start.slice(0,10)),values:p.rows.map(r=>r[key]===null?null:r[key]*100),details:p.rows.map(r=>r[key]===null?null:{numerator:loss?r.lost:r.mapped,denominator:loss?r.expected:r.records,basisLabel:loss?'丢失 / 预期事件':'成功关联 / 待关联记录',numeratorUnit:loss?'事件':'记录',denominatorUnit:loss?'事件':'记录'}),note:p.note};
+}
+function qualityWindow() {const p=qualityProjection();return p.reason?'质量日窗待核验':`质量完整日v1 · ${p.current.start} → ${p.current.end}（左含右不含）`;}
+function qualityBaseline() {
+  const p=qualityProjection();if(p.reason)return '质量计数证据待核验';
+  const types=sourceData.diagnostics.G.qualityFacts.eventTypes;
+  return '质量日证据v1：'+JSON.stringify({source:p.source,classification:'entirely_synthetic',windows:[p.previous,p.current],eventTypes:Object.fromEntries(Object.keys(types).map(key=>[key,qualityProjection(filterState,key).rows.slice(-2)]))});
+}
+function qualityHistoryTable(p=qualityProjection()) {
+  return {title:'质量计数 · 30个完整UTC日',columns:['起点（含，UTC）','终点（不含，UTC）','入库事件','丢失 / 预期事件','丢失率','关联 / 待关联记录','映射覆盖率'],rows:p.rows.map(r=>[r.start,r.end,r.ingested,r.reliable?`${qualityCount(r.lost)} / ${number(r.expected)}`:'预期待核验；未算丢失数',qualityPercent(r.loss),`${number(r.mapped)} / ${number(r.records)}`,qualityPercent(r.mapping)]),note:qualityNote};
+}
+function qualityBaselineDetails(baseline) {
+  const node=element('details','quality-baseline-details');node.append(element('summary','','查看首次保存的两日质量计数与事件类型证据'));
+  try{const saved=JSON.parse(baseline.slice('质量日证据v1：'.length));node.append(element('p','table-note',`合成来源 ${saved.source}；两类分母独立。`),dataTable({...qualityHistoryTable({rows:saved.windows}),title:'首次保存 · 两日整体质量计数'}));for(const [key,rows]of Object.entries(saved.eventTypes))node.append(dataTable({...qualityHistoryTable({rows}),title:`首次保存 · ${sourceData.diagnostics.G.qualityFacts.eventTypes[key]??key}丢失计数`}));}
+  catch{node.append(element('p','na-note','原质量证据文本无法解析，保留原文，不以当前数据替换。'),element('p','table-note',baseline));}return node;
+}
+function qualityEvidence(panel,appendPair) {
+  const p=qualityProjection();if(p.reason)return null;
+  panel.append(element('p','table-note quality-window',qualityWindow()));
+  for(const key of ['loss','mapping']){const history=qualityHistory(key);appendPair({...history,metricId:54,title:`${history.title} · 30个完整日`,series:[{name:history.title,values:history.values,details:history.details,color:key==='loss'?'#bf762b':'#356d51'}]},qualityHistoryTable(p),'change');}
+  const full=dataTable(qualityHistoryTable(p),'quality-history-table');full.dataset.evidenceKind='data';panel.append(full);
+  const node=element('section','entity-workspace quality-explorer');node.dataset.evidenceKind='groups';node.append(element('h3','','采集事件类型与App证据'),element('p','table-note',qualityNote));
+  const platformRows=['iOS','Android'].map(appPlatform=>{const r=qualityProjection({...filterState,appPlatform}).current;return [appPlatform,qualityPercent(r.loss),`${qualityCount(r.lost)} / ${number(r.expected)}`,qualityPercent(r.mapping),`${number(r.mapped)} / ${number(r.records)}`];});
+  node.append(dataTable({title:'同国家范围 · 两平台对照（不沿用平台选择）',columns:['App','丢失率','丢失 / 预期事件','映射覆盖率','关联 / 待关联记录'],rows:platformRows,note:'平台对照保留所选国家，点击平台行应用该App；事件类型不改变ID关联总体。'},'quality-platform-table'));
+  node.querySelectorAll('.quality-platform-table tbody tr').forEach((row,i)=>{const cell=row.children[0],link=element('a','',platformRows[i][0]),params=new URLSearchParams(location.hash.split('?')[1]??'');params.set('metric','54');params.set('appPlatform',platformRows[i][0]);params.set('panel','groups');link.href='#/G?'+params;cell.replaceChildren(link);});
+  const label=element('label','retention-month-control','丢失率证据视角'),select=element('select','quality-event-type');select.setAttribute('aria-label','丢失率事件类型');
+  for(const [key,name]of [['','全部事件'],...Object.entries(sourceData.diagnostics.G.qualityFacts.eventTypes)]){const option=element('option','',name);option.value=key;select.append(option);}label.append(select);node.append(label);
+  const chartPanel=element('div','detail-chart-panel'),title=element('h3',''),box=element('div','detail-chart');box.setAttribute('role','img');const scale=element('p','chart-scale-note'),detail=element('details','workspace-calculation');detail.append(element('summary','','查看30日完整计数'));chartPanel.append(title,box,scale,detail);node.append(chartPanel);
+  const typeRows=Object.entries(sourceData.diagnostics.G.qualityFacts.eventTypes).map(([key,name])=>{const r=qualityProjection(filterState,key).current;return [key,name,`${qualityCount(r.lost)} / ${number(r.expected)}`,qualityPercent(r.loss)];});
+  const types=dataTable({title:'最新完整日 · 事件类型',columns:['事件类型','丢失 / 预期事件','丢失率'],rows:typeRows.map(r=>r.slice(1))},'quality-type-table');node.append(types);
+  types.querySelectorAll('tbody tr').forEach((row,i)=>{const button=element('button','',typeRows[i][1]);button.type='button';button.addEventListener('click',()=>{select.value=typeRows[i][0];render();select.focus({preventScroll:true});});row.children[0].replaceChildren(button);});
+  const render=()=>{const history=qualityHistory('loss',filterState,select.value),part=qualityProjection(filterState,select.value),spec={...history,metricId:54,title:`${history.title} · 30个完整日`,series:[{name:history.title,values:history.values,details:history.details}]};title.textContent=spec.title;box.setAttribute('aria-label',spec.title+'；'+qualityNote);const table=dataTable(qualityHistoryTable(part));detail.replaceChildren(element('summary','','查看30日完整计数'),table);scale.textContent=chartScaleNote(spec);const old=window.echarts?.getInstanceByDom(box);if(old){destroyChart(old);const i=detailCharts.indexOf(old);if(i>=0)detailCharts.splice(i,1);}drawEvidenceChart(box,spec);updateScrollableTables();};
+  select.addEventListener('change',render);panel.append(node);return {node,init:render,refresh:()=>{const instance=window.echarts?.getInstanceByDom(box);if(instance&&node.getClientRects().length){refreshChartTypography(instance);instance.resize();}}};
+}
+
+function qualityContextTable(spec) {
+  if(!['数据质量与业务信号','异常信号与前期基线'].includes(spec.title))return spec;
+  const p=qualityProjection();if(p.reason)return {...spec,rows:[['数据质量','—','—',p.reason]],note:qualityNote};
+  const r=p.current,previous=p.previous,q=dataQualityState(metric(54));
+  return {...spec,rows:spec.rows.map(row=>row[0]==='埋点事件丢失率'?[row[0],qualityCount(r.lost),r.expected,qualityPercent(r.loss)]:row[0]==='ID-Mapping覆盖率'?[row[0],r.mapped,r.records,qualityPercent(r.mapping)]:row[0]==='数据状态'?[row[0],'演示判断','—',q.label]:row[0]==='埋点丢失率'?[row[0],previous.start.slice(0,10)+' '+qualityPercent(previous.loss),r.start.slice(0,10)+' '+qualityPercent(r.loss),'完整UTC日；演示阈值，不推断生产达标']:row),note:spec.note+' 质量子项：'+qualityWindow()};
+}
+
 const anomalyDimensions=['country','appPlatform','anomalyType'];
 const anomalyNote='30个连续24小时窗口，按同一合成异常发现记录去重；不是受影响用户或设备数。统一近4周告警基线、严重程度及影响人数待补。';
 function anomalyProjection(state=filterState) {
@@ -1804,6 +1873,7 @@ function projectMetric(id,state=filterState) {
   const scoped=Object.fromEntries(filters),product=scoped.productLine,model=scoped.deviceModel;
   if(id===23){if(scoped.plan==='Free'||product==='Bird'&&scoped.plan==='Starter')return na('所选套餐不属于期初有效付费主订阅群');return renewalMetric(state);}
   if([4,25,30].includes(id))return activeWindowMetric(id,state);
+  if(id===54)return qualityMetric(state);
   if(id===53){const part=anomalyProjection(state);return part.reason?pending(part.reason):{kind:"count",value:part.current.count};}
   if(id===26){const part=sessionDepthProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{sessionsPerUser:part.current.frequency,durationP50Minutes:part.current.p50===null?null:part.current.p50/60,durationP90Minutes:part.current.p90===null?null:part.current.p90/60}};}
   if(id===7){const part=accountStockProjection(state);return part.reason?pending(part.reason):{kind:'group',value:{registered:part.registered,boundOwners:part.boundOwners}};}
@@ -1924,7 +1994,6 @@ function projectMetric(id,state=filterState) {
     v.subscriptionNetIncome=allocatedCount(raw.value.subscriptionNetIncome,applicable,id,'numerator',shares);
     v.ARPPU=v.subscriptionNetIncome/v.monthlySubscriptionPayers;
   }
-  if(id===54&&result.kind==='group')result.value.status=dataQualityState(result).label;
   return result;
 }
 function dataQualityState(value) {
@@ -1932,17 +2001,17 @@ function dataQualityState(value) {
   const {eventLoss,idMapping}=value.value??{};
   const thresholds=sourceData.snapshot.quality?.thresholds;
   const validRate=part=>part?.kind==='rate'&&Number.isFinite(part.numerator)&&Number.isFinite(part.denominator)&&
-    part.denominator>=30&&part.numerator>=0&&part.numerator<=part.denominator&&
+    part.denominator>0&&part.numerator>=0&&part.numerator<=part.denominator&&
     Number.isFinite(part.value)&&Math.abs(part.value-part.numerator/part.denominator)<1e-9;
   const validThreshold=limit=>Number.isFinite(limit)&&limit>=0&&limit<=1;
-  if(!validRate(eventLoss)||!validRate(idMapping)||!validThreshold(thresholds?.eventLossMax)||!validThreshold(thresholds?.idMappingMin))
-    return {label:'待核验',reason:'质量指标缺少可核验的分子、分母或演示阈值，不能判定正常。'};
-  const warning=eventLoss.value>thresholds.eventLossMax||idMapping.value<thresholds.idMappingMin;
+  if(!validThreshold(thresholds?.eventLossMax)||!validThreshold(thresholds?.idMappingMin))
+    return {label:'待核验',reason:'缺少有效演示阈值，不能判定正常。'};
   const checks=[{key:'eventLoss',name:'事件丢失率',...eventLoss,limit:thresholds.eventLossMax,upper:true,unit:'事件'},
     {key:'idMapping',name:'ID映射覆盖率',...idMapping,limit:thresholds.idMappingMin,upper:false,unit:'记录'}]
-    .map(check=>({...check,warning:check.upper?check.value>check.limit:check.value<check.limit}));
-  return {label:warning?'演示预警':'演示正常',checks,
-    reason:`演示阈值：事件丢失率≤${percent(thresholds.eventLossMax)}，ID映射覆盖率≥${percent(thresholds.idMappingMin)}；尚未确认生产达标标准。`};
+    .map(check=>({...check,available:validRate(check),warning:validRate(check)&&(check.upper?check.value>check.limit:check.value<check.limit)}));
+  const complete=checks.every(c=>c.available),warning=checks.some(c=>c.warning);
+  return {label:warning?'演示预警':complete?'演示正常':'待核验',checks,
+    reason:`演示阈值：事件丢失率≤${percent(thresholds.eventLossMax)}，ID映射覆盖率≥${percent(thresholds.idMappingMin)}；尚未确认生产达标标准。${complete?'':'至少一项比例不可核验，保留独立可用指标，不判为正常。'}`};
 }
 function projectDataset() {
   if(filterErrors.length) {
@@ -2178,6 +2247,7 @@ function renewalEvidence(panel,appendPair) {
   const full=dataTable(renewalMonthTable(part),'renewal-calculation');full.dataset.evidenceKind='data';panel.append(full);
 }
 function trendValues(id) {
+  if(id===54){const p=qualityProjection();return p.rows?p.rows.map(r=>r.loss===null?null:r.loss*100):null;}
   if(id===53){const part=anomalyProjection();return part.rows?part.rows.map(w=>w.count):null;}
   if(id===7){const part=accountStockHistory();return part.rows?part.rows.map(r=>r.registered):null;}
   if(id===46)return technicalHistoryHeadline()?.values??null;
@@ -2575,6 +2645,7 @@ function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
   if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
+  if(id===54)return qualityHistory();
   if(id===53){const p=anomalyProjection();return p.rows?{comparisonLabel:'较前24小时',title:'异常发现',unit:'条',nearestLinePoint:true,labels:p.rows.map(w=>w.endExclusive.slice(0,10)),values:p.rows.map(w=>w.count),note:'每点为当日12:00 UTC截止的完整24小时窗口，起含止不含；'+anomalyNote}:null;}
   if(id===26){const p=sessionDepthProjection();return p.rows?{comparisonLabel:'较前日',title:'人均有效会话',unit:'次/人',labels:p.rows.map(r=>r.end.slice(0,10)),values:p.rows.map(r=>r.frequency),note:'84个完整UTC日；独立刻度，不代表留存或打开间隔。'}:null;}
   if(id===46)return technicalHistoryHeadline();
@@ -3653,7 +3724,7 @@ const groupSummary={
   46:v=>{const [name,part]=Object.entries(v)[0];return `${groupLabels[name]??name} ${percent(part.value)}`;},
   50:v=>`绑定未激活 ${number(v.boundNotActivated)}台`,
   51:v=>`30日回绑 ${percent(v.reboundWithin30d.value)}`,
-  54:v=>`${percent(v.eventLoss.value)} / ${percent(v.idMapping.value)}`,
+  54:v=>`${qualityPercent(v.eventLoss.value)} / ${qualityPercent(v.idMapping.value)}`,
 };
 function displayValue(id) {
   const value=metric(id);
@@ -3747,9 +3818,9 @@ function metricCardSummary(id) {
       summary.fields=entries.slice(1).map(([key,rate])=>[`${groupLabels[key]}成功率`,percent(rate.value)]);
       summary.context=`${sourceData.technicalFacts.window} · 各链路独立计算`;
     } else if(id===54) {
-      summary.text=percent(v.eventLoss.value);
-      summary.fields=[['ID映射覆盖率',percent(v.idMapping.value)]];
-      summary.context='丢失率与映射覆盖率分别计算，不能相除';
+      summary.text=qualityPercent(v.eventLoss.value);
+      summary.fields=[['ID映射覆盖率',qualityPercent(v.idMapping.value)]];
+      summary.context='最近完整UTC日 · 两类来源各自计算';
     }
   } else if(id===41&&value.kind==='rate') {
     summary.context='近30天有效行为 · 心跳不计活跃';
@@ -3765,6 +3836,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===54&&metric(54).kind==='group')return qualityBaseline();
   if(id===53&&metric(53).kind==='count')return anomalyBaseline();
   if(id===50&&metric(50).kind==='group'){const v=metric(50).value;return '设备状态计数：'+['boundActivated','boundNotActivated','activatedUnbound','sharedBoundActivated','sharedBoundNotActivated'].map(key=>`${groupLabels[key]} ${number(v[key])}台`).join('；');}
   if(id===26&&metric(26).kind==='group')return sessionDepthBaseline();
@@ -3878,6 +3950,7 @@ function chartBasis(detail) {
 }
 function diagnosticChartFacts(page,spec) {
   const info=sourceData.diagnostics[page];
+  if(page==='G'&&spec.title===info.extraCharts?.[0]?.title){const h=qualityHistory();return h?{...h,title:'事件丢失率 · 30个完整UTC日',metricId:54,series:[{name:h.title,values:h.values,details:h.details}]}:{...spec,series:[],unavailableReason:qualityProjection().reason};}
   if(page==='G'&&spec.title===info.chart.title){const p=anomalyProjection();return p.reason?{...spec,series:[],unavailableReason:p.reason}:{...spec,title:'最新24小时异常发现 · 领域',labels:['新客','订阅','设备','数据质量'],series:[{name:'异常发现',values:['新客','订阅','设备','数据质量'].map(k=>p.current.events.filter(e=>e.domain===k).length)}],note:anomalyNote};}
   if(page==='F'&&spec.metricId===50){const part=deviceStateProjection();return part.reason?{...spec,unavailableReason:part.reason,series:[]}:{...spec,series:[{...spec.series[0],values:[part.value.boundActivated,part.value.boundNotActivated,part.value.activatedUnbound]}],note:deviceStateTable(part).note};}
   if(page==='E'&&spec.kind==='heatmap'&&metric(39).kind==='group')
@@ -4559,7 +4632,7 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===54?'30个完整UTC日 · 独立质量计数':id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
@@ -4595,6 +4668,7 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===54){const explorer=qualityEvidence(panel,appendEvidencePair);return {node:panel,specs,explorer};}
   if(id===53){const part=anomalyProjection(),history=metricHistory(53);
     appendEvidencePair({metricId:53,title:'异常发现 · 最近30个24小时窗口',unit:'条',nearestLinePoint:true,onPoint:index=>panel.dispatchEvent(new CustomEvent('anomaly-window-select',{bubbles:true,detail:part.rows[index]?.endExclusive})),labels:history.labels,series:[{name:'异常发现',values:history.values}],note:history.note},anomalyHistoryTable(part),'change');
     const table=dataTable(anomalyHistoryTable(part),'anomaly-history-table');table.dataset.evidenceKind='data';panel.append(table);return {node:panel,specs};
@@ -4678,7 +4752,7 @@ function metricEvidence(id,page) {
     appendEvidencePair(spec,id===23?renewalMonthTable():id===24?retentionTable():{title:`${history.title} · 趋势数据`,columns:qualityDetails?['日期','丢失率','丢失事件（次）','预期事件（次）']:['周期','值'],rows,
       note:history.note},'change');
     if(id===23)panel.insertBefore(panel.lastElementChild,panel.querySelector('.evidence-pair'));
-    if(id===54)panel.append(element('p','table-note','ID映射覆盖率仅有当前快照，暂无可比历史；当前分子、分母见下方完整值。'));
+
   }
   if(id===11||id===13){
     const duration=onboardingDurationEvidence(id),part=onboardingSummary(id);
@@ -5104,11 +5178,13 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  const qualityBaselineSaved=evidenceId===54&&baseline.startsWith('质量日证据v1：');
   const anomalyBaselineSaved=evidenceId===53&&baseline.startsWith('异常事件证据v1：');
   const deviceStateBaseline=evidenceId===50&&baseline.startsWith('设备状态计数：');
   const sessionBaseline=evidenceId===26&&baseline.startsWith('会话日证据v1：');
   const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${qualityBaselineSaved?'两日质量计数证据':anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(qualityBaselineSaved)form.append(qualityBaselineDetails(baseline));
   if(anomalyBaselineSaved)form.append(anomalyBaselineDetails(baseline));
   if(deviceStateBaseline){const detail=element('details','device-state-baseline-details');detail.append(element('summary','','查看首次保存的五项状态计数'),element('p','table-note',baseline));form.append(detail);}
   if(sessionBaseline)form.append(sessionDepthBaselineDetails(baseline));
@@ -5144,6 +5220,10 @@ function actionRecord(page,evidenceId) {
   const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
+  else if(evidenceId===54&&(current.baseline||draft?.baseline)){
+    if(!qualityBaselineSaved||!baselineAt.startsWith('质量完整日v1'))form.append(element('p','action-baseline-note quality-legacy-note','旧登记未保存完整UTC日和独立质量计数；保留原编号、范围、基线、周期与草稿，不补写历史或当作同口径比较。'));
+    else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note quality-evidence-change','当前日窗、计数或事件类型证据与首次保存不同，即使百分比相同也需核对。保存处理进度保留首次证据。'));
+  }
   else if(evidenceId===53&&(current.baseline||draft?.baseline)){
     if(!anomalyBaselineSaved||!baselineAt.startsWith('异常24小时v1'))form.append(element('p','action-baseline-note anomaly-legacy-note','旧登记未保存24小时窗和事件明细；保留原编号、范围、基线、周期与草稿，不补写历史或当作同口径比较。'));
     else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note anomaly-evidence-change','当前事件窗口或记录证据与首次保存不同，即使条数相同也需核对。保存处理进度保留首次事件证据。'));
@@ -5489,7 +5569,7 @@ function filteredFinding(page,requestedId) {
   if(page==='G'&&isTarget(54)&&m(54).kind==='group') {
     const value=m(54),quality=dataQualityState(value);
     const rates=quality.label==='演示预警'||quality.label==='演示正常'?
-      `事件丢失率 ${percent(value.value.eventLoss.value)}（${number(value.value.eventLoss.numerator)} / ${number(value.value.eventLoss.denominator)} 事件）；ID映射覆盖率 ${percent(value.value.idMapping.value)}（${number(value.value.idMapping.numerator)} / ${number(value.value.idMapping.denominator)}）。`:'';
+      `事件丢失率 ${qualityPercent(value.value.eventLoss.value)}（${value.value.eventLoss.numerator===null?'丢失数待核验':number(value.value.eventLoss.numerator)+' / '+number(value.value.eventLoss.denominator)+' 事件'}）；ID映射覆盖率 ${qualityPercent(value.value.idMapping.value)}（${number(value.value.idMapping.numerator)} / ${number(value.value.idMapping.denominator)}）。`:'';
     return {id:54,text:`数据质量：${quality.label}。${rates}${quality.reason}`};
   }
   if(requestedId!==undefined)return null;
@@ -5600,12 +5680,12 @@ function qualityCheckSummary() {
   if(!quality.checks)return null;
   const list=element('dl','quality-checks');list.setAttribute('aria-label','当前数据质量检查');
   quality.checks.forEach(check=>{
-    const row=element('div','quality-check');row.dataset.check=check.key;row.dataset.state=check.warning?'warning':'normal';
+    const row=element('div','quality-check');row.dataset.check=check.key;row.dataset.state=!check.available?'unavailable':check.warning?'warning':'normal';
     const result=element('dd','quality-check-result');
-    result.append(element('strong','',percent(check.value)),element('span','quality-check-status',
-      check.warning?check.upper?'高于演示上限':'低于演示下限':'演示范围内'));
+    result.append(element('strong','',check.available?percent(check.value):'待核验'),element('span','quality-check-status',
+      !check.available?'无可核验比例':check.warning?check.upper?'高于演示上限':'低于演示下限':'演示范围内'));
     row.append(element('dt','',check.name),result,element('dd','quality-check-basis',
-      `${number(check.numerator)} / ${number(check.denominator)} ${check.unit} · 演示${check.upper?'上限 ≤':'下限 ≥'}${percent(check.limit)}`));
+      `${check.available?number(check.numerator)+' / '+number(check.denominator):check.reason??'无合格分母'} ${check.unit} · 演示${check.upper?'上限 ≤':'下限 ≥'}${percent(check.limit)}`));
     list.append(row);
   });
   return list;
@@ -5622,7 +5702,7 @@ function diagnosticFinding(page,id,observation,{current=true}={}) {
     if(observation.incomeChange)finding.append(incomeDriverSummary(observation.incomeChange));
     const qualitySummary=id===54?qualityCheckSummary():null;
     if(qualitySummary)finding.append(qualitySummary,element('p','finding-context',
-      '按当前演示阈值分别判断，尚未确认生产达标标准。趋势数据仅覆盖事件丢失率；ID映射覆盖率只有当前快照。'));
+      '最近完整UTC日；丢失率与ID映射覆盖率分别使用独立计数，均保留30日合成历史。按演示阈值判断，尚未确认生产达标标准。'));
     else if(end>=0&&text.slice(end+1))finding.append(element('p','finding-context',text.slice(end+1)));
     const basis=element('details','finding-basis');
     basis.append(element('summary','','合成数据 · 查看观察依据'));
@@ -6237,7 +6317,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(explorer.node);
     }
     const grids=element('div','evidence-grid');
-    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):page==='F'?relationshipContextTable(spec):page==='G'&&spec.title==='异常事件样本'?anomalyContextTable(spec):spec));});
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):page==='F'?relationshipContextTable(spec):page==='G'?(spec.title==='异常事件样本'?anomalyContextTable(spec):qualityContextTable(spec)):spec));});
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));

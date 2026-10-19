@@ -58,7 +58,15 @@ async(parent)=>{
       check(JSON.stringify(state.filters)===JSON.stringify(record.filters),'Opened record merged current filters into stored filters');
       check(state.issue===String(record.evidenceId)&&state.owner===record.owner&&state.note===record.note,'Opened another issue or lost fields');
       check(state.status===record.status&&state.due===record.due,'Stored progress or review date changed');
-      check(state.baseline.includes(record.baseline)&&state.baseline.includes(record.baselineAt)&&state.heading.includes(record.issueId),'Stored baseline or identity changed');
+      if(record.evidenceId===54&&record.baseline.startsWith('质量日证据v1：')) {
+        const counts=JSON.parse(record.baseline.slice('质量日证据v1：'.length)),detail=p.locator('.quality-baseline-details');
+        check(await detail.count()===1&&await detail.locator('tbody tr').count()===8,'Saved quality source no longer has inspectable two-day/type evidence');
+        await detail.locator('> summary').click();
+        const latest=await detail.locator('table').first().locator('tbody tr').last().innerText();
+        check(latest.includes(counts.windows[1].start)&&latest.includes(counts.windows[1].end)&&latest.includes(counts.windows[1].mapped.toLocaleString('zh-CN')),'Reopened quality baseline uses different daily evidence');
+        await detail.locator('> summary').click();await p.locator('.action-record [name=owner]').focus();
+      }else check(state.baseline.includes(record.baseline),'Stored baseline changed');
+      check(state.baseline.includes(record.baselineAt)&&state.heading.includes(record.issueId),'Stored window or identity changed');
       check(state.focus==='owner','Opened issue has no keyboard destination');
       check(await stored()===original,'Opening a saved record changes persisted data');states.push({key,...state});
     }

@@ -1259,17 +1259,18 @@
       "id": 54,
       "page": "G",
       "entity": "事件",
-      "window": "2026-09-24 当日事件丢失率、ID映射覆盖率及数据质量状态",
+      "window": "最近完整UTC日：2026-09-23T00:00:00Z → 2026-09-24T00:00:00Z，左含右不含；30日同源历史",
       "businessDimensions": [
         "appPlatform",
         "country",
         "deviceModel",
         "productLine"
       ],
-      "demonstrableDimensions": [],
-      "unavailableDimensions": [
-        "appPlatform",
+      "demonstrableDimensions": [
         "country",
+        "appPlatform"
+      ],
+      "unavailableDimensions": [
         "deviceModel",
         "productLine"
       ]

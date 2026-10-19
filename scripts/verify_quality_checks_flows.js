@@ -1,83 +1,55 @@
-// Separate quality signals without inventing mapping history or changing saved scope.
-async(parent)=>{
- const base=new URL('.',parent.url()).href,browser=parent.context().browser(),states=[],errors=[];
- const c=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',reducedMotion:'reduce'}),p=await c.newPage();
- const check=(ok,message)=>{if(!ok)throw Error(message);};p.on('pageerror',e=>errors.push(e.message));
- const [metrics,trends,snapshot]=await Promise.all(['metric-values','metric-trends','snapshot'].map(async name=>{
-  const response=await parent.request.get(`${base}data/${name}.json`);return response.json();
- }));
- const fixtures=[{name:'normal',loss:220,mapped:9650},{name:'loss',loss:410,mapped:9650},
-  {name:'mapping',loss:220,mapped:9400},{name:'both',loss:410,mapped:9400},
-  {name:'boundary',loss:300,mapped:9500},{name:'missing-limit',loss:220,mapped:9650,missing:true},
-  {name:'low-sample',loss:1,mapped:9650,denominator:29}];
- let fixture=fixtures[0];
- const current=()=>p.locator('.workspace-observation>.detail-finding');
- const ready=async()=>{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));
-  await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));};
- const fresh=async hash=>{await p.goto('about:blank');await p.goto(`${base}#/${hash}`);await ready();};
+// Approved #54: independent daily count sources, scope, evidence ownership and immutable issue baselines.
+async parent=>{
+ const base=new URL('.',parent.url()).href,browser=parent.context().browser(),engine=browser.browserType().name(),c=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',reducedMotion:'reduce'}),p=await c.newPage(),errors=[],results=[];
+ const check=(ok,m)=>{if(!ok)throw Error(m);};p.on('pageerror',e=>errors.push(e.message));
+ const ready=async()=>{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));};
+ const open=async q=>{await p.goto(base+'#/G?metric=54'+(q?'&'+q:''));await ready();},current=()=>p.locator('.workspace-observation>.detail-finding'),form=()=>p.locator('.action-record'),stored=()=>p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY));
  try{
-  await p.route('**/data/metric-values.json',r=>{const data=structuredClone(metrics),v=data.m54.value;
-   Object.assign(v.eventLoss,{numerator:fixture.loss,denominator:fixture.denominator??10000,value:fixture.loss/(fixture.denominator??10000)});
-   Object.assign(v.idMapping,{numerator:fixture.mapped,value:fixture.mapped/10000});return r.fulfill({json:data});});
-  await p.route('**/data/metric-trends.json',r=>{const data=structuredClone(trends);
-   Object.assign(data.m54.points.at(-1),{numerator:fixture.loss,denominator:fixture.denominator??10000,value:fixture.loss/(fixture.denominator??10000)});return r.fulfill({json:data});});
-  await p.route('**/data/snapshot.json',r=>{const data=structuredClone(snapshot);if(fixture.missing)delete data.quality.thresholds.eventLossMax;return r.fulfill({json:data});});
-  for(const [width,size] of [[1366,16],[1600,16],[1920,16],[1366,32]]){
-   await p.setViewportSize({width,height:1000});
-   for(fixture of fixtures){
-    await fresh('');await p.evaluate(s=>document.documentElement.style.fontSize=`${s}px`,size);await ready();
-    const pending=Boolean(fixture.missing||fixture.denominator),lossWarning=!pending&&fixture.loss>300,mappingWarning=!pending&&fixture.mapped<9500;
-    const warning=lossWarning||mappingWarning,expected=fixture.denominator?'不适用':fixture.missing?'待核验':warning?'演示预警':'演示正常';
-    const badge=p.locator('.quality-status'),badgeText=await badge.innerText();check(badgeText.includes(expected),`${fixture.name} ${width}/${size}: expected ${expected}, received ${badgeText}`);
-    check(await badge.getAttribute('data-state')===(pending?'unavailable':warning?'warning':'normal'),'Homepage warning is not distinguished from a verified normal result');
-    if(width===1600&&fixture.name==='mapping')await p.screenshot({path:`output/playwright/v122-audit/12-quality-warning-header-${browser.browserType().name()}.png`,scale:'css'});
-    await badge.focus();await p.keyboard.press('Enter');await ready();
-    check(p.url().endsWith('/G?metric=54')&&(await current().innerText()).includes(expected),'Quality entry loses the quality metric or status');
-    const rows=current().locator('.quality-check');
-    if(pending){check(await rows.count()===0,'Unverifiable data creates a confident check status');}
-    else{
-     check(await rows.count()===2,'Quality check is missing or duplicated');
-     for(const [key,numerator,value,limit,failed,word,unit] of [
-      ['eventLoss',fixture.loss,fixture.loss/100,3,lossWarning,'上限','事件'],
-      ['idMapping',fixture.mapped,fixture.mapped/100,95,mappingWarning,'下限','记录']]){
-      const row=current().locator(`[data-check=${key}]`),text=await row.innerText();
-      check(await row.getAttribute('data-state')===(failed?'warning':'normal'),'The wrong quality signal is emphasized');
-      check((await row.locator('strong').innerText())===`${value.toFixed(1)}%`&&text.includes(`${numerator.toLocaleString('zh-CN')} / 10,000 ${unit}`)&&
-       text.includes(`${word} ${key==='eventLoss'?'≤':'≥'}${limit.toFixed(1)}%`),'Quality value, source counts, unit or comparison limit is wrong');
-      check(text.includes(failed?key==='eventLoss'?'高于演示上限':'低于演示下限':'演示范围内'),'Status depends on color alone');
-     }
-     check((await current().innerText()).includes('ID映射覆盖率只有当前快照'),'Snapshot is presented as a mapping trend');
-     const charts=await p.locator('.income-panel:not([hidden]) .detail-chart').evaluateAll(ns=>ns.map(n=>echarts.getInstanceByDom(n)?.getOption().series.map(s=>s.name)));
-     check(charts.flat(2).every(name=>!name?.includes('映射')),'A mapping historical series was invented');
-    }
-    await current().locator('h3').first().scrollIntoViewIfNeeded();await ready();
-    check(!await current().evaluate(n=>n.scrollWidth>n.clientWidth+1)&&!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Quality status overflows the desktop or enlarged text');
-    if(width===1600&&fixture.name==='mapping')await p.screenshot({path:`output/playwright/v122-audit/11-quality-checks-${browser.browserType().name()}.png`,scale:'css'});
-    if(width===1366&&size===32&&fixture.name==='mapping')await p.screenshot({path:`output/playwright/v122-audit/13-quality-checks-enlarged-${browser.browserType().name()}.png`,scale:'css'});
-    states.push({width,size,fixture:fixture.name,expected,lossWarning,mappingWarning});
-   }
-  }
-  fixture=fixtures[0];await fresh('G?metric=54&issue=54');const form=()=>p.locator('.action-record');
-  await form().locator('[name=owner]').fill('质量核查');await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
-  const original=await p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1')),baseline=await form().locator('> .table-note').innerText();
-  fixture=fixtures[2];await p.reload();await ready();
-  check((await current().innerText()).includes('数据质量：演示预警')&&await form().locator('> .table-note').innerText()===baseline,'Current quality refresh overwrites or hides the registered baseline');
-  await form().locator('[name=note]').fill('映射覆盖待核查的未保存草稿');
-  await p.getByRole('button',{name:'当前指标',exact:true}).click();await ready();
-  await current().locator('.finding-basis summary').click();
-  check(await p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'))===original&&await form().locator('[name=note]').inputValue()==='映射覆盖待核查的未保存草稿','Reading quality checks writes saved data or loses the draft');
-  for(const query of ['country=US','appPlatform=iOS','productLine=Bird']){
-   await fresh(`G?metric=54&${query}`);check(await p.locator('.quality-check').count()===0&&
-    (await current().innerText()).includes('待补数据'),'Unsupported quality scope reuses a global result');
-  }
-  await fresh('G?metric=54&appPlatform=Android&panel=change');
-  check(await p.evaluate(()=>metric(54).availability)==='pending','Unsupported quality scope is not pending');
-  const unrelated=p.locator('#G-panel-change > .workspace-context').filter({hasText:'其他指标对照 · 异常发现'});
-  check(await unrelated.count()===1&&!await unrelated.evaluate(n=>n.open),'Unavailable quality promotes another metric as its lead evidence');
-  check(await p.locator('#G-panel-change svg:visible').count()===0,'Unrelated anomaly chart is visible as quality evidence');
-  await unrelated.locator(':scope > summary').click();await unrelated.locator('svg').waitFor();
-  check((await unrelated.innerText()).includes('单位：条')&&await p.locator('.income-context .detail-finding').getAttribute('data-metric-id')==='54','Explicit comparison loses its unit or replaces the quality subject');
-  check(!errors.length,errors.join('; '));return {status:'PASS',states,checks:['independent loss and mapping failures','threshold equality remains normal','no confident status for missing limit or low sample',
-   'source counts and units','native header entry','no fabricated mapping history','current warning with original baseline and draft','unsupported scope remains pending'],errors};
+ await open('');check(await p.evaluate(()=>metric(54).value.eventLoss.value===.022&&metric(54).value.idMapping.value===.965),'Approved overall anchors changed');
+ check(await p.locator('#G-panel-change > .evidence-pair').count()===2,'Both independent histories are not visible by default');
+ for(const query of['','country=US','appPlatform=Android','country=UK&appPlatform=iOS']){
+  await open(query);const values=await p.evaluate(()=>metric(54).value),charts=p.locator('#G-panel-change > .evidence-pair .detail-chart');await charts.first().locator('svg').waitFor();
+  const actual=await charts.evaluateAll(ns=>ns.map(n=>echarts.getInstanceByDom(n).getOption().series[0].data));const expected=await p.evaluate(()=>[qualityHistory().values,qualityHistory('mapping').values]);check(JSON.stringify(actual)===JSON.stringify(expected)&&actual.every(xs=>xs.length===30),'Rendered histories differ from same-source daily counts');
+  check((await current().innerText()).includes(values.status),'Analysis and top status disagree');
+  await p.locator('#G-tab-data').click();check(await p.locator('.quality-history-table tbody tr').count()===30,'Complete history lost rows');
+  await p.locator('#G-tab-groups').click();const explorer=p.locator('.quality-explorer');await explorer.locator('svg').waitFor();
+  const before=await p.evaluate(()=>JSON.stringify(metric(54))),hash=p.url();await explorer.locator('.quality-event-type').selectOption('Content');check(await p.evaluate(()=>JSON.stringify(metric(54)))===before&&p.url()===hash,'Local event view changes global quality or registration scope');
+  const typeChart=explorer.locator('.detail-chart');const typeValues=await typeChart.evaluate(n=>echarts.getInstanceByDom(n).getOption().series[0].data);check(JSON.stringify(typeValues)===JSON.stringify(await p.evaluate(()=>qualityHistory('loss',filterState,'Content').values)),'Event-type graph is stale');
+  check(await explorer.locator('details tbody tr').count()===30,'Local event view has no complete count alternative');
+  const typeButton=explorer.locator('.quality-type-table button').last();await typeButton.focus();await typeButton.press('Enter');check(await explorer.locator('.quality-event-type').inputValue()==='Notification','Keyboard type drill is inoperative');
+  await p.locator('#G-tab-change').click();const box=p.locator('#G-panel-change > .evidence-pair .detail-chart').first();await box.evaluate(n=>echarts.getInstanceByDom(n).trigger('click',{dataIndex:29,seriesIndex:0}));check(await p.locator('#G-panel-change > .evidence-pair').first().locator('details').evaluate(n=>n.open)&&await p.locator('#G-panel-change .chart-selected').count()>0,'Chart selection does not open its matching count row');
+  results.push({query,status:values.status});
+ }
+ await open('panel=groups');await p.locator('.quality-platform-table a').filter({hasText:'Android'}).click();await ready();check(p.url().includes('appPlatform=Android')&&(await current().innerText()).includes('演示预警')&&(await current().innerText()).includes('177 / 4,800'),'Platform drill loses same-source warning or counts');
+ for(const q of['deviceModel=K6','productLine=Bird']){await open(q);check(await p.evaluate(()=>metric(54).availability)==='pending'&&await p.locator('.quality-explorer').count()===0,'Missing attribution falls back to overall');}
+ // Old scalar record retained, without migration or writes when inspecting the new source.
+ await open('issue=54');const legacy=await p.evaluate(()=>{const key=recordKey('G',54);return {[key]:{issueId:issueIdForKey(key,'G',54),page:'G',evidenceId:54,scope:recordScope('G',54),filters:{},baseline:'事件丢失率：2.2%；ID映射覆盖率：96.5%',baselineAt:'快照 2026-09-24',owner:'旧质量范围',status:'pending',note:'旧记录',due:'',target:'',reviewMetric:54,reviewValue:'',reviewedAt:''}};});
+ await p.evaluate(r=>localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(r)),legacy);await p.reload();await ready();const old=await stored();check(await p.locator('.quality-legacy-note').count()===1,'Historical scalar baseline is treated as a new daily count record');
+ await form().locator('[name=note]').fill('保留的未保存草稿');await p.getByRole('button',{name:'当前指标',exact:true}).click();await p.locator('#G-tab-groups').click();await p.locator('.quality-event-type').selectOption('Content');await p.getByRole('button',{name:'问题登记',exact:true}).click();check(await form().locator('[name=note]').inputValue()==='保留的未保存草稿'&&await stored()===old,'Evidence inspection writes old record or discards draft');
+ await form().getByRole('button',{name:'保存本地记录',exact:true}).click();const updated=JSON.parse(await stored()),oldKey=Object.keys(legacy)[0];check(updated[oldKey].baseline===legacy[oldKey].baseline&&updated[oldKey].baselineAt===legacy[oldKey].baselineAt&&updated[oldKey].issueId===legacy[oldKey].issueId,'Progress save migrates original scope, baseline or ID');
+ // A new independent scope saves its two daily windows and type evidence; equal rates do not hide a changed denominator.
+ await open('appPlatform=Android&issue=54');await form().locator('[name=owner]').fill('日质量复查');await form().getByRole('button',{name:'保存本地记录',exact:true}).click();const saved=JSON.parse(await stored()),key=await p.evaluate(()=>recordKey('G',54)),baseline=saved[key].baseline;check(baseline.startsWith('质量日证据v1：')&&JSON.parse(baseline.slice('质量日证据v1：'.length)).windows[1].lost===177&&saved[key].baselineAt.includes('2026-09-23T00:00:00Z'),'New issue omits daily count source');
+ await form().locator('.quality-baseline-details summary').click();check(await form().locator('.quality-baseline-details tbody tr').count()===8,'Saved original daily/type counts cannot be inspected');
+ await p.evaluate(()=>{for(const d of sourceData.diagnostics.G.qualityFacts.days.slice(-2)){d.eventGroups.forEach(r=>{r.expected*=2;r.ingested*=2;});d.mappingGroups.forEach(r=>{r.records*=2;r.mapped*=2;});}projectDataset();renderRoute();});await ready();check(await p.locator('.quality-evidence-change').count()===1,'Same-rate count changes are hidden');await form().locator('[name=note]').fill('只更新进度');await form().getByRole('button',{name:'保存本地记录',exact:true}).click();check(JSON.parse(await stored())[key].baseline===baseline,'Progress save overwrites first daily counts');
+ await form().locator('[name=reviewedAt]').evaluate(n=>n.closest('details').open=true);await form().locator('[name=reviewedAt]').fill('2026-09-01');const before=await stored();await form().getByRole('button',{name:'保存本地记录',exact:true}).click();check(await stored()===before,'Review earlier than quality window was saved');
+ // Reliable zero, missing expectation, malformed sources and missing limits remain distinct.
+ for(const mutation of['s.days[0].eventGroups.pop()','s.days[0].endExclusive=s.asOf','s.days[0].mappingGroups[1]=s.days[0].mappingGroups[0]']){
+  await p.route('**/data/diagnostics.json',async route=>{const response=await route.fetch(),d=await response.json();new Function('s',mutation)(d.G.qualityFacts);await route.fulfill({response,json:d});});await p.goto('about:blank');await open('');check(await p.evaluate(()=>metric(54).availability)==='pending','Malformed quality source reused old snapshot');await p.unroute('**/data/diagnostics.json');
+ }
+ for(const [mode,expected]of[['missing','待核验'],['zero','待核验'],['small','演示预警'],['loss','演示预警'],['mapping','演示预警'],['boundary','演示正常']]){
+  await p.route('**/data/diagnostics.json',async route=>{const response=await route.fetch(),d=await response.json(),day=d.G.qualityFacts.days.at(-1);
+   if(mode==='missing')day.eventGroups.forEach(r=>r.expectedReliable=false);
+   if(mode==='zero'||mode==='small'){day.eventGroups.forEach(r=>{r.expected=0;r.ingested=0;});if(mode==='small')Object.assign(day.eventGroups[0],{expected:29,ingested:28});}
+   if(['loss','boundary'].includes(mode)){let left=mode==='loss'?410:300;for(const r of day.eventGroups){const n=Math.min(left,r.expected);r.ingested=r.expected-n;left-=n;}}
+   if(['mapping','boundary'].includes(mode)){let left=mode==='mapping'?600:500;for(const r of day.mappingGroups){const n=Math.min(left,r.records);r.mapped=r.records-n;left-=n;}}
+   await route.fulfill({response,json:d});});await p.goto('about:blank');await open('');check(await p.evaluate(()=>dataQualityState(metric(54)).label)===expected,mode+' status wrong');check(await p.evaluate(()=>metric(54).value.eventLoss.value===null)===(mode==='missing'||mode==='zero'),'Unverifiable percentage becomes zero');check((await current().innerText()).includes(mode==='mapping'?'低于演示下限':mode==='loss'?'高于演示上限':expected),mode+' has misleading signal text');await p.unroute('**/data/diagnostics.json');
+ }
+ await p.route('**/data/snapshot.json',async route=>{const response=await route.fetch(),d=await response.json();delete d.quality.thresholds;await route.fulfill({response,json:d});});await p.goto('about:blank');await open('');check(await p.evaluate(()=>dataQualityState(metric(54)).label)==='待核验','Missing threshold is called normal');await p.unroute('**/data/snapshot.json');
+ for(const [width,size]of[[1366,16],[1600,16],[1920,16],[1366,32]]){
+  await p.setViewportSize({width,height:1000});await p.goto('about:blank');await open('appPlatform=Android');await p.evaluate(size=>document.documentElement.style.fontSize=size+'px',size);
+  for(const panel of['change','groups','data']){await p.locator('#G-tab-'+panel).click();if(panel==='groups')await p.locator('.quality-explorer svg').waitFor();await ready();check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Desktop/200% page overflow '+panel);}
+  await p.locator('#G-tab-change').click();const chart=p.locator('#G-panel-change > .evidence-pair .detail-chart').first();await chart.scrollIntoViewIfNeeded();await p.waitForFunction(size=>{const n=document.querySelector('#G-panel-change .detail-chart'),instance=echarts.getInstanceByDom(n);return instance?.getOption().xAxis?.[0]?.axisLabel.fontSize===size*.75&&Math.abs(n.querySelector('svg').getBoundingClientRect().width-n.clientWidth)<=1;},size);const geometry=await chart.evaluate(n=>{const y=echarts.getInstanceByDom(n).getOption().yAxis[0];return {min:y.min,max:y.max,width:n.clientWidth,svg:n.querySelector('svg').getBoundingClientRect().width};});check(geometry.max-geometry.min<10,'Trend axis conceals daily changes');await p.screenshot({path:`output/playwright/v170-quality-${engine}-${width}-${size}.png`});results.push({width,size,geometry});
+ }
+ await p.route('**/vendor/echarts.min.js*',r=>r.abort());await p.goto('about:blank');await open('panel=data');check(!await p.evaluate(()=>Boolean(window.echarts))&&await p.locator('.quality-history-table tbody tr').count()===30,'Actual chart failure loses daily counts');await p.locator('#G-tab-groups').click();await p.locator('.quality-event-type').selectOption('Content');check(await p.locator('.quality-explorer details tbody tr').count()===30,'Chart failure loses filterable event evidence');check(!errors.length,errors.join('; '));return {status:'PASS',engine,results,independentDailySources:true,legacyRecordPreserved:true,unchangedRateCountDetection:true,libraryFailure:true};
  }finally{await c.close();}
 }

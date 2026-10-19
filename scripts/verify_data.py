@@ -611,6 +611,28 @@ active_policies=[r for r in filter_policy['metrics'] if r['id'] in [4,25,30]]
 check('D30-active-window-applicability',len(active_policies)==3 and all(set(r['demonstrableDimensions'])=={'country','appPlatform'} and {'deviceModel','productLine'}<=set(r['unavailableDimensions']) for r in active_policies),
       '三项仅国家×App同源可算；型号／产品线保留业务适用性、缺归属待补，不独立乘比例')
 
+# Approved #54 daily count source: independent pools, real UTC windows and original seven count anchors.
+q = diagnostics['G']['qualityFacts']
+qd = q['days']
+check('D31-quality-source', q['status'] == 'approved-synthetic' and q['classification'] == 'entirely_synthetic' and
+      len(qd) == 30 and all(len(d['eventGroups']) == 24 and len(d['mappingGroups']) == 8 and
+      len({(r['country'], r['appPlatform'], r['eventType']) for r in d['eventGroups']}) == 24 and
+      len({(r['country'], r['appPlatform']) for r in d['mappingGroups']}) == 8 and
+      all(type(r['expected']) is int and 0 <= r['ingested'] <= r['expected'] and type(r['expectedReliable']) is bool for r in d['eventGroups']) and
+      all(type(r['records']) is int and 0 <= r['mapped'] <= r['records'] for r in d['mappingGroups']) and
+      d['endExclusive'].endswith('T00:00:00Z') and
+      date.fromisoformat(d['endExclusive'][:10]) - date.fromisoformat(d['startInclusive'][:10]) == timedelta(days=1) and
+      date.fromisoformat(d['endExclusive'][:10]) == date.fromisoformat(q['asOf'][:10]) - timedelta(days=29-i)
+      for i,d in enumerate(qd)), '30完整UTC日、720采集组与240独立关联组；日窗连续、分组唯一、计数有效')
+check('D32-quality-anchors', [sum(r['expected']-r['ingested'] for r in d['eventGroups']) for d in qd[-7:]] ==
+      [p['numerator'] for p in quality_history['points']] and
+      sum(r['mapped'] for r in qd[-1]['mappingGroups']) == 9650 and
+      sum(r['records'] for r in qd[-1]['mappingGroups']) == 10000 and
+      sum(r['expected']-r['ingested'] for r in qd[-1]['eventGroups'] if r['appPlatform']=='Android') == 177 and
+      sum(r['mapped'] for r in qd[-1]['mappingGroups'] if r['appPlatform']=='Android') == 4540 and
+      any(not r['expectedReliable'] for d in qd for r in d['eventGroups']),
+      '保留末7日丢失计数及220/10000、9650/10000；Android新合成177/4800、4540/4800，保留无可靠预期样例')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

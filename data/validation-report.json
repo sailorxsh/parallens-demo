@@ -1,6 +1,6 @@
 {
-  "passed": 53,
-  "total": 53,
+  "passed": 55,
+  "total": 55,
   "checks": [
     {
       "rule": "catalog",
@@ -266,6 +266,16 @@
       "rule": "D30-active-window-applicability",
       "passed": true,
       "detail": "三项仅国家×App同源可算；型号／产品线保留业务适用性、缺归属待补，不独立乘比例"
+    },
+    {
+      "rule": "D31-quality-source",
+      "passed": true,
+      "detail": "30完整UTC日、720采集组与240独立关联组；日窗连续、分组唯一、计数有效"
+    },
+    {
+      "rule": "D32-quality-anchors",
+      "passed": true,
+      "detail": "保留末7日丢失计数及220/10000、9650/10000；Android新合成177/4800、4540/4800，保留无可靠预期样例"
     }
   ]
 }
