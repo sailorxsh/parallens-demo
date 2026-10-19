@@ -18,9 +18,9 @@ async(parent)=>{
    for(const id of [43,51])for(const query of ['', 'deviceStatus=Effective','deviceStatus=Inactive','country=US&deviceStatus=Effective']){
     await open(id,query);await p.evaluate(font=>document.documentElement.style.fontSize=`${font}px`,font);
     const state=await p.evaluate(id=>({value:metric(id),window:actionBaselineWindow(id),history:metricHistory(id),policy:policyFor(id)}),id);
-    check(state.policy.businessDimensions.includes('deviceStatus')&&state.policy.demonstrableDimensions.includes('deviceStatus')===(id===43),'Historical entry-state policy does not match source availability');
+    check(state.policy.businessDimensions.includes('deviceStatus')&&state.policy.demonstrableDimensions.includes('deviceStatus'),'Historical entry-state policy does not match source availability');
     const evidence=p.locator(`#metric-evidence-${id}`),text=await evidence.innerText();
-    if(id===51)check(!/本指标可演示筛选：[^。]*设备状态/.test(text),'Unbinding evidence advertises missing entry status');
+    if(id===51)check(/本指标可演示筛选：[^。]*设备状态/.test(text),'Approved month-start ledger state is not exposed');
     if(id===43){
      const v=state.value.value;check(state.value.kind==='group','Cohort retention unavailable despite approved source');
      if(query.includes('Inactive'))check(v.D7.denominator===0&&v.D7.kind==='na'&&v.D30.kind==='na','Ineligible entry population invented retention');
@@ -28,16 +28,10 @@ async(parent)=>{
      else check(v.D7.numerator===1600&&v.D30.numerator===1450&&v.D30.denominator===2000,'Approved cohort anchors changed');
      check(text.includes('2026-08-17')&&text.includes('入组时'),'Historical cohort or frozen entry boundary hidden');
      check(state.window===(query.includes('Inactive')?'所选激活批次尚无可用完整观察基线':'设备留存D30观察期末 2026-09-22 · 激活批次 2026-08-17—2026-08-23'),'Retention registration lost its cohort boundary');
-    }else if(query){
-     check(state.value.availability==='pending'&&state.value.reason.includes('入组时设备状态'),'Historical flow is filtered by current status, zeroed, or declared inapplicable');
-     check(text.includes('不能用当前状态排除未留存或已解绑设备'),'Missing entry-state explanation is not visible');
     }else{
-     const v=state.value.value;
-     check(state.history===null,'Undated aggregates acquired a fabricated trend');
-     check(id===43?v.D7.numerator===1600&&v.D30.numerator===1450&&v.D30.denominator===2000:
-      v.unboundEvents===300&&v.observedUnboundDevices===250&&v.reboundWithin30d.numerator===180&&v.reboundWithin30d.denominator===250,'Unfiltered source counts changed');
-     check(id===43?text.includes('入组日期与观察截止待补'):text.includes('2026-07解绑批次'),'Source period boundary is hidden');
-     check(state.window===(id===43?'新设备留存批次日期待补':'完整月 2026-07'),'Registration silently substitutes the current snapshot');
+     if(query.includes('Inactive'))check(state.value.kind==='na'&&!state.value.availability&&state.value.reason.includes('月初'),'Invalid month-start cohort is not inapplicable');
+     else{const v=state.value.value;check(state.value.kind==='group'&&v.unboundDeviceRate.numerator===v.observedUnboundDevices,'Historical scope fails to close');if(!query||query==='deviceStatus=Effective')check(v.observedUnboundDevices===250&&v.unboundEvents===300&&v.reboundWithin30d.numerator===180,'July source anchors changed');}
+     check(state.window===(query.includes('Inactive')?'当前范围暂无可用基线周期':'解绑月v1 · 2026-07-01T00:00:00Z → 2026-08-01T00:00:00Z · 观察截至 2026-09-24T00:00:00Z'),'Registration loses unbinding observation window');
     }
     check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Historical metadata or missing-state explanation overflows desktop');
     states.push({id,query,width,font,value:state.value,window:state.window});
@@ -48,14 +42,14 @@ async(parent)=>{
   }
   await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.setViewportSize({width:1600,height:1000});
   await open(51,'',true);
-  check(await field('reviewedAt').getAttribute('min')==='2026-07-31','July unbinding review still starts at September snapshot');
+  check(await field('reviewedAt').getAttribute('min')==='2026-09-24','New ledger review must follow the saved observation cutoff');
   await field('owner').fill('合成解绑核查');await field('status').selectOption('verified');
   await field('target').fill('演示验收，不代表实际业务目标');await field('reviewValue').fill('180/250，演示复查');
-  await field('reviewedAt').fill('2026-07-30');await save();
+  await field('reviewedAt').fill('2026-09-23');await save();
   check(await field('reviewedAt').getAttribute('aria-invalid')==='true'&&await field('reviewedAt').evaluate(n=>n===document.activeElement),'Early review date is saved or lacks a focused error');
-  await field('reviewedAt').fill('2026-08-31');await save();
-  check((await record(51)).baselineAt==='完整月 2026-07','New unbinding record saved the wrong period');
-  await p.reload();await ready();check(await field('reviewedAt').inputValue()==='2026-08-31','Valid monthly review does not survive reload');
+  await field('reviewedAt').fill('2026-09-24');await save();
+  check((await record(51)).baselineAt==='解绑月v1 · 2026-07-01T00:00:00Z → 2026-08-01T00:00:00Z · 观察截至 2026-09-24T00:00:00Z','New unbinding record saved the wrong period');
+  await p.reload();await ready();check(await field('reviewedAt').inputValue()==='2026-09-24','Valid monthly review does not survive reload');
   await form().scrollIntoViewIfNeeded();await p.screenshot({path:'output/playwright/v137-historical-new-record.png'});
   await open(43,'',true);
   await form().locator('.action-review summary').click();

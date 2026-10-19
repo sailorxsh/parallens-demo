@@ -12,7 +12,7 @@ async (parent) => {
   };
   const selected=page=>p.locator(`#${page}-tab-data`);
   const tableCases=[['A',12],['B',28],['B',31],['C',8],['C',45],
-    ['D',20],['D',22],['D',32],['D',33],['E',37],['E',40],['F',51]];
+    ['D',20],['D',22],['D',32],['D',33],['E',37],['E',40]];
   try {
     for(const width of [1366,1600,1920]) {
       await p.setViewportSize({width,height:1000});
@@ -25,7 +25,7 @@ async (parent) => {
         check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),`#${id} introduces page overflow`);
         results.push({width,page,id,view:'data'});
       }
-      for(const [page,id,view,title,points]of [['A',7,'change','注册与当前绑定主账号',13],['B',26,'change','人均有效会话',84],['C',43,'change','D7／D30留存',12],['C',46,'change','30个完整日',30],['E',36,'groups','五类Pack',5],['E',38,'groups','用户与设备构成',4]]) {
+      for(const [page,id,view,title,points]of [['F',51,'change','解绑设备率',12],['A',7,'change','注册与当前绑定主账号',13],['B',26,'change','人均有效会话',84],['C',43,'change','D7／D30留存',12],['C',46,'change','30个完整日',30],['E',36,'groups','五类Pack',5],['E',38,'groups','用户与设备构成',4]]) {
         await open(`${page}?metric=${id}`);
         check(await p.locator(`#${page}-tab-${view}`).getAttribute('aria-selected')==='true',`#${id} hides its approved ${view} evidence`);
         const root=p.locator(`#metric-evidence-${id}`),visible=p.locator(`#${page}-panel-${view}`);

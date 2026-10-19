@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import runpy
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -519,10 +520,10 @@ check('D23-onboarding-frequency-source',duration_ok,'576个互斥合成分组；
 historical_contracts={item['id']:item for item in contract if item['id'] in (43,51)}
 check('D24-historical-device-boundaries',
       'deviceStatus' in policy_metrics[43]['businessDimensions'] and 'deviceStatus' in policy_metrics[43]['demonstrableDimensions'] and
-      'deviceStatus' in policy_metrics[51]['businessDimensions'] and 'deviceStatus' in policy_metrics[51]['unavailableDimensions'] and
+      'deviceStatus' in policy_metrics[51]['businessDimensions'] and 'deviceStatus' in policy_metrics[51]['demonstrableDimensions'] and
       '自然日完整观察' in historical_contracts[43]['window'] and
-      historical_contracts[51]['window'].startswith(metrics['m51']['value']['cohort']+'解绑批次'),
-      '新设备留存使用已补齐的激活入组状态；解绑仍缺入组状态，不按当前状态排除历史流失者')
+      '未成熟不报最终率' in historical_contracts[51]['window'] and diagnostics['F']['unbindingFacts']['status']=='approved-synthetic',
+      '设备留存按激活入组、解绑按月初冻结状态；后续停用或解绑不剔除历史分母')
 
 retention = metric_trends['m24']
 retention_ok = (retention['status']=='approved-synthetic' and retention['classification']=='entirely_synthetic' and
@@ -632,6 +633,14 @@ check('D32-quality-anchors', [sum(r['expected']-r['ingested'] for r in d['eventG
       sum(r['mapped'] for r in qd[-1]['mappingGroups'] if r['appPlatform']=='Android') == 4540 and
       any(not r['expectedReliable'] for d in qd for r in d['eventGroups']),
       '保留末7日丢失计数及220/10000、9650/10000；Android新合成177/4800、4540/4800，保留无可靠预期样例')
+
+try:
+    unbinding_audit = runpy.run_path(str(ROOT / 'scripts/verify_unbinding_source.py'))['summary']
+    unbinding_ok = unbinding_audit['status']=='PASS' and unbinding_audit['cohortScopes']==2736
+except (AssertionError, KeyError, TypeError, ValueError):
+    unbinding_ok = False
+check('D33-monthly-unbinding-ledger', unbinding_ok,
+      '12月、2625台合成设备与5555条关系事件；月初有效归属、重复解绑、观察窗口、2736范围与总体计数独立闭合')
 
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

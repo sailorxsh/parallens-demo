@@ -1189,20 +1189,23 @@
     {
       "id": 51,
       "page": "F",
-      "entity": "解绑事件",
-      "window": "2026-07解绑批次；已满30日观察窗，逐台观察截止待补",
+      "entity": "解绑设备与关系事件",
+      "window": "12个完整解绑月；7/30日观察截至2026-09-24 00:00 UTC，未成熟不报最终率",
       "businessDimensions": [
-        "appPlatform",
         "country",
+        "appPlatform",
+        "productLine",
+        "deviceModel",
         "deviceStatus"
       ],
       "demonstrableDimensions": [
+        "country",
         "appPlatform",
-        "country"
-      ],
-      "unavailableDimensions": [
+        "productLine",
+        "deviceModel",
         "deviceStatus"
-      ]
+      ],
+      "unavailableDimensions": []
     },
     {
       "id": 52,

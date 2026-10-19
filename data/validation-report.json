@@ -1,6 +1,6 @@
 {
-  "passed": 55,
-  "total": 55,
+  "passed": 56,
+  "total": 56,
   "checks": [
     {
       "rule": "catalog",
@@ -235,7 +235,7 @@
     {
       "rule": "D24-historical-device-boundaries",
       "passed": true,
-      "detail": "新设备留存使用已补齐的激活入组状态；解绑仍缺入组状态，不按当前状态排除历史流失者"
+      "detail": "设备留存按激活入组、解绑按月初冻结状态；后续停用或解绑不剔除历史分母"
     },
     {
       "rule": "D25-monthly-retention-cohorts",
@@ -276,6 +276,11 @@
       "rule": "D32-quality-anchors",
       "passed": true,
       "detail": "保留末7日丢失计数及220/10000、9650/10000；Android新合成177/4800、4540/4800，保留无可靠预期样例"
+    },
+    {
+      "rule": "D33-monthly-unbinding-ledger",
+      "passed": true,
+      "detail": "12月、2625台合成设备与5555条关系事件；月初有效归属、重复解绑、观察窗口、2736范围与总体计数独立闭合"
     }
   ]
 }
