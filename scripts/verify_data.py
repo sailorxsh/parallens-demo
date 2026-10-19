@@ -389,6 +389,7 @@ incident_samples = entity_samples["G"]
 incident_rows = diagnostics["G"]["tables"][0]["rows"]
 all_samples = device_samples + incident_samples
 check("D17-entity-samples", len(device_samples) == 4 and len(incident_samples) == len(incident_rows) == 7 and
+      next(item for item in incident_samples if item["id"] == "EX-06")["evidence"] == {"page":"C", "metricId":44} and
       len({item["id"] for item in all_samples}) == len(all_samples) and
       all(item["observedAt"][:10] <= snapshot["asOf"] and item["review"] and
           any(row["id"] == item["evidence"]["metricId"] and row["page"] == item["evidence"]["page"]

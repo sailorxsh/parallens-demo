@@ -61,6 +61,16 @@ async(parent)=>{
     await open('G','appPlatform=iOS');
     check(await p.locator('.entity-sample-item').count()===0&&(await p.locator('.entity-workspace').innerText()).includes('没有逐条筛选维度'),
       'Unknown event dimensions reuse overall sample records');
+    await open('G','metric=53');
+    check((await p.locator('.income-evidence .evidence-meta').innerText()).includes('统一近4周基线待补'),'Anomaly window claims an uncomputed four-week alert baseline');
+    const originalStorage=await p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY));
+    await p.getByRole('button',{name:/EX-06 长期未使用/}).click();
+    const unusedLink=p.locator('.entity-sample-detail .inspector-link');
+    check((await unusedLink.getAttribute('href')).includes('/C?metric=44'),'Long-unused device event routes to active rate instead of #44');
+    await unusedLink.click();await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
+    check(await p.locator('#metric-evidence-44').count()===1&&new URL(p.url()).hash.includes('metric=44'),'Related event link does not open the unused-device evidence');
+    check((await p.locator('.income-context .detail-finding').innerText()).includes('未使用'),'Event destination explains a different metric');
+    check(await p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY))===originalStorage,'Opening related evidence changes existing issue records');
     await open('C');
     await p.evaluate(()=>document.documentElement.style.fontSize='24px');
     check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'Larger desktop text creates page-wide overflow');

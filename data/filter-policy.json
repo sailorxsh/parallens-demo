@@ -1231,7 +1231,7 @@
       "id": 53,
       "page": "G",
       "entity": "异常事件",
-      "window": "2026-09-24 当日演示异常事件数；基线为近4周同时间段",
+      "window": "2026-09-24 当日演示异常事件数；当前变化比较前1日，统一近4周基线待补",
       "businessDimensions": [
         "anomalyType",
         "appPlatform",
