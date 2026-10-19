@@ -6884,7 +6884,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261019-177`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261019-178`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}
