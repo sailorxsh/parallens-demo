@@ -5876,18 +5876,20 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     if(context.children.length>1)panels.get('groups').append(context);
   }
   if(legacy) {
+    const currentAvailable=metric(selectedMetric).kind!=='na';
     const contextual=(node,key,label)=>{
       const disclosure=element('details','workspace-context');
       const ownsSelectedChart=[node,...node.querySelectorAll('.detail-chart-panel')]
         .some(panel=>panel.dataset.evidenceMetric===String(selectedMetric));
+      if(ownsSelectedChart&&!currentAvailable)return;
       if(ownsSelectedChart)disclosure.open=true;
       disclosure.append(element('summary','',label),node);panels.get(key).append(disclosure);
     };
     const hasSelectedHistory=[4,25].includes(selectedMetric)||Boolean(panels.get('change').querySelector('.detail-chart,.na-note'));
     const mainIsTrend=legacy.specs.some(([box,spec])=>legacy.analysisMain.contains(box)&&isTimelineSpec(spec));
-    if(!hasSelectedHistory&&mainIsTrend&&[primaryTrendMetric[page],defaultFindingMetric[page]].includes(selectedMetric))
+    if(currentAvailable&&!hasSelectedHistory&&mainIsTrend&&[primaryTrendMetric[page],defaultFindingMetric[page]].includes(selectedMetric))
       panels.get('change').prepend(legacy.analysisMain);
-    else if(![4,25,50].includes(selectedMetric))contextual(legacy.analysisMain,mainIsTrend?'change':'groups','专题概况与主线对照');
+    else if(![4,25,50].includes(selectedMetric))contextual(legacy.analysisMain,mainIsTrend?'change':'groups',currentAvailable?'专题概况与主线对照':`其他指标对照 · ${legacy.specs.find(([box])=>legacy.analysisMain.contains(box))?.[1]?.title??'专题证据'}`);
     const supplemental=node=>{
       if(node.matches('.section-top'))return;
       if(node.matches('.trial-readiness')){panels.get('change').append(node);return;}

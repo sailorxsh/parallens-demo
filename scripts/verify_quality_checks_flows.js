@@ -70,6 +70,13 @@ async(parent)=>{
    await fresh(`G?metric=54&${query}`);check(await p.locator('.quality-check').count()===0&&
     (await current().innerText()).includes('待补数据'),'Unsupported quality scope reuses a global result');
   }
+  await fresh('G?metric=54&appPlatform=Android&panel=change');
+  check(await p.evaluate(()=>metric(54).availability)==='pending','Unsupported quality scope is not pending');
+  const unrelated=p.locator('#G-panel-change > .workspace-context').filter({hasText:'其他指标对照 · 异常发现'});
+  check(await unrelated.count()===1&&!await unrelated.evaluate(n=>n.open),'Unavailable quality promotes another metric as its lead evidence');
+  check(await p.locator('#G-panel-change svg:visible').count()===0,'Unrelated anomaly chart is visible as quality evidence');
+  await unrelated.locator(':scope > summary').click();await unrelated.locator('svg').waitFor();
+  check((await unrelated.innerText()).includes('单位：条')&&await p.locator('.income-context .detail-finding').getAttribute('data-metric-id')==='54','Explicit comparison loses its unit or replaces the quality subject');
   check(!errors.length,errors.join('; '));return {status:'PASS',states,checks:['independent loss and mapping failures','threshold equality remains normal','no confident status for missing limit or low sample',
    'source counts and units','native header entry','no fabricated mapping history','current warning with original baseline and draft','unsupported scope remains pending'],errors};
  }finally{await c.close();}
