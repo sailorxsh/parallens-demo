@@ -899,9 +899,11 @@ function sharesFor(filters,metricId) {
 }
 function allocatedCount(total,filters,metricId,kind,shares) {
   if(!Number.isInteger(total))return total*shares[kind];
-  const dimensions=filters.some(([key])=>key==='deviceModel')?
-    filters.filter(([key])=>key!=='productLine'):filters;
-  if(dimensions.length===1&&dimensions[0][0]==='deviceStatus'&&dimensions[0][1]==='Effective')return total;
+  // Effective is already the default population and carries no allocation weight.
+  // Remove that neutral condition before choosing single-dimension apportionment.
+  const weighted=filters.filter(([key,value])=>key!=='deviceStatus'||value!=='Effective');
+  const dimensions=weighted.some(([key])=>key==='deviceModel')?
+    weighted.filter(([key])=>key!=='productLine'):weighted;
   if(dimensions.length!==1)return Math.round(total*shares[kind]);
   const [key,selected]=dimensions[0];
   const all=Object.entries(sourceData.slices[key]??{}).filter(([name])=>
@@ -1643,6 +1645,75 @@ function sessionDepthEvidence(panel,append) {
   return {node:section,init:()=>{initialized=true;renderDistribution();},refresh:()=>{if(initialized&&section.getClientRects().length)for(const[box,spec]of dynamicPlots)drawEvidenceChart(box,spec);}};
 }
 
+// Keep parent totals and their device-state subsets closed after allocation.
+// Attribution remains the existing synthetic independent-dimension assumption.
+function deviceStateProjection(state=filterState) {
+  const parent=sourceData.metrics.m08,raw=sourceData.metrics.m50,sharing=sourceData.metrics.m49;
+  const invalid=()=>({reason:'设备激活、绑定或共享的同日台数不闭合，需核验原始计数；不截断或回退旧结构。'});
+  const fields=['boundActivated','boundNotActivated','activatedUnbound','sharedBoundActivated','sharedBoundNotActivated'];
+  if(parent?.kind!=='group'||raw?.kind!=='group'||sharing?.kind!=='rate'||
+    ![parent.value?.activatedCumulative,parent.value?.boundCurrent,sharing.numerator,sharing.denominator,...fields.map(key=>raw.value?.[key])].every(validHeadcount))return invalid();
+  const p=parent.value,r=raw.value;
+  if(p.boundCurrent!==sourceData.snapshot.boundDevicesCurrent||p.activatedCumulative!==sourceData.snapshot.activatedDevicesCumulative||
+    r.boundActivated+r.boundNotActivated!==p.boundCurrent||r.boundActivated+r.activatedUnbound!==p.activatedCumulative||
+    r.sharedBoundActivated>r.boundActivated||r.sharedBoundNotActivated>r.boundNotActivated||
+    sharing.denominator!==p.boundCurrent||sharing.numerator!==r.sharedBoundActivated+r.sharedBoundNotActivated||
+    !Number.isFinite(sharing.value)||Math.abs(sharing.value-(sharing.denominator?sharing.numerator/sharing.denominator:0))>1e-6)return invalid();
+  const filters=effectiveFor(50,state);
+  if(filters.some(([key,value])=>!policyFor(50).demonstrableDimensions.includes(key)||!sourceData.slices[key]?.[value]))return {reason:'此范围缺少设备状态归属，不能回退总体。'};
+  const scope=Object.fromEntries(filters);if(scope.productLine&&scope.deviceModel&&(scope.productLine==='Hunting')!==(scope.deviceModel==='Hunt Pro'))return {reason:'产品线与设备型号组合无样本。'};
+  const shares=sharesFor(filters,50),allocate=(n,kind='denominator')=>allocatedCount(n,filters,50,kind,shares);
+  const boundCurrent=allocate(p.boundCurrent),activatedCumulative=allocate(p.activatedCumulative),boundNotActivated=allocate(r.boundNotActivated);
+  const boundActivated=boundCurrent-boundNotActivated,activatedUnbound=activatedCumulative-boundActivated;
+  const shared=allocate(sharing.numerator,sharing.value>.9?'denominator':'numerator');
+  if(![boundCurrent,activatedCumulative,boundNotActivated,boundActivated,activatedUnbound,shared].every(validHeadcount)||shared>boundCurrent)return invalid();
+  // Allocate the shared subset jointly rather than round its two parts independently.
+  // Feasible bounds prevent a shared sub-state exceeding its parent at tiny scales.
+  const lower=Math.max(0,shared-boundActivated),upper=Math.min(boundNotActivated,shared);
+  const sharedBoundNotActivated=sharing.numerator?Math.min(upper,Math.max(lower,Math.round(shared*r.sharedBoundNotActivated/sharing.numerator))):0;
+  return {value:{boundActivated,boundNotActivated,activatedUnbound,sharedBoundActivated:shared-sharedBoundNotActivated,sharedBoundNotActivated},
+    boundCurrent,activatedCumulative,shared,scope:filters,note:'沿用原模拟分片估算，先确定绑定、累计激活及共享总数，再约束互斥子项闭合；没有逐设备关系明细，不能解释为实际设备迁移或解绑事件。'};
+}
+function deviceInventoryMetric(state=filterState) {
+  const raw=sourceData.metrics.m08;
+  if(raw?.kind!=='group'||![raw.value?.boundCurrent,raw.value?.activatedCumulative].every(validHeadcount)||raw.value.boundCurrent!==sourceData.snapshot.boundDevicesCurrent||raw.value.activatedCumulative!==sourceData.snapshot.activatedDevicesCumulative)return pending('设备绑定与累计激活的同日计数待核验，不沿用旧快照。');
+  const filters=effectiveFor(8,state);return projectValue(raw,sharesFor(filters,8),filters,8);
+}
+function deviceSharingMetric(state=filterState) {
+  const raw=sourceData.metrics.m49;
+  if(raw?.kind!=='rate'||![raw.numerator,raw.denominator].every(validHeadcount)||raw.numerator>raw.denominator||raw.denominator!==sourceData.snapshot.boundDevicesCurrent||
+    !Number.isFinite(raw.value)||Math.abs(raw.value-(raw.denominator?raw.numerator/raw.denominator:0))>1e-6)return pending('设备共享的分子、同日绑定设备分母或比例待核验，不截断坏计数。');
+  const filters=effectiveFor(49,state);return projectValue(raw,sharesFor(filters,49),filters,49);
+}
+function deviceStateTable(part=deviceStateProjection()) {
+  if(part.reason)return {title:'设备状态 · 待核验',columns:['状态'],rows:[[part.reason]]};
+  const v=part.value,total=v.boundActivated+v.boundNotActivated+v.activatedUnbound;
+  const ratio=(n,d)=>d>=30?percent(n/d):d?'样本不足30台':'无合格分母';
+  return {title:'设备交叉状态 · 数量与包含关系',columns:['互斥状态','设备（台）','占三类并集','其中有共享（台）','其中无共享（台）'],
+    rows:[['绑定且已激活',v.boundActivated,ratio(v.boundActivated,total),v.sharedBoundActivated,v.boundActivated-v.sharedBoundActivated],
+      ['绑定未激活',v.boundNotActivated,ratio(v.boundNotActivated,total),v.sharedBoundNotActivated,v.boundNotActivated-v.sharedBoundNotActivated],
+      ['已激活未绑定',v.activatedUnbound,ratio(v.activatedUnbound,total),'不属当前绑定共享分母','—'],
+      ['三类并集',total,total>=30?'100.0%':ratio(total,total),'—','—']],
+    note:`当前绑定 ${number(part.boundCurrent)} 台＝前两类；累计激活 ${number(part.activatedCumulative)} 台＝第一类＋第三类。共享 ${number(part.shared)} / ${number(part.boundCurrent)} 台；共享是绑定状态子集，不是第四种状态。三类并集不是全部出厂设备。${part.note}`};
+}
+function relationshipContextTable(spec) {
+  if(spec.title==='主账号、共享与回绑'){
+    const shared=metric(49),part=deviceStateProjection();
+    return {...spec,rows:spec.rows.map(row=>row[0]!=='开启共享的绑定设备'?row:shared.kind==='rate'?
+      [row[0],shared.numerator,shared.denominator,percent(shared.value)]:!part.reason?
+        [row[0],part.shared,part.boundCurrent,part.boundCurrent?'样本不足30台':'无合格分母']:[row[0],'—','—',shared.reason??'共享计数待核验'])};
+  }
+  if(spec.title!=='设备状态双向核对'&&spec.title!=='共享作为绑定状态子维度')return spec;
+  const part=deviceStateProjection();if(part.reason)return {title:spec.title+' · 待核验',columns:['状态'],rows:[[part.reason]],note:'其他可靠指标仍按自身来源展示。'};
+  const v=part.value;
+  return {...spec,rows:spec.title==='设备状态双向核对'?[
+    ['当前绑定',`已激活 ${number(v.boundActivated)}`,`未激活 ${number(v.boundNotActivated)}`,`${number(part.boundCurrent)}台`],
+    ['历史激活',`当前绑定 ${number(v.boundActivated)}`,`当前未绑定 ${number(v.activatedUnbound)}`,`${number(part.activatedCumulative)}台`]]:[
+    ['绑定且已激活',v.sharedBoundActivated,v.boundActivated-v.sharedBoundActivated,v.boundActivated],
+    ['绑定未激活',v.sharedBoundNotActivated,v.boundNotActivated-v.sharedBoundNotActivated,v.boundNotActivated],
+    ['绑定设备合计',part.shared,part.boundCurrent-part.shared,part.boundCurrent]],note:part.note};
+}
+
 function projectMetric(id,state=filterState) {
   const contract=contractFor(id);
   const policy=policyFor(id);
@@ -1708,6 +1779,9 @@ function projectMetric(id,state=filterState) {
   if(id===18)return trialMetric(scoped);
   if(id===42)return deviceEventMetric(scoped);
     if(id===15){const result=bindingDeviceRows(state);return result.rows?{kind:'count',value:result.rows.length}:pending(result.reason);}
+  if(id===8)return deviceInventoryMetric(state);
+  if(id===49)return deviceSharingMetric(state);
+  if(id===50){const part=deviceStateProjection(state);return part.reason?pending(part.reason):{kind:'group',value:part.value};}
   let raw=sourceData.metrics[`m${String(id).padStart(2,'0')}`];
   if(scoped.week&&contract.dimensions.includes('week')) {
     const weekly=sourceData.weekly.find(w=>String(w.week)===scoped.week);
@@ -3607,6 +3681,7 @@ function metricSecondaryValues(summary) {
   return list;
 }
 function actionBaselineValue(id) {
+  if(id===50&&metric(50).kind==='group'){const v=metric(50).value;return '设备状态计数：'+['boundActivated','boundNotActivated','activatedUnbound','sharedBoundActivated','sharedBoundNotActivated'].map(key=>`${groupLabels[key]} ${number(v[key])}台`).join('；');}
   if(id===26&&metric(26).kind==='group')return sessionDepthBaseline();
   if(id===7&&metric(7).kind==='group'){const v=metric(7).value;return `累计注册用户：${number(v.registered)}人；当前绑定主账号：${number(v.boundOwners)}人`;}
   if(id===5&&metric(5).kind==='group') {
@@ -3718,6 +3793,7 @@ function chartBasis(detail) {
 }
 function diagnosticChartFacts(page,spec) {
   const info=sourceData.diagnostics[page];
+  if(page==='F'&&spec.metricId===50){const part=deviceStateProjection();return part.reason?{...spec,unavailableReason:part.reason,series:[]}:{...spec,series:[{...spec.series[0],values:[part.value.boundActivated,part.value.boundNotActivated,part.value.activatedUnbound]}],note:deviceStateTable(part).note};}
   if(page==='E'&&spec.kind==='heatmap'&&metric(39).kind==='group')
     spec={...spec,...modelSubscriptionHeatmap(),title:spec.title};
   let details;
@@ -4433,6 +4509,11 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===50){const part=deviceStateProjection(),v=part.value;
+    appendEvidencePair({metricId:50,title:'设备交叉状态 · 当前快照',unit:'台',labels:['绑定且已激活','绑定未激活','已激活未绑定'],series:[{name:'设备数',values:[v.boundActivated,v.boundNotActivated,v.activatedUnbound]}],note:deviceStateTable(part).note},deviceStateTable(part));
+    const table=dataTable(deviceStateTable(part),'device-state-calculation');table.dataset.evidenceKind='data';panel.append(table);
+    const note=element('p','table-note','当前只有状态快照；原要求的近6个月变化和逐设备关系来源仍待补，不由当前比例反推。');note.dataset.evidenceKind='change';panel.append(note);return {node:panel,specs};
+  }
   if(id===26){const explorer=sessionDepthEvidence(panel,appendEvidencePair);return {node:panel,specs,explorer};}
   if(id===7)accountStockHistoryEvidence(panel,appendEvidencePair);
   if(id===46){if(value.kind==='na')panel.append(element('p','na-note',value.reason));technicalHistoryEvidence(panel,appendEvidencePair);}
@@ -4931,9 +5012,11 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  const deviceStateBaseline=evidenceId===50&&baseline.startsWith('设备状态计数：');
   const sessionBaseline=evidenceId===26&&baseline.startsWith('会话日证据v1：');
   const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(deviceStateBaseline){const detail=element('details','device-state-baseline-details');detail.append(element('summary','','查看首次保存的五项状态计数'),element('p','table-note',baseline));form.append(detail);}
   if(sessionBaseline)form.append(sessionDepthBaselineDetails(baseline));
   if(statusCountBaseline){const counts=element('details','status-baseline-details');counts.append(element('summary','','查看本次基线的完整状态人数'),element('p','table-note',baseline));form.append(counts);}
   let comparisonSection=comparisonEvidenceSection(evidenceId,simulatedActionState[key]);form.append(comparisonSection);
@@ -4967,6 +5050,7 @@ function actionRecord(page,evidenceId) {
   const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
+  else if(evidenceId===50&&current.baseline&&!current.baseline.startsWith('设备状态计数：'))form.append(element('p','action-baseline-note device-state-legacy-note','原登记只保存摘要，未记录五项设备状态计数，不能据摘要相同断言共享构成未变。原编号、范围、基线、窗口和草稿保留，请对照当前完整状态表；保存进度不补写历史。'));
   else if(evidenceId===5&&current.baseline&&!current.baseline.startsWith('状态人数：'))form.append(element('p','action-baseline-note status-legacy-note','原登记只保存状态名称，未保存完整人数；不能自动判断状态是否变化。原编号、基线和草稿保留，不补写历史人数。'));
   else if(evidenceId===26&&(current.baseline||draft?.baseline)){
     if(!sessionBaseline||!baselineAt.startsWith('会话日口径v1'))form.append(element('p','action-baseline-note session-legacy-note','原登记未保存完整UTC日及分布频数，不能自动当作同口径比较；原编号、范围、基线、周期和草稿保留，不反推历史。'));
@@ -5300,6 +5384,7 @@ function filteredFinding(page,requestedId) {
     const facts=entries.map(([channel,part])=>`${channel} ${number(part.owners)} 位主账号，订阅率 ${percent(part.subscriptionRate)}`).join('；');
     return {id:40,text:`当前 ${entries.length} 个自报渠道演示样本。${facts}。各渠道分别核对，不将分组人数相加作为总用户；渠道为用户自报，不能直接解释购买归因。`};
   }
+  if(page==='F'&&requestedId===50&&m(50).kind==='group'){const part=deviceStateProjection(),v=part.value;return {id:50,text:`当前绑定 ${number(v.boundActivated)}＋${number(v.boundNotActivated)}＝${number(part.boundCurrent)} 台；累计激活 ${number(v.boundActivated)}＋${number(v.activatedUnbound)}＝${number(part.activatedCumulative)} 台。其中共享 ${number(v.sharedBoundActivated)}＋${number(v.sharedBoundNotActivated)}＝${number(part.shared)} 台，与同范围设备共享指标分子一致。当前是合成状态快照，不能用存量差推断解绑或迁移。`};}
   if(page==='F'&&isTarget(48)&&m(48).kind==='rate'&&m(49).kind==='rate')
     return {id:48,text:`多设备主账号占比 ${percent(m(48).value)}${changeText(recentChange(48))}；设备共享率 ${percent(m(49).value)}。前者以主账号为分母，后者以当前绑定设备为分母。`};
   if(page==='G'&&isTarget(53)&&m(53).kind==='count')return {id:53,text:`当前筛选下有 ${number(m(53).value)} 条模拟异常事件${changeText(recentChange(53),0)}；先核对事件归属和数据质量，再判断业务异常。`};
@@ -5703,7 +5788,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     const mainIsTrend=legacy.specs.some(([box,spec])=>legacy.analysisMain.contains(box)&&isTimelineSpec(spec));
     if(!hasSelectedHistory&&mainIsTrend&&[primaryTrendMetric[page],defaultFindingMetric[page]].includes(selectedMetric))
       panels.get('change').prepend(legacy.analysisMain);
-    else contextual(legacy.analysisMain,mainIsTrend?'change':'groups','专题概况与主线对照');
+    else if(selectedMetric!==50)contextual(legacy.analysisMain,mainIsTrend?'change':'groups','专题概况与主线对照');
     const supplemental=node=>{
       if(node.matches('.section-top'))return;
       if(node.matches('.trial-readiness')){panels.get('change').append(node);return;}
@@ -5711,7 +5796,8 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
       if(node.matches('.detail-chart-panel')) {
         const spec=legacy.specs.find(([box])=>node.contains(box))?.[1];
-        if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
+        if(selectedMetric===50&&spec)contextual(node,'groups',`其他指标对照 · ${spec.title}`);
+        else if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
         else panels.get('groups').append(node);
         return;
       }
@@ -5985,6 +6071,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
   const drawSpecs=[];
   const addChart=(container,spec)=>{
     spec=diagnosticChartFacts(page,spec);
+    if(spec.unavailableReason){const panel=element('section','detail-chart-panel');panel.append(element('h3','',spec.title),element('p','na-note',spec.unavailableReason));container.append(panel);return;}
     if(spec.kind==='heatmap'&&!spec.sampleSizes&&metric(39).kind==='group')
       spec={...spec,sampleSizes:spec.labels.map(name=>metric(39).value[name]?.owners)};
     const chartPanel=element('div','detail-chart-panel');
@@ -6048,7 +6135,7 @@ function renderDetail(page,selectedMetric,showSelected=false) {
       evidence.append(explorer.node);
     }
     const grids=element('div','evidence-grid');
-    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):spec));});
+    info.tables.forEach((spec,index)=>{if(page!=='G'||index!==0)grids.append(dataTable(page==='C'?(index===0?deviceEventContributionTable():deviceContextTable(spec)):page==='B'?retentionContextTable(spec):page==='D'?renewalContextTable(spec):page==='F'?relationshipContextTable(spec):spec));});
     evidence.append(grids);
   } else {
     evidence.append(sectionTitle('03  /  BREAKDOWN','筛选后的补充证据'));

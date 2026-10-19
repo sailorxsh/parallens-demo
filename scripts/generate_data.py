@@ -38,6 +38,7 @@ for cells in sheet.iter_rows(min_row=4, max_row=57, values_only=True):
         "page": page,
     })
 next(item for item in catalog if item["id"] == 26).update({'businessQuestion': '使用深度：一天使用几次、每次看多久', 'definition': '最近完整UTC日，App主动活跃正式主账号平均使用几次、每次前台使用多久；不是打开间隔或留存。', 'formula': '人均有效会话次数＝最近完整UTC日有效会话数÷同日App主动活跃主账号数；P50/P90按合并后的有效前台时长频数用R7计算，非分组分位数平均。', 'default': '人均会话次数、P50/P90和84日独立刻度趋势；按日期查看次数与时长分布及完整频数。', 'note': '连续30分钟无有效前台交互后重开；UTC零时切分，后台不计时。次数分母对齐#25 App近1天，时长单列合格样本数；版本、用户类型及逐用户来源待补。'})
+next(item for item in catalog if item["id"] == 50)["note"] = '当前状态按绑定、累计激活与共享三个父总数约束子项闭合；筛选仍是原模拟分片估算，不是逐设备关系明细。近6个月历史待补。'
 next(item for item in catalog if item["id"] == 53)["note"] = '当前提供前日事件数对比；统一近4周告警基线、严重程度定级和影响人数来源待补，不能把昨日事件数当作正常基线。'
 next(item for item in catalog if item["id"] == 29).update({
     "definition": "看当前有多少主账号达到未使用阈值，以及独立历史入组的未使用主账号在随后7天有多少重新活跃。",
