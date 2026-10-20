@@ -5578,6 +5578,8 @@ function topicMetricRows(id) {
   if(id===29){const age=sourceData.inactivityCohorts,threshold=value.thresholdDays,applicable=effectiveFor(id).filter(([k])=>k!=='season'),shares=sharesFor(applicable,id),d=allocatedCount(age.historicalReturnCohort[`${threshold}days`],applicable,id,'numerator',shares),n=Math.min(d,allocatedCount(age.returnsAfterThreshold[`${threshold}days`],applicable,id,'numerator',shares));rows.push(['独立历史入组7天回流',topicRateText(d>=30?{kind:'rate',value:n/d,numerator:n,denominator:d}:na('历史样本不足30人'))]);}
   if(id===10&&value.sevenDay)rows.push(['7日首次绑定',topicRateText(value.sevenDay)]);
   if([11,13].includes(id)){const p=onboardingSummary(id);if(!p.reason)rows.push(['成功耗时P50',onboardingDuration(p.p50Seconds,id)],['成功耗时P90',onboardingDuration(p.p90Seconds,id)]);}
+  if(id===41){const p=deviceActivitySummary(id);if(!p.reason)rows.push(['近24小时活跃设备',number(p.active1)+'台'],['近7天活跃设备',number(p.active7)+'台'],['近30天活跃设备',number(p.active30)+'台']);}
+  if(id===44){const p=deviceActivitySummary(id);if(!p.reason)rows.push(['至少21天未使用设备',number(p.unused21)+'台'],['至少30天未使用设备',number(p.unused30)+'台']);}
   if(id===44){const p=deviceReturnSummary();if(!p.reason)rows.push(['历史入组7天回流',topicRateText({...p,value:p.denominator>=30?p.numerator/p.denominator:null},'台')]);}
   return rows;
  }
@@ -5598,13 +5600,20 @@ function topicMetricRows(id) {
  });
 }
 function topicMetricStructure(id) {
- const m=metric(id);if(m.kind!=='group')return null;const v=m.value;
+ const m=metric(id);if(m.kind==='count'&&[15,52,53].includes(id)){
+  let title,rows,note;
+  if(id===15){const p=bindingDeviceRows();if(!p.rows)return null;title='当前设备 · 互斥等待分层';rows=['超过3天、未满7天','7–13天','14天及以上'].map(label=>[label,number(p.rows.filter(r=>bindingWaitBand(r,p.at)===label).length)+'台']);note='同一设备只归一层，合计回到当前清单；等待分层不代表预测风险。';}
+  if(id===52){const p=riskProjection();if(p.reason)return null;const w=p.current;title='高危主账号 · 互斥命中构成';rows=[['仅意图层',number(w.intentOnly)+'人'],['仅行为叠加层',number(w.behaviorOnly)+'人'],['两者同时命中',number(w.both)+'人']];note='三类合计回到高危去重人数；单个风险信号可能重叠，详情中核对。';}
+  if(id===53){const p=anomalyProjection();if(p.reason)return null;title='同一24小时窗 · 异常分类';rows=['Business','Device','Quality'].map(key=>[optionLabel('anomalyType',key),number(p.current.events.filter(r=>r.anomalyType===key).length)+'条']);note='每条发现归入一个类别，合计回到当前数量；严重程度和受影响人数尚未提供，不据此判断影响大小。';}
+  return dataTable({title,columns:['分类','数量'],rows,note},'topic-mini-table');
+ }
+ if(m.kind!=='group')return null;const v=m.value;
  let columns,rows,note='';
  if(id===5){const container=element('div','topic-status-products');for(const [line,parts] of Object.entries(v)){const total=Object.values(parts).reduce((a,b)=>a+b,0),table=dataTable({title:`${groupLabels[line]} · ${number(total)}主账号`,columns:['状态','人数','占本线'],rows:Object.entries(parts).map(([key,n])=>[statusHistoryFields[key]??groupLabels[key],number(n)+'人',total>=30?percent(n/total):'样本不足']),note:'本产品线内状态互斥合计100%；跨线不能相加为独立用户。'},'topic-mini-table');container.append(table);}return container;}
 
  if(id===30){columns=['互斥活跃来源','主账号','占复合活跃'];rows=activityCombinations.map(item=>[item.label.replace('\n',''),number(v.exclusiveCells[item.key])+'人',v.composite>=30?percent(v.exclusiveCells[item.key]/v.composite):'样本不足']);note=`合计 ${number(v.composite)} 人；App ${number(v.app)}、内容 ${number(v.content)}、推送 ${number(v.pushClicked)} 为可重叠来源。`;}
  if(id===36){columns=['增值包','有效权益主账号','渗透率'];rows=[['任一增值包',number(v.anyPack.numerator)+'人',topicRateText(v.anyPack)],...Object.entries(v.byPack).map(([name,part])=>[name,number(part.numerator)+'人',topicRateText(part)])];note='各包可重叠，人数不可相加；分母为同日付费权益主账号。';}
- if(id===38){const container=element('div','topic-structure-dimensions');for(const [key,parts] of Object.entries(v)){const label=key==='deviceModelShare'?'绑定设备／型号':key==='countryShare'?'注册用户／国家':'注册用户／App';container.append(dataTable({title:label,columns:['类别','占比'],rows:Object.entries(parts).map(([name,n])=>[optionLabels[name]??name,percent(n)]),note:'本维度独立归一化。'},'topic-mini-table'));}return container;}
+ if(id===38){const source=structureMetricViews();if(source.reason)return null;const container=element('div','topic-structure-dimensions');for(const view of source.views)container.append(dataTable({title:view.label,columns:['类别','数量','占比'],rows:view.rows.map(([label,n])=>[label,number(n)+view.unit,percent(n/view.denominator)]),note:`同口径分母 ${number(view.denominator)}${view.unit}；本维度独立归一化。`},'topic-mini-table'));return container;}
  if(id===39){columns=['型号','主账号','30天活跃率','订阅率'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners)+'人',percent(r.activeRate),percent(r.subscriptionRate)]);note='同型号主账号为分母；各型号可能共享主账号，不能相加。';}
  if(id===40){columns=['自报渠道','样本主账号','7日激活','活跃率','订阅率','月付款人数','ARPPU'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners),percent(r.activation7dRate),percent(r.activeRate),percent(r.subscriptionRate),number(r.monthlyPayers),'$'+r.ARPPU.toFixed(2)]);note='自报渠道合成样本；不同窗口单独解释，不视为平台归因或因果。';}
  if(id===51){columns=['观察项','当前结果'];rows=[['去重解绑设备',number(v.observedUnboundDevices)+'台'],['解绑事件',number(v.unboundEvents)+'次'],['月初绑定设备解绑率',topicRateText(v.unboundDeviceRate,'台')],['7日回绑',topicRateText(v.reboundWithin7d,'台')],['30日回绑',topicRateText(v.reboundWithin30d,'台')]];note=`解绑批次 ${v.cohort}；未成熟观察窗不补零。`;}
@@ -7181,7 +7190,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261020-186`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261020-187`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}
@@ -7361,10 +7370,11 @@ function bindAppEvents() {
       }
     });
     document.addEventListener('click',event=>{
+      if(event.defaultPrevented)return;
       const link=event.target.closest?.('a[href^="#/"]');
       if(!link||link.getAttribute('href')!==location.hash)return;
       const id=Number(new URLSearchParams(location.hash.split('?')[1]??'').get('metric'));
-      if(id){event.preventDefault();showMetricEvidence(id,{behavior:'smooth'});}
+      if(id){event.preventDefault();showMetricEvidence(id,{behavior:chartAnimationDuration(1)?'smooth':'instant'});}
     });
 }
 async function start() {

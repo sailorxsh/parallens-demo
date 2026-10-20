@@ -21,7 +21,7 @@ async parent=>{
     check(JSON.stringify(await p.evaluate(id=>metric(id),id))===JSON.stringify(before),'Overview and diagnosis disagree '+id);
     await p.locator('.topic-return').click();await ready();
     check(await p.evaluate(id=>document.activeElement?.id===id,`topic-open-${code}-${id}`),'Explicit return loses metric focus '+id);
-    const rect=await card.boundingBox(),nav=await p.locator('.topic-navigation').boundingBox();check(rect.y+rect.height>nav.y+nav.height&&rect.y<1000,'Explicit return hides the target '+id);
+    const rect=await card.boundingBox(),nav=await p.locator('.topic-navigation').boundingBox();check(rect.y+rect.height>nav.y+nav.height&&rect.y<1000,'Explicit return hides the target '+id+' '+JSON.stringify({rect,nav,state:await p.evaluate(code=>({top:scrollY,focus:document.activeElement?.id,origin:topicOverviewOrigins.get(code),fonts:document.fonts.status}),code)}));
    }
    results.push({code,metrics:ids.length,allDiscovered:true,allDiagnosisValuesMatch:true});
   }
