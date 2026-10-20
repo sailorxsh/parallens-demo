@@ -1065,7 +1065,7 @@ article.trial-sample-item {cursor:auto}
 .topic-context,.topic-no-history {font-size:.72rem;line-height:1.6;color:#65725f;margin:.35rem 0}
 .topic-metric .headline-trend {margin-top:.65rem;padding-top:.55rem}
 .topic-metric .headline-trend-label {font-size:.72rem;color:#556d58}
-.topic-sparkline {height:2.5rem;color:#3d7658;margin:.4rem 0 .2rem}
+.topic-sparkline {position:relative;height:2.5rem;color:#3d7658;margin:.4rem 0 .2rem}
 .topic-sparkline svg {display:block;width:100%;height:100%}
 .topic-diagnose {display:block;align-self:flex-end;margin-top:auto;padding:.55rem 0 0;font-size:.75rem;font-weight:600;color:#315d45;text-underline-offset:.2rem}
 .topic-diagnose:hover {text-decoration:underline}
@@ -1127,3 +1127,6 @@ article.trial-sample-item {cursor:auto}
 .topic-heat-cell {font-weight:600;text-align:center;border:3px solid #fffefa;font-variant-numeric:tabular-nums}
 .topic-heat-legend {display:flex;flex-wrap:wrap;align-items:center;gap:.3rem;font-size:.75rem;margin:.5rem 0 .8rem}
 .topic-heat-legend>span {padding:.3rem .5rem}
+
+/* Keep the selected period round while the SVG trend stretches with its card. */
+.topic-sparkline-marker {position:absolute;width:5px;height:5px;border-radius:50%;background:#ad692c;transform:translate(-50%,-50%);pointer-events:none}
