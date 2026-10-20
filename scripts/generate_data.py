@@ -334,7 +334,7 @@ diagnostics = {
     "C": {
         "period": "最新完整周 W12 · 2026-09-13", "heroIds": [8, 41, 42, 43, 45, 46],
         "finding": "观鸟线空触发率由42.0%升至58.0%。K6 固件2.8分组升至82.0%，其余设备保持42.0%；这解释了总体变化，但尚未证明对价值激活的因果影响。",
-        "crossLink": "A", "crossLabel": "对照新客价值激活",
+        "crossLink": "A", "crossLabel": "对照新客价值激活", "crossMetric": 13,
         "chart": series("观鸟空触发率 · 最近12个完整周", "%", labels, [
             ("整体", [round(w["deviceEventsBird"]["empty"] / w["deviceEventsBird"]["triggers"] * 100, 1) for w in weekly]),
             ("K6 · 固件2.8", [round(w["deviceEventsBird"]["k6Firmware28"]["empty"] / w["deviceEventsBird"]["k6Firmware28"]["triggers"] * 100, 1) for w in weekly]),

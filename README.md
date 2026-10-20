@@ -282,3 +282,5 @@ D18分组原位核对（2026-10-20确认）：在有可信两期互斥贡献时�
 本轮Chrome验证入口：`verify_trial_comparison_layout_flows.js`（三桌面宽度、200%文字、独立源计数、真实筛选/刷新、缺数/小样本/零、键盘和跨页草稿）、`verify_zero_contribution_flows.js`（柱/零点连续点选与计算行）、`verify_trial_rate_decomposition_flows.js`及样本/比较快照保护回归。`verify_trial_readiness_flows.js`已于v232接入当前观察区与route-D载荷，三桌面宽度、未成熟/待齐/未知数量、真实筛选刷新、键盘及风险基线/保存记录保护通过。未新增Safari验收或发布。
 
 D18性能补验（v233，本地）：改前12b124d与当前版本交替各5次，首页/订阅概览/D18首次可读和筛选无超门槛退化；分组证据到达119→120ms。当前gzip冷启动最大663.5KiB，限速与4倍CPU降速首次可读中位4.44秒；仅为受控本地测量。按页加载、失败重试、迟到响应及历史记录保护回归通过。证据见`output/playwright/v233-performance/progress.md`，未发布。
+
+跨专题指标落点（v234）：C页“对照新客价值激活”现直达A13，而非A概览；其他专题级链接保留。`verify_related_metric_navigation_flows.js`验证键盘、三桌面宽度/200%文字、型号产品线保留、返回及原问题草稿/基线保护。

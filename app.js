@@ -6669,7 +6669,7 @@ function diagnosticFinding(page,id,observation,{current=true}={}) {
   if(observation) {
     const info=dataset.diagnostics[page];
     const related=element('a','insight-link related-link',`${info.crossLabel} ↗`);
-    related.href=routeHref(info.crossLink);finding.append(related);
+    related.href=routeHref(info.crossLink,info.crossMetric);finding.append(related);
     if(selectedFilters().some(([key])=>!relevantFilters(info.crossLink).includes(key)))
       finding.append(element('p','finding-meta','跨页时仅保留目标页支持的筛选条件。'));
   }
