@@ -5009,7 +5009,7 @@ function drawDetailChart(box,spec) {
       tooltip:{...chartTooltipStyle(),trigger:'axis',formatter:params=>{
         const index=params[0]?.dataIndex;
         if(index===undefined)return '';
-        const lines=[periodLabel(spec.labels[index]),...params.map(item=>{
+        const lines=[periodLabel(spec.labels[index]),...params.filter(item=>item.seriesIndex<spec.series.length).map(item=>{
           const line=spec.series[item.seriesIndex],basis=Number.isFinite(item.value)?chartBasis(chartPointDetail(spec,line,index)):'';
           return `${item.marker}${item.seriesName}：${evidenceValue(item.value)}${basis?`<br>${basis}`:''}`;
         })];
@@ -5040,7 +5040,11 @@ function drawDetailChart(box,spec) {
         label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
           fontSize:chartText(12),fontWeight:600,color:'#365a43'},
         labelLayout:{hideOverlap:true,moveOverlap:'shiftY'},
-      })),
+      })).concat(!isTimeline&&spec.series.length===1&&spec.unit==='个百分点'&&spec.series[0].values.some(value=>value===0)?[{
+        // A true zero has no bar hit area. Keep its value and row index intact.
+        name:spec.series[0].name,type:'scatter',symbol:'circle',symbolSize:10,clip:false,
+        itemStyle:{color:'#718078'},data:spec.series[0].values.map(value=>value===0?0:null),
+      }]:[]),
     };
   },{responsive:!isTimeline,legendPadding:isTimeline?null:()=>categoryLayout().padding});
   interactiveChartLegend(box,instance,spec.series.map((line,index)=>({...line,color:line.color??colors[index%colors.length],
