@@ -4602,7 +4602,7 @@ function stackedChartPoint(instance,spec,params) {
   return seriesIndex<0?null:{...params,dataIndex:index,seriesIndex,value:spec.series[seriesIndex].values[index]};
 }
 function bindChartTableSelection(instance,table,describe,{indexFor=params=>params.dataIndex,columnFor,resolvePoint=params=>params,
-  disclosure=table?.closest('details')}={}) {
+  disclosure=table?.closest('details'),bindClick=true}={}) {
   if(!instance||!table)return;
   const details=disclosure,anchor=details??table.closest('.data-table-scroll')??table;
   const previous=anchor.previousElementSibling;
@@ -4626,7 +4626,7 @@ function bindChartTableSelection(instance,table,describe,{indexFor=params=>param
     feedback.textContent=`图中临时选中：${describe(params)}。${details?'已展开':'已标亮'}对应数据行；全局筛选保持不变。`;
     requestAnimationFrame(()=>{if(row.isConnected&&row.classList.contains('chart-selected'))row.scrollIntoView({block:'nearest'});});
   };
-  instance.on('click',select);return select;
+  if(bindClick)instance.on('click',select);return select;
 }
 function drawEvidenceChart(box,spec,legendSelection) {
   evidenceChartSpecs.set(box,spec);
@@ -4637,6 +4637,7 @@ function drawEvidenceChart(box,spec,legendSelection) {
   try {
     const existing=window.echarts?.getInstanceByDom(box);
     if(existing) {
+      if(spec.groupInspection)spec.groupInspection.hideTooltip();
       legendSelection={...existing.getOption().legend?.[0]?.selected};
       refreshChartTypography(existing);
       existing.resize();
@@ -4656,7 +4657,12 @@ function drawEvidenceChart(box,spec,legendSelection) {
         spec.kind==='stacked100'?spec.series[params.seriesIndex].name:null;
       spec.onPoint?.(index);
       return `${spec.labels[index]}${dimension?` · ${dimension}`:''}`;
-    },{indexFor,resolvePoint:params=>spec.kind==='stacked100'?stackedChartPoint(instance,spec,params):params});
+    },{indexFor,bindClick:!spec.groupInspection,resolvePoint:params=>spec.kind==='stacked100'?stackedChartPoint(instance,spec,params):params});
+    if(spec.groupInspection&&select) {
+      spec.groupInspection.openCalculation=index=>select({dataIndex:index,seriesIndex:0});
+      instance.on('click',params=>spec.groupInspection.select(params.dataIndex));
+      spec.groupInspection.setChart(instance);
+    }
     if(spec.nearestLinePoint&&select)instance.getZr().on('click',event=>{
       const pixel=[event.offsetX,event.offsetY];if(!instance.containPixel({gridIndex:0},pixel))return;
       const coordinate=instance.convertFromPixel({seriesIndex:0},pixel),index=Math.round(coordinate[0]);
@@ -5206,6 +5212,54 @@ function bindingFailureEvidence() {
       rows:[...ordered.map(([cause,n])=>[cause,n,failed,share(n),sourceData.diagnostics.A.tables.find(t=>t.title==='首次绑定失败原因 · W12')?.rows.find(r=>r[0]===cause)?.[3]??'核对绑定日志']),['合计',failed,failed,share(failed),'总尝试−成功尝试']],note:scope+note}};
 }
 
+function attachTrialGroupInspection(pair,parts,spec) {
+  pair.classList.add('trial-group-evidence');
+  const plot=pair.querySelector('.evidence-plot'),grid=element('div','trial-group-grid');
+  const controls=element('div','trial-group-controls');controls.setAttribute('role','group');controls.setAttribute('aria-label','选择核对试用分组');
+  const detail=element('section','trial-group-detail');detail.id='trial-selected-group';detail.setAttribute('aria-label','所选分组证据');
+  const heading=element('h3'),period=element('p','table-note','前9个成熟周 W1–9 → 近3个成熟周 W10–12；以下比率各用自己的分母。');
+  const values=element('div','trial-group-values');
+  const calculate=element('button','trial-group-calculation','查看该组贡献计算');calculate.type='button';
+  const note=element('p','table-note','查看分组不改变总体解读、筛选或问题单。两段周期长短不同，人数合计不能直接比较；同步变化不证明因果。');
+  detail.append(heading,period,values,calculate,note);
+  plot.before(grid);grid.append(plot,detail);grid.before(controls);
+  const buttons=[],inspection={index:0,chart:null,openCalculation:null};
+  inspection.hideTooltip=()=>{
+    if(!inspection.chart)return;
+    const tooltip=inspection.chart.getOption().tooltip?.[0];
+    inspection.chart.setOption({tooltip:{enterable:false,hideDelay:0}});
+    inspection.chart.dispatchAction({type:'hideTip'});
+    inspection.chart.setOption({tooltip:{enterable:tooltip?.enterable??true,hideDelay:tooltip?.hideDelay??100}});
+  };
+  const highlight=()=>{if(!inspection.chart)return;inspection.hideTooltip();inspection.chart.dispatchAction({type:'downplay'});
+    inspection.chart.dispatchAction({type:'highlight',seriesIndex:parts.changes[inspection.index]===0?1:0,dataIndex:inspection.index});};
+  inspection.select=(index,announce=true)=>{
+    if(!Number.isInteger(index)||!parts.groups[index])return;
+    inspection.index=index;const group=parts.groups[index];
+    buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
+    heading.textContent=`所选分组 · ${group.name}`;values.replaceChildren();
+    const row=(title,rates,counts)=>{const node=element('div','trial-group-value');node.append(element('h4','',title),
+      element('p','trial-group-rate',rates.join(' → ')),element('p','trial-group-counts',counts.join(' → ')));values.append(node);};
+    row('转正率',group.summaries.map(part=>percent(part.numerator/part.denominator)),
+      group.summaries.map(part=>`${number(part.numerator)} 转正 / ${number(part.denominator)} 成熟试用`));
+    row('支付失败率',group.summaries.map(part=>part.attempts>=30?percent(part.failed/part.attempts):part.attempts?'样本不足30次':'无支付尝试'),
+      group.summaries.map(part=>`${number(part.failed)} 失败 / ${number(part.attempts)} 支付尝试`));
+    row('占总体成熟试用',group.summaries.map((part,i)=>percent(part.denominator/parts.overall[i].denominator)),
+      group.summaries.map((part,i)=>`${number(part.denominator)} 该组 / ${number(parts.overall[i].denominator)} 总体`));
+    pair.querySelectorAll('.chart-selected,.chart-selected-cell').forEach(node=>node.classList.remove('chart-selected','chart-selected-cell'));
+    const feedback=pair.querySelector('.chart-selection');if(feedback)feedback.textContent='';
+    highlight();
+    if(announce)document.querySelector('#announcement').textContent=`已查看${group.name}的同周期证据；总体解读、筛选和问题单保持不变。`;
+  };
+  parts.groups.forEach((group,index)=>{const button=element('button','trial-group-choice',group.name);button.type='button';button.setAttribute('aria-controls',detail.id);
+    button.addEventListener('click',()=>inspection.select(index));buttons.push(button);controls.append(button);});
+  calculate.addEventListener('click',()=>inspection.openCalculation?.(inspection.index));
+  inspection.setChart=instance=>{inspection.chart=instance;highlight();};
+  spec.groupInspection=inspection;
+  const strongest=parts.changes.reduce((best,value,index)=>Math.abs(value)>Math.abs(parts.changes[best])?index:best,0);
+  inspection.select(strongest,false);
+}
+
 function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
@@ -5250,7 +5304,7 @@ function metricEvidence(id,page) {
     const scaleNote=chartScaleNote(spec);
     if(scaleNote)plot.append(element('p','chart-scale-note',scaleNote));
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
-    pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
+    pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);return pair;
   };
   if(id===17){trialOpeningEvidence(panel,appendEvidencePair);return {node:panel,specs};}
   if(id===16){activationDeviceEvidence(panel,appendEvidencePair);return {node:panel,specs};}
@@ -5399,16 +5453,17 @@ function metricEvidence(id,page) {
         const low=Math.min(0,...plottedChanges),high=Math.max(0,...plottedChanges),span=high-low||1;
         const interval=chartNiceStep(span/4),rounded=value=>Number(value.toPrecision(12));
         const signed=value=>`${Math.abs(value)<.005?'':value>0?'+':'−'}${Math.abs(value).toFixed(2)}`;
-        const changeSpec={title:'转正率变化 · 互斥分组贡献',comparisonGroup:'trial-periods',unit:'个百分点',labels:groups.map(group=>group.name),
+        const changeSpec={categoryLabels:groups.map(group=>group.name.replace(' Android ',' Android\n')),title:'转正率变化 · 互斥分组贡献',comparisonGroup:'trial-periods',unit:'个百分点',labels:groups.map(group=>group.name),
           minY:low<0?rounded(Math.floor((low-span*.1)/interval)*interval):0,
           maxY:high>0?rounded(Math.ceil((high+span*.1)/interval)*interval):high===low?1:0,intervalY:interval,
           labelRotation:0,series:[{name:'对总体变化的贡献',values:plottedChanges,color:'#bc6a20'}],
           note:`前9周→近3周：组内表现 ${signed(effects.reduce((sum,item)=>sum+item.within,0))}、人群构成 ${signed(effects.reduce((sum,item)=>sum+item.composition,0))}，合计 ${signed((overall[1].value-overall[0].value)*100)} 个百分点。算术拆分不证明原因；纵轴含0，pp＝百分点。`};
-        appendEvidencePair(changeSpec,{title:'分组贡献 · 可验算依据',
+        const contributionPair=appendEvidencePair(changeSpec,{title:'分组贡献 · 可验算依据',
           columns:['互斥分组','前9周转正 / 总体成熟','近3周转正 / 总体成熟','变化贡献（百分点）'],
           rows:groups.map((group,index)=>[group.name,`${number(group.summaries[0].numerator)} / ${number(overall[0].denominator)}`,
             `${number(group.summaries[1].numerator)} / ${number(overall[1].denominator)}`,signed(changes[index])]),
           note:'贡献＝近期该组转正人数÷近期总体成熟人数−前期该组转正人数÷前期总体成熟人数。分母为同一期总体成熟人群，区别于组内转正率；这是数学分解，不证明支付失败导致转正下降。'});
+        attachTrialGroupInspection(contributionPair,contribution,changeSpec);
         const decomposition=element('details','workspace-context trial-rate-decomposition');
         decomposition.dataset.evidenceKind='groups';
         decomposition.append(element('summary','','核对组内表现与人群构成拆分'),dataTable({
@@ -6762,11 +6817,15 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       chartPanel.append(node);
       const scale=spec&&chartScaleNote(spec);if(scale)chartPanel.append(element('p','chart-scale-note',scale));
       if(spec)chartPanel.append(chartTable(spec));
-      panels.get(kind).append(chartPanel);
+      if(selectedMetric===18&&spec?.kind==='periodComparison'&&left.querySelector('.trial-group-evidence')) {
+        const overall=element('details','workspace-context trial-overall-comparison');
+        overall.append(element('summary','','查看总体成熟批次对照'),chartPanel);panels.get(kind).append(overall);
+      } else panels.get(kind).append(chartPanel);
       continue;
     }
     const preceding=panels.get(kind).lastElementChild;
     if(node.matches('.table-note')&&preceding?.matches('.workspace-chart-panel'))preceding.append(node);
+    else if(node.matches('.table-note')&&preceding?.matches('.trial-overall-comparison'))preceding.querySelector('.workspace-chart-panel').append(node);
     else panels.get(kind).append(node);
   }
   // Keep the full calculation adjacent but reveal it on demand at desktop widths.
@@ -7057,12 +7116,6 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       const item=element('li','');item.append(button);list.append(item);
     });
     navigation.append(list);groupPanel.prepend(navigation);
-  }
-  // Pair the two views of the same mature cohorts; each keeps its own scale and calculation.
-  const trialComparisons=[...groupPanel.children].filter(node=>node.dataset.comparisonGroup==='trial-periods');
-  if(trialComparisons.length===2) {
-    const comparison=element('div','trial-period-comparisons');
-    trialComparisons[0].before(comparison);comparison.append(...trialComparisons);
   }
   workspace.addEventListener('toggle',()=>requestAnimationFrame(drawVisible),true);
   layout.append(left,right);workspace.append(layout);body.append(workspace);

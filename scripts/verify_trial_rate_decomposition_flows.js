@@ -36,7 +36,7 @@ async(parent)=>{
         const source=expected(filters),details=p.locator('.trial-rate-decomposition');
         check(Boolean(source),'Fixture requires a valid decomposition');
         check(await details.count()===1&&!await details.evaluate(n=>n.open),'Detailed arithmetic should be available but collapsed');
-        const pair=p.locator('.trial-period-comparisons .evidence-pair');
+        const pair=p.locator('.trial-group-evidence');
         const summary=await pair.locator('.table-note').first().innerText();
         check(summary.includes(`组内表现 ${signed(source.summaries.reduce((sum,item)=>sum+item.within,0))}`)&&
           summary.includes(`人群构成 ${signed(source.summaries.reduce((sum,item)=>sum+item.mix,0))}`),'Default summary contradicts raw records');
