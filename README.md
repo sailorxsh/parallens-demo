@@ -279,4 +279,4 @@ D页公共“转化与续费环节”表的续订行也使用所选完整到期�
 
 D18分组原位核对（2026-10-20确认）：在有可信两期互斥贡献时，点击柱形／零点或分组按钮，在图旁显示所选组转正率、支付失败率、各自计数分母和总体成熟人群占比。默认选择绝对贡献最大的组，范围变化后重新计算；仅为局部查看，不写URL或问题记录。支付尝试不足30次不报可靠失败率，无尝试与真实零分开。图形选组不再自动滚到完整表；“查看该组贡献计算”展开并定位数据行，总体批次图、拆分及原表继续可查。重新定位或切组时收起旧悬浮提示，避免它遮住下一次点击，正常悬停阅读仍保留。右侧总体观察、已有问题单和草稿不随选组切换。
 
-本轮Chrome验证入口：`verify_trial_comparison_layout_flows.js`（三桌面宽度、200%文字、独立源计数、真实筛选/刷新、缺数/小样本/零、键盘和跨页草稿）、`verify_zero_contribution_flows.js`（柱/零点连续点选与计算行）、`verify_trial_rate_decomposition_flows.js`及样本/比较快照保护回归。旧`verify_trial_readiness_flows.js`仍指向已移除的顶部卡片，其当前入口失败未作为本轮通过证据。未新增Safari验收或发布。
+本轮Chrome验证入口：`verify_trial_comparison_layout_flows.js`（三桌面宽度、200%文字、独立源计数、真实筛选/刷新、缺数/小样本/零、键盘和跨页草稿）、`verify_zero_contribution_flows.js`（柱/零点连续点选与计算行）、`verify_trial_rate_decomposition_flows.js`及样本/比较快照保护回归。`verify_trial_readiness_flows.js`已于v232接入当前观察区与route-D载荷，三桌面宽度、未成熟/待齐/未知数量、真实筛选刷新、键盘及风险基线/保存记录保护通过。未新增Safari验收或发布。

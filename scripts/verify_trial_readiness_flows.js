@@ -7,11 +7,12 @@ async(page)=>{
   p.on('pageerror',error=>errors.push(error.message));
   const panel=()=>p.locator('.trial-readiness');
   const batch=end=>panel().locator(`[data-batch-end="${end}"]`);
-  const open=async hash=>{await p.goto(`${base}#/${hash}`);await panel().waitFor({state:'attached'});};
+  const ready=()=>p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
+  const open=async hash=>{await p.goto(`${base}#/${hash}`);await ready();await panel().waitFor({state:'attached'});};
   try {
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
       await p.setViewportSize({width,height});await open('D?metric=18');
-      check((await p.locator('.detail-kpi[data-metric-id="18"]').innerText()).includes('43.4%'),'Mature conversion changed');
+      check((await p.locator('.workspace-observation').innerText()).includes('43.4%'),'Mature conversion changed');
       check((await batch('2026-09-27').innerText()).includes('观察未结束'),'Future batch shown as zero');
       check((await batch('2026-09-20').innerText()).includes('已齐 248 / 应齐 300 人'),'Pending result counts differ');
       check((await batch('2026-09-20').innerText()).includes('仍缺 52 人'),'Missing results hidden');
@@ -43,22 +44,27 @@ async(page)=>{
     check(await panel().locator('.trial-readiness-card').count()===0,'Missing example shown as zero batch');
     check((await panel().innerText()).includes('不能据此判断没有待齐批次'),'Missing coverage hidden');
     await open('D?week=1&metric=18');
-    check((await p.locator('.detail-kpi[data-metric-id="18"]').innerText()).includes('45.0%'),'W1 mature conversion changed');
+    check((await p.locator('.workspace-observation').innerText()).includes('45.0%'),'W1 mature conversion changed');
     check(await panel().locator('.trial-readiness-card').count()===2,'Week filter incorrectly drops readiness dates');
     await open('D?metric=52&issue=52');
-    check((await p.locator('.action-record').innerText()).includes('168'),'Readiness module changes risk issue baseline');
-    await p.route('**/data/trial-facts.json',async route=>{
+    const riskBefore=await p.locator('.action-record .risk-baseline-details').textContent();
+    check(riskBefore.includes('168'),'Risk snapshot is missing its original count');
+    const savedBefore=await p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'));
+    let alteredResponses=0;
+    await p.route('**/data/route-D.json*',async route=>{
       const response=await route.fetch(),json=await response.json();
-      json.readiness.records[0].received_outcomes=null;
+      json.sources.trialFacts.readiness.records[0].received_outcomes=null;alteredResponses++;
       await route.fulfill({response,json});
     });
-    await p.reload();await panel().waitFor({state:'attached'});
+    await p.reload();await ready();await panel().waitFor({state:'attached'});check(alteredResponses===1,'Unknown-count fixture did not reach the active route payload');
     const other=p.locator('#D-panel-change > .workspace-context').filter({hasText:'其他指标核对 · #18 试用批次数据可用性'});
     check(await other.count()===1&&!await other.evaluate(n=>n.open),'Another metric promotes trial readiness as its own evidence');
     await other.locator('> summary').click();await panel().waitFor();
     check((await batch('2026-09-20').innerText()).includes('已齐数量待核验'),'Unknown count converted to zero');
     check((await batch('2026-09-20').innerText()).includes('结果待齐'),'Completed observation mistaken for unfinished window');
+    check(await p.locator('.action-record .risk-baseline-details').textContent()===riskBefore,'Trial readiness changes the risk snapshot evidence');
+    check(await p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'))===savedBefore,'Readiness checks mutate saved issue records');
     check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
-    return {result:'PASS',sizes,scenarios:['observation unfinished','results incomplete','country interaction and reload','missing intersection','unknown received count','independent batch dates','mature denominator and issue baseline preserved','keyboard details']};
+    return {status:'PASS',sizes,scenarios:['observation unfinished','results incomplete','country interaction and reload','missing intersection','unknown received count','independent batch dates','mature denominator and issue baseline preserved','keyboard details']};
   } finally {await context.close();}
 }
