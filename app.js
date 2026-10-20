@@ -3369,7 +3369,7 @@ function filteredBreakdown(page) {
   const unit=rows[0].value.kind==='rate'?'%':rows[0].value.kind==='usd'?'美元':'人';
   const values=rows.map(row=>row.value.kind==='rate'?row.value.value*100:row.value.value);
   const comparisonScope=`保留其余筛选条件，仅切换${filterLabels[dimension]}；当前选择：${optionLabel(dimension,filterState[dimension])}。${omitted.length?` 未绘制：${omitted.map(row=>`${row.label}（${row.value.reason}）`).join('；')}。`:''}`;
-  const spec={title:`${filterLabels[dimension]} · ${catalogItem(id).name}分组对照`,unit,
+  const spec={metricId:id,title:`${filterLabels[dimension]} · ${catalogItem(id).name}分组对照`,unit,
     labels:rows.map(row=>row.label),details:unit==='%'?rows.map(row=>row.value):null,series:[{name:catalogItem(id).name,values}],
     note:`${comparisonScope} 当前模拟分组用于定位差异，不能证明原因。`};
   const table={title:`${filterLabels[dimension]} · 组规模与指标`,
@@ -3439,7 +3439,7 @@ function technicalBreakdown() {
       denominator:row.value.value[key].denominator,numeratorUnit:'次',denominatorUnit:'次'}))}));
   const highest=Math.max(...series.flatMap(line=>line.values));
   const maxY=Math.min(100,Math.max(5,Math.ceil(highest/5)*5));
-  const spec={title:`${filterLabels[dimension]} · 技术链路失败请求率`,unit:'%',maxY,labels:rows.map(row=>row.label),series,
+  const spec={metricId:46,title:`${filterLabels[dimension]} · 技术链路失败请求率`,unit:'%',maxY,labels:rows.map(row=>row.label),series,
     note:`每条链路失败次数÷请求次数；纵轴从0至${maxY}%，按局部刻度观察，跨页不直接比较柱高。型号×固件使用同一组合成请求事实，仍需核对真实错误码与影响设备数。`};
   const table={title:`${filterLabels[dimension]} · 请求样本与失败次数`,
     columns:['分组','尝试次数',...keys.map(key=>`${labels[key]}失败`)],
@@ -3454,7 +3454,7 @@ function modelSubscriptionRanking() {
   if(value.kind!=='group')return null;
   const rows=Object.entries(value.value).sort((a,b)=>b[1].subscriptionRate-a[1].subscriptionRate);
   if(rows.length<2)return null;
-  const spec={title:'设备型号订阅率排序 · 合成主账号样本',unit:'%',labels:rows.map(([name])=>name),
+  const spec={metricId:39,title:'设备型号订阅率排序 · 合成主账号样本',unit:'%',labels:rows.map(([name])=>name),
     series:[{name:'订阅率',values:rows.map(([,part])=>part.subscriptionRate*100),details:rows.map(([,part])=>({
       numerator:part.subscribedOwners,denominator:part.owners,numeratorUnit:'人',denominatorUnit:'人'}))}],
     note:'按订阅率排序；分母为各型号主账号。型号经营表现为相关性，不能直接解释订阅差异的原因。'};
@@ -6856,7 +6856,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
       if(node.matches('.detail-chart-panel')) {
         const spec=legacy.specs.find(([box])=>node.contains(box))?.[1];
-        if(spec&&(selectedMetric===50||selectedMetric===52&&spec.metricId!==52||page==='D'&&spec.metricId&&spec.metricId!==selectedMetric))contextual(node,'groups',`其他指标对照 · ${spec.title}`);
+        if(spec&&(selectedMetric===50||selectedMetric===52&&spec.metricId!==52||spec.metricId&&spec.metricId!==selectedMetric))contextual(node,'groups',`其他指标对照 · ${spec.title}`);
         else if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
         else panels.get('groups').append(node);
         return;
