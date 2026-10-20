@@ -5651,7 +5651,7 @@ function topicMetricStructure(id) {
  let columns,rows,note='';
  if(id===5){const container=element('div','topic-status-products');for(const [line,parts] of Object.entries(v)){const total=Object.values(parts).reduce((a,b)=>a+b,0),table=dataTable({title:`${groupLabels[line]} · ${number(total)}主账号`,columns:['状态','人数','占本线'],rows:Object.entries(parts).map(([key,n])=>[statusHistoryFields[key]??groupLabels[key],number(n)+'人',total>=30?percent(n/total):'样本不足']),note:'本产品线内状态互斥合计100%；跨线不能相加为独立用户。'},'topic-mini-table');container.append(table);}return container;}
 
- if(id===30){columns=['互斥活跃来源','主账号','占复合活跃'];rows=activityCombinations.map(item=>[item.label.replace('\n',''),number(v.exclusiveCells[item.key])+'人',v.composite>=30?percent(v.exclusiveCells[item.key]/v.composite):'样本不足']);note=`合计 ${number(v.composite)} 人；App ${number(v.app)}、内容 ${number(v.content)}、推送 ${number(v.pushClicked)} 为可重叠来源。`;}
+ if(id===30){columns=['互斥活跃来源','主账号','占复合活跃'];rows=activityCombinations.map(item=>[item.label.replace('\n',''),number(v.exclusiveCells[item.key])+'人',v.composite>=30?percent(v.exclusiveCells[item.key]/v.composite):'样本不足']);note=`七类互斥组合合计 ${number(v.composite)} 人；App ${number(v.app)}、内容 ${number(v.content)}、推送 ${number(v.pushClicked)} 为可重叠来源，不能相加。`;}
  if(id===36){columns=['增值包','有效权益主账号','渗透率'];rows=[['任一增值包',number(v.anyPack.numerator)+'人',topicRateText(v.anyPack)],...Object.entries(v.byPack).map(([name,part])=>[name,number(part.numerator)+'人',topicRateText(part)])];note='各包可重叠，人数不可相加；分母为同日付费权益主账号。';}
  if(id===38){const source=structureMetricViews();if(source.reason)return null;const container=element('div','topic-structure-dimensions');for(const view of source.views)container.append(dataTable({title:view.label,columns:['类别','数量','占比'],rows:view.rows.map(([label,n])=>[label,number(n)+view.unit,percent(n/view.denominator)]),note:`同口径分母 ${number(view.denominator)}${view.unit}；本维度独立归一化。`},'topic-mini-table'));return container;}
  if(id===39){columns=['型号','主账号','30天活跃率','订阅率'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners)+'人',percent(r.activeRate),percent(r.subscriptionRate)]);note='同型号主账号为分母；各型号可能共享主账号，不能相加。';}
@@ -5760,7 +5760,9 @@ function renderTopicOverview(page) {
     if(id===29)card.append(element('p','topic-context','当前未使用池与历史回流入组不同；历史入组日期未提供，不用于跨期归因。'));
     if(id===12){const part=registrationProjection(12);if(!part.reason)card.append(element('p','topic-context',`D7采用W${part.current.week}，D30采用W${part.d30.week}；分别核对观察窗。`));}
     if(id===21)card.append(element('p','topic-net-change',`净增 ${topicNetChange(m)}人 · 期末减期初`));
-    if(s.context)card.append(element('p','topic-context',s.context));
+    // These available structures already expose the same scope or interpretation.
+    const contextCovered=structure?.querySelector('table')&&[3,30,34,51].includes(id);
+    if(s.context&&!contextCovered)card.append(element('p','topic-context',s.context));
     const history=metricHistory(id),trend=headlineTrend(id);
     if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');const range=topicTrendRange(history);if(range)trend.append(range);card.append(trend);}
     else card.append(element('p','topic-no-history',m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
