@@ -5600,7 +5600,26 @@ function topicMetricRows(id) {
  });
 }
 function topicMetricStructure(id) {
- const m=metric(id);if(m.kind==='count'&&[15,52,53].includes(id)){
+ const current=metric(id);
+ if(current.kind!=='na'&&[3,34,48,49].includes(id)) {
+  const unavailable=text=>element('p','topic-context',text);
+  if(id===34){const part=paidRightsComposition();if(part.reason)return unavailable('权益构成待补：'+part.reason);
+   return dataTable({title:'同日付费权益 · 互斥构成',columns:['权益','主账号','占付费权益'],rows:['仅订阅','仅增值Pack','订阅和Pack都有'].map((label,i)=>[label,number(part.counts[i])+'人',percent(part.counts[i]/part.parent.total)]),note:'三类互斥，合计回到当前付费主账号；各Pack持有明细见本页增值包渗透。'},'topic-mini-table');}
+  if(selectedFilters().length)return unavailable(id===3?'MRR分项待补当前筛选范围的来源；不沿用总体组成。':id===48?'平均设备数和持有分布待补当前范围明细；不沿用总体结构。':'共享用户数及人数分布待补当前范围关系明细；设备共享率仍按自身范围显示。');
+  if(id===3){const {baseMRR,packMRR,totalMRR}=sourceData.snapshot;
+   if(![baseMRR,packMRR,totalMRR].every(n=>Number.isFinite(n)&&n>=0)||Math.abs(baseMRR+packMRR-totalMRR)>.001||Math.abs(totalMRR-current.value)>.001)return unavailable('MRR分项与总额待核验。');
+   return dataTable({title:'当前MRR组成',columns:['收入组成','月化收入'],rows:[['基础订阅','$'+number(baseMRR)],['增值Pack','$'+number(packMRR)]],note:'按同一快照加总；月化收入不等于当月实际收款。'},'topic-mini-table');}
+  if(id===48){const rows=sourceData.diagnostics.F.tables.find(t=>t.title==='每主账号绑定设备数分层')?.rows;
+   const valid=rows?.length===4&&rows.every(r=>validHeadcount(r[1])&&validHeadcount(r[2]));
+   if(!valid)return unavailable('持有结构缺少可靠计数，平均设备数待核验。');
+   const owners=rows.reduce((n,r)=>n+r[1],0),devices=rows.reduce((n,r)=>n+r[2],0),multi=rows.slice(1).reduce((n,r)=>n+r[1],0);
+   if(owners!==current.denominator||multi!==current.numerator||devices!==sourceData.snapshot.boundDevicesCurrent)return unavailable('设备持有结构与主账号／设备总数不闭合，待核验。');
+   return dataTable({title:'主账号持有结构',columns:['设备数','主账号','占绑定主账号'],rows:rows.map(r=>[r[0],number(r[1])+'人',owners>=30?percent(r[1]/owners):'样本不足']),note:`平均绑定 ${owners>=30?(devices/owners).toFixed(2):'待核验'}台/主账号 · ${number(devices)}台 / ${number(owners)}人；4台及以上是聚合组，不表示每人恰好4台。`},'topic-mini-table');}
+  const row=sourceData.diagnostics.F.tables.find(t=>t.title==='主账号、共享与回绑')?.rows.find(r=>r[0]==='通过共享获得访问权限的用户');
+  if(!row||!validHeadcount(row[1]))return unavailable('去重共享用户数待核验；每台设备共享人数分布待补。');
+  return dataTable({title:'共享覆盖 · 总体快照',columns:['观察项','数量'],rows:[['通过共享获得访问权限的去重用户',number(row[1])+'人']],note:'共享用户与设备不是同一统计对象，不相加；每台设备共享人数分布待补关系明细。'},'topic-mini-table');
+ }
+ const m=current;if(m.kind==='count'&&[15,52,53].includes(id)){
   let title,rows,note;
   if(id===15){const p=bindingDeviceRows();if(!p.rows)return null;title='当前设备 · 互斥等待分层';rows=['超过3天、未满7天','7–13天','14天及以上'].map(label=>[label,number(p.rows.filter(r=>bindingWaitBand(r,p.at)===label).length)+'台']);note='同一设备只归一层，合计回到当前清单；等待分层不代表预测风险。';}
   if(id===52){const p=riskProjection();if(p.reason)return null;const w=p.current;title='高危主账号 · 互斥命中构成';rows=[['仅意图层',number(w.intentOnly)+'人'],['仅行为叠加层',number(w.behaviorOnly)+'人'],['两者同时命中',number(w.both)+'人']];note='三类合计回到高危去重人数；单个风险信号可能重叠，详情中核对。';}
@@ -7201,7 +7220,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261020-188`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261020-189`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}
