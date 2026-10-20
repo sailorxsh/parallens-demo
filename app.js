@@ -3492,10 +3492,11 @@ function modelContextTable() {
       note:'未展示旧汇总比例或反推人数；补齐同范围来源后再核对型号表现。'};
 }
 // Display precision must not turn a measurable movement into a claim of equality.
-function trendMovement(delta,unit) {
+function trendMovement(delta,unit,digits=1) {
   if(!Number.isFinite(delta))return '暂无可比值';
   if(Math.abs(delta)<1e-10)return '持平';
-  return Math.abs(delta)<.05?`${delta>0?'上升':'下降'}不足 0.1${unit}`:`${delta>0?'+':''}${delta.toFixed(1)}${unit}`;
+  const step=10**-digits;
+  return Math.abs(delta)<step/2?`${delta>0?'上升':'下降'}不足 ${step.toFixed(digits)}${unit}`:`${delta>0?'+':''}${delta.toFixed(digits)}${unit}`;
 }
 function headlineTrend(id) {
   const history=metricHistory(id);
@@ -3557,7 +3558,7 @@ function journeyStatus(id) {
     if(!comparison)return {status:'缺少可比批次',severity:'neutral'};
     const before=comparison.beforeLabel.replace('合并率',''),after=comparison.afterLabel.replace('合并率','');
     const direction=Math.abs(comparison.delta)<.05?0:Math.sign(comparison.delta);
-    return {status:direction?`${after}${direction<0?'低于':'高于'}${before}`:`${after}与${before}持平`,
+    return {status:direction?`${after}${direction<0?'低于':'高于'}${before}`:`${after}较${before}${trendMovement(comparison.delta,' 个百分点')}`,
       severity:direction<0?'warn':direction>0?'ok':'neutral'};
   }
   if(id===9) {
@@ -3823,7 +3824,7 @@ function homeStartingPoint(comparisons) {
     '当前可比线索未见明显下降；展示事实，不生成异常优先级。':'当前范围缺少可比样本，不判定异常或优先级。'};
 }
 function homeComparisonChange(comparison) {
-  return Math.abs(comparison.delta)<0.05?'基本持平':`${comparison.delta>0?'+':'−'}${Math.abs(comparison.delta).toFixed(1)} 个百分点`;
+  return trendMovement(comparison.delta,' 个百分点');
 }
 function homeResult({id,label,value,page,status}) {
   const article=element('article','home-result');article.dataset.metricId=String(id);
@@ -3964,7 +3965,7 @@ function renderHome() {
       const link=element('a','insight-link','核对分组证据 ↗');link.href=routeHref(selected.page,selected.id,'groups');
       link.setAttribute('aria-label',`进入${pages[selected.page].title}，核对${selected.name}分组证据`);
       const action=element('div','home-signal-actions');action.append(link,basis);
-      const movement=Math.abs(selected.delta)<.05?'基本持平':`较前期${selected.delta>0?'上升':'下降'} ${Math.abs(selected.delta).toFixed(1)} 个百分点`;
+      const movement=`较前期${trendMovement(selected.delta,' 个百分点')}`;
       const adverse=selected.delta<=-.05;
       const advice=homeTrialClue(selected,trialEvidence)||(adverse?
         selected.id===13?'优先核对分组差异及成熟注册批次。':'优先核对转正失败构成及成熟试用批次。':
@@ -6254,8 +6255,7 @@ function filteredFinding(page,requestedId) {
       {delta:now-before,previous:history.labels[index-1],current:history.labels[index],unit:history.unit}:null;
   };
   const changeText=(change,digits=1)=>!change?'':
-    `；${change.current}较${change.previous}${Math.abs(change.delta)<.05?'基本持平':
-      `${change.delta>=0?'上升':'下降'} ${Math.abs(change.delta).toFixed(digits)} ${change.unit==='%'?'个百分点':change.unit}`}`;
+    `；${change.current}较${change.previous}${change.unit==='美元/人'?arppuChangeLabel(change.delta):trendMovement(change.delta,' '+(change.unit==='%'?'个百分点':change.unit),digits)}`;
   if(page==='A'&&isTarget(13)&&m(13).kind==='rate') {
     const t=weeklyRateComparison(13),week=filterState.week??sourceData.weekly.at(-1).week;
     return {id:13,comparison:t,text:`W${week}观鸟7日价值激活率 ${percent(m(13).value)}。${t?'按比较周期的合格注册人数合并计算。该变化不证明设备问题是原因。':'前期无可比样本，暂不生成变化判断。'}`};
@@ -6376,7 +6376,7 @@ function findingComparison(comparison) {
   });
   const delta=comparison.delta,steady=Math.abs(delta)<.05;
   const adverse=comparison.id===42?delta>0:delta<0;
-  const change=element('p','finding-comparison-change',steady?'基本持平':`${delta>0?'上升':'下降'} ${Math.abs(delta).toFixed(1)} 个百分点`);
+  const change=element('p','finding-comparison-change',trendMovement(delta,' 个百分点'));
   change.dataset.direction=steady?'neutral':adverse?'adverse':'improving';wrap.append(values,change);
   return wrap;
 }
@@ -6452,7 +6452,7 @@ function metricInspector(id,page) {
         history.unit==='美元/人'?`$${Math.abs(delta).toFixed(2)}`:
           `${number(Math.abs(Math.round(delta)))} ${history.unit}`;
       const change=history.unit==='美元/人'?arppuChangeLabel(delta):
-        Math.abs(delta)<.05?'基本持平':`${delta>0?'上升':'下降'} ${amount}`;
+        history.unit==='%'?trendMovement(delta,' 个百分点'):Math.abs(delta)<1e-10?'持平':`${delta>0?'上升':'下降'} ${amount}`;
       fact('较上一期',`${change} · ${history.labels[index-1]} → ${history.labels[index]}`);
     }
   }
