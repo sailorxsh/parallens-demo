@@ -61,6 +61,7 @@ const sparklines=[];
 const detailCharts=[];
 const chartPresentations=new WeakMap();
 const evidenceChartSpecs=new WeakMap();
+const chartPeriodSummaries=new WeakMap();
 function refreshEvidenceChart(instance) {
   const box=instance.getDom(),spec=evidenceChartSpecs.get(box);
   if(!spec)return false;
@@ -4960,13 +4961,24 @@ function drawDetailChart(box,spec) {
   const weeklyAxis=isTimeline&&spec.labels.some(label=>/^W\d+$/.test(label));
   const nameInEndLabel=spec.series.length>1&&box.clientWidth>=480;
   const evidenceValue=value=>spec.metricId===51&&spec.series.length===1&&spec.unit==='%'&&Number.isFinite(value)?`${value.toFixed(2)}%`:chartValue(value,spec.unit);
+  const selectedIndex=isTimeline&&spec.selectedPeriod?spec.labels.indexOf(spec.selectedPeriod):-1;
+  chartPeriodSummaries.get(box)?.remove();
+  if(selectedIndex>=0&&selectedIndex<spec.labels.length-1) {
+    const summary=element('div','chart-period-summary');
+    summary.append(element('strong','',`所选 ${periodLabel(spec.selectedPeriod)}`));
+    for(const line of spec.series)summary.append(element('span','',`${line.name}：${Number.isFinite(line.values[selectedIndex])?evidenceValue(line.values[selectedIndex]):'暂无可用值'}`));
+    summary.append(element('small','','完整趋势保留；线尾标签对应各线末个有效值。'));
+    const anchor=box.parentElement?.classList.contains('chart-legend-frame')?box.parentElement:box;
+    anchor.before(summary);chartPeriodSummaries.set(box,summary);
+  }
   const endText=(line,value)=>`${nameInEndLabel?`${line.name} `:''}${evidenceValue(value)}`;
   const endWidth=Math.max(0,...spec.series.map(line=>[...endText(line,line.values.at(-1))].reduce((sum,char)=>sum+(char.charCodeAt(0)>255?12:6.8),0)));
   const rightReserve=isTimeline?Math.max(52,Math.min(Math.ceil(endWidth+24),box.clientWidth*.32)):18;
   const timelineLabelInterval=index=>{
     const spacing=chartText(Math.max(weeklyAxis?62:42,...spec.labels.map(label=>String(label).length*7+18)));
-    const slots=Math.min(spec.labels.length,Math.max(2,Math.floor((box.clientWidth-leftReserve-rightReserve)/spacing)+1));
-    return Array.from({length:slots},(_,slot)=>Math.round(slot*(spec.labels.length-1)/Math.max(1,slots-1))).includes(index);
+    const last=spec.labels.length-1,step=(box.clientWidth-chartText(leftReserve+rightReserve))/Math.max(1,last);
+    const stride=Math.max(1,Math.ceil(spacing/Math.max(1,step)));
+    return index===0||index===last||index%stride===0&&last-index>=stride;
   };
   const axisValue=value=>{
     if(spec.unit==='%') {
@@ -5018,9 +5030,10 @@ function drawDetailChart(box,spec) {
           const adverse=spec.adverseWhenHigh?value>0:value<0;
           return {value,label:{position:value<0?'bottom':'top',color:value===0?'#58695b':adverse?'#97541c':'#315e41'},
             itemStyle:{color:value===0?'#718078':adverse?'#bc6a20':'#356d51'}};
-        }):line.values,smooth:false,symbolSize:6,
+        }):line.values,smooth:false,symbolSize:selectedIndex>=0?(_,point)=>point.dataIndex===selectedIndex?11:6:6,
         markLine:index===0&&spec.selectedPeriod?{silent:true,symbol:'none',label:{show:false},lineStyle:{type:'dashed',color:'#718777'},data:[{xAxis:spec.selectedPeriod}]}:undefined,
-        barMaxWidth:52,symbol:['circle','rect','triangle'][index%3],
+        barMaxWidth:52,symbol:selectedIndex>=0?(_,point)=>point.dataIndex===selectedIndex?'emptyCircle':['circle','rect','triangle'][index%3]:['circle','rect','triangle'][index%3],
+        ...(selectedIndex>=0?{showAllSymbol:true}:{}),
         lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
         endLabel:{show:isTimeline&&(Number.isFinite(line.values.at(-1))||spec.endLastValid&&line.values.some(Number.isFinite)),formatter:params=>endText(line,params.value),
           color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:chartText(12),fontWeight:600,width:chartText(rightReserve-12),overflow:'truncate'},

@@ -8,7 +8,9 @@ async(parent)=>{
   for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]){
    await p.setViewportSize({width,height});
    for(const code of ['', 'A','C','D']){
-    await p.goto(`${base}#/${code}`);
+    const metricId={A:13,C:42,D:18}[code];
+    await p.goto(`${base}#/${code}${metricId?`?metric=${metricId}`:''}`);
+    await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
     const box=p.locator(code?'.income-panel:not([hidden]) .detail-chart':'#trendChart').first();
     await box.locator('svg').waitFor();await p.evaluate(()=>document.fonts.ready);
     await p.waitForFunction(selector=>{
@@ -41,7 +43,7 @@ async(parent)=>{
   check(await p.locator('.income-panel:not([hidden]) .detail-chart svg text').getByText('9/13',{exact:true}).count()>0,'Selected week lacks its own date');
   await p.goto(`${base}#/G?metric=54`);await p.locator('.income-panel:not([hidden]) .detail-chart svg').first().waitFor();
   const daily=await p.locator('.income-panel:not([hidden]) .detail-chart').first().evaluate(n=>echarts.getInstanceByDom(n).getOption().xAxis[0]);
-  check(daily.data[0]==='9/18'&&daily.data.at(-1)==='9/24'&&!daily.axisLabel.rich?.date,'Daily dates were remapped as weeks');
+  check(daily.data.length===30&&daily.data[0]==='2026-08-25'&&daily.data.at(-1)==='2026-09-23'&&!daily.axisLabel.rich?.date,'Complete UTC days were remapped as weeks');
   check(!errors.length,`Page errors: ${errors.join('; ')}`);
   return {status:'PASS',checks:7,results};
  }finally{await context.close();}

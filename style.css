@@ -178,6 +178,8 @@ th:first-child,td:first-child {text-align:left}
 .metric-filter-scope {display:block;font-size:var(--text-xs);line-height:1.5;color:#5b6d60;margin:.35rem 0}
 .table-note {font-size:var(--text-sm);color:#58695b;margin:.55rem 0 0;max-width:70rem;line-height:1.6}
 .chart-scale-note {display:table;margin:.45rem 0 .55rem;padding:.3rem .55rem;border-left:2px solid #73987b;background:#f0f5ec;color:#355b42;font-size:var(--text-xs);font-weight:600;line-height:1.5}
+.chart-period-summary {display:flex;flex-wrap:wrap;gap:.3rem .85rem;margin:.5rem 0;padding:.45rem .65rem;border-left:2px solid var(--forest-soft);background:#f0f5ec;color:#355b42;font-size:var(--text-xs);line-height:1.5}
+.chart-period-summary small {flex-basis:100%;font:inherit;color:#58695b}
 .action-section .data-table-scroll,.metric-inventory .data-table-scroll {padding:1rem 1.2rem}
 .action-table {min-width:65rem}
 .action-table th:last-child,.action-table td:last-child {min-width:8.5rem}

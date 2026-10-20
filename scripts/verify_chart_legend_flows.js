@@ -15,6 +15,7 @@ async(parent)=>{
       await p.setViewportSize({width,height});
       for(const [code,panel] of [['','change'],['A','change'],['B','groups'],['C','groups'],['D','groups'],['E','groups'],['F','groups'],['G','groups']]){
         await p.goto(`${base}#/${code}${code?`?panel=${panel}`:''}`);await p.locator('#main h1').waitFor();
+        await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
         if(!code)await p.getByRole('button',{name:'并列对照',exact:true}).click();
         await p.evaluate(()=>document.fonts.ready);
         let baseline=null;
