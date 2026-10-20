@@ -40,3 +40,5 @@ for w in f['weeks']:
 retention=(root/'data/device-retention-facts.json').read_bytes()
 assert hashlib.sha256(retention).hexdigest()=='b7127f424c21ed0bf69e66fed905e943fd337012b106573832b8a8225f6a25c2'
 print(f'PASS #16: 25160 unique synthetic devices, 84 UTC dates, 12 complete weeks, {checks} grouped closures; #43 source unchanged.')
+
+summary={'status':'PASS','records':len(f['records']),'days':len(by_day),'weeks':len(f['weeks']),'current':by_week[f['defaultWeek']]}

@@ -1141,7 +1141,9 @@ const trialOpeningIndexes=new WeakMap();
 function trialOpeningRegistrationCounts() {
   const reg=sourceData.diagnostics?.A?.registrationFacts;
   if(!reg)return sourceData.registrationCohortCounts;
-  if(reg.version!=='synthetic-registration-cohorts-v1'||!Array.isArray(reg.cohorts))return null;
+  if(reg.version!=='synthetic-registration-cohorts-v1'||reg.status!=='approved-synthetic'||!Array.isArray(reg.cohorts)||reg.cohorts.length!==12||reg.cohorts.some(c=>!c||!Array.isArray(c.records)||c.records.length!==48||
+    c.records.some(r=>!r||!['US','UK','DE','Other'].includes(r.country)||!['iOS','Android'].includes(r.appPlatform)||!['Bird','Hunting'].includes(r.productLine)||!['Demo 1.1.0','Demo 1.2.0','Demo 1.3.0'].includes(r.registrationAppVersion)||!Number.isSafeInteger(r.registered)||r.registered<0)||
+    new Set(c.records.map(r=>[r.country,r.appPlatform,r.productLine,r.registrationAppVersion].join('|'))).size!==48))return null;
   return {version:reg.version,asOf:reg.asOf,cohorts:reg.cohorts.map(c=>({week:c.week,start:c.start,end:c.end,observationThrough:c.observed7Through,
     groups:['US','UK','DE','Other'].flatMap(country=>['iOS','Android'].map(appPlatform=>({country,appPlatform,registered:c.records.filter(r=>r.country===country&&r.appPlatform===appPlatform).reduce((n,r)=>n+r.registered,0)})))}))};
 }
@@ -7090,7 +7092,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261020-184`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261020-185`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}

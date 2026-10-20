@@ -31,3 +31,5 @@ for c,r,w in zip(f['cohorts'],reg['cohorts'],weekly,strict=True):
  assert sum(g['trialStarted7d']for g in c['groups'])==c['trialStarted7d']==w['registrationCohort']['trialStarted7d']
 assert f['cohorts'][-1]['registered']==2750 and f['cohorts'][-1]['trialStarted7d']==1292
 print(f'PASS #17: 12 mature cohorts, {checks} exact #9 denominator groups, {cells} exclusive opening cells; original weekly totals preserved.')
+
+summary={'status':'PASS','cohorts':12,'denominatorGroups':checks,'openingCells':cells,'currentNumerator':1292,'currentDenominator':2750}

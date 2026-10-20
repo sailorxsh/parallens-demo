@@ -658,6 +658,22 @@ except (AssertionError, KeyError, TypeError, ValueError):
 check('D35-approved-feature-user-registration-cohorts', approved_ok,
       '已确认功能672组、新客861组与注册576组；1260／360／540范围周期独立闭合，旧锚点与完整观察规则保留')
 
+try:
+    activation_source = runpy.run_path(str(ROOT / 'scripts/verify_activation_devices_source.py'))['summary']
+    activation_source_ok = activation_source['status']=='PASS' and activation_source['records']==25160 and activation_source['current']==2450
+except (AssertionError, KeyError, TypeError, ValueError):
+    activation_source_ok = False
+check('D36-first-content-device-ledger', activation_source_ok,
+      '独立首次内容台账25,160台、84日、12完整周同源闭合；默认9/14—9/20为2,450台，保留#43来源')
+
+try:
+    opening_source = runpy.run_path(str(ROOT / 'scripts/verify_trial_opening_source.py'))['summary']
+    opening_source_ok = opening_source['status']=='PASS' and opening_source['denominatorGroups']==96 and opening_source['openingCells']==1719
+except (AssertionError, KeyError, TypeError, ValueError):
+    opening_source_ok = False
+check('D37-trial-opening-registration-population', opening_source_ok,
+      '12个成熟注册批次、96组分母与#9一致；1,719个开启构成单元互斥闭合，方案属性不构造未开启者分母')
+
 report = {"passed": sum(c["passed"] for c in checks), "total": len(checks), "checks": checks}
 (DATA / "validation-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 for c in checks:

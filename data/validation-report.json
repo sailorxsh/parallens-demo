@@ -1,6 +1,6 @@
 {
-  "passed": 58,
-  "total": 58,
+  "passed": 60,
+  "total": 60,
   "checks": [
     {
       "rule": "catalog",
@@ -291,6 +291,16 @@
       "rule": "D35-approved-feature-user-registration-cohorts",
       "passed": true,
       "detail": "已确认功能672组、新客861组与注册576组；1260／360／540范围周期独立闭合，旧锚点与完整观察规则保留"
+    },
+    {
+      "rule": "D36-first-content-device-ledger",
+      "passed": true,
+      "detail": "独立首次内容台账25,160台、84日、12完整周同源闭合；默认9/14—9/20为2,450台，保留#43来源"
+    },
+    {
+      "rule": "D37-trial-opening-registration-population",
+      "passed": true,
+      "detail": "12个成熟注册批次、96组分母与#9一致；1,719个开启构成单元互斥闭合，方案属性不构造未开启者分母"
     }
   ]
 }
