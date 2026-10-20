@@ -5580,6 +5580,8 @@ function topicMetricRows(id) {
   const rows=[[metricCardSummary(id).label,topicRateText(value,unit)]];
   if(id===17&&metricFilterContext(17).composition.length){const p=trialOpeningComposition();rows.push(['所选已开启者构成人数',`${number(p.count)} / ${number(p.total)}人`]);}
   if(id===29){const age=sourceData.inactivityCohorts,threshold=value.thresholdDays,applicable=effectiveFor(id).filter(([k])=>k!=='season'),shares=sharesFor(applicable,id),d=allocatedCount(age.historicalReturnCohort[`${threshold}days`],applicable,id,'numerator',shares),n=Math.min(d,allocatedCount(age.returnsAfterThreshold[`${threshold}days`],applicable,id,'numerator',shares));rows.push(['独立历史入组7天回流',topicRateText(d>=30?{kind:'rate',value:n/d,numerator:n,denominator:d}:na('历史样本不足30人'))]);}
+  if(id===23){const p=renewalProjection();if(!p.reason)rows.push(['月内发生权益流失 / 期初',topicRateText(p.current.loss)],['月内主动取消 / 期初',topicRateText(p.current.cancel)]);}
+  if(id===27){const p=featureUsageProjection();if(!p.reason){rows.length=0;featureFunctions.forEach((key,i)=>rows.push([optionLabel('functionType',key)+'使用率',topicRateText({value:p.current.users[i]/p.current.denominator,numerator:p.current.users[i],denominator:p.current.denominator})]));}}
   if(id===10&&value.sevenDay)rows.push(['7日首次绑定',topicRateText(value.sevenDay)]);
   if([11,13].includes(id)){const p=onboardingSummary(id);if(!p.reason)rows.push(['成功耗时P50',onboardingDuration(p.p50Seconds,id)],['成功耗时P90',onboardingDuration(p.p90Seconds,id)]);}
   if(id===41){const p=deviceActivitySummary(id);if(!p.reason)rows.push(['近24小时活跃设备',number(p.active1)+'台'],['近7天活跃设备',number(p.active7)+'台'],['近30天活跃设备',number(p.active30)+'台']);}
@@ -5676,12 +5678,13 @@ function renderTopicOverview(page) {
     const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);}
     const structure=topicMetricStructure(id);if(structure)card.append(structure);
     if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(dataTable(versions,'topic-mini-table'));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
+    if(id===23)card.append(element('p','topic-context','续订以当月到期主账号为分母；流失与取消以期初有效订阅为分母，人数可重叠，不能相加。取消不等于立即失去权益。'));
     if(id===29)card.append(element('p','topic-context','当前未使用池与历史回流入组不同；历史入组日期未提供，不用于跨期归因。'));
     if(id===12){const part=registrationProjection(12);if(!part.reason)card.append(element('p','topic-context',`D7采用W${part.current.week}，D30采用W${part.d30.week}；分别核对观察窗。`));}
     if(id===21)card.append(element('p','topic-net-change',`净增 ${topicNetChange(m)}人 · 期末减期初`));
     if(s.context)card.append(element('p','topic-context',s.context));
     const history=metricHistory(id),trend=headlineTrend(id);
-    if(trend&&history){const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');card.append(trend);}
+    if(trend&&history){if(rows.length>1||id===27)trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');card.append(trend);}
     else card.append(element('p','topic-no-history',m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
    }
    const context=metricFilterContext(id);if(context.ignored.length)card.append(element('p','metric-filter-scope',`未应用：${context.ignoredText}`));
