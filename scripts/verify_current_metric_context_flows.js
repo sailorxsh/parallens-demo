@@ -32,8 +32,8 @@ async(parent)=>{
    const factual=await current().locator('.finding-summary-status').count();
    if(factual){
     check((await current().locator('.finding-summary-status').innerText()).includes('暂无该指标的诊断结论'),`Facts imply an invented diagnosis ${id}`);
-    const window=current().locator('.inspector-facts > div').filter({has:p.locator('dt',{hasText:'时间窗口'})}).locator('dd');
-    const expectedWindow=[16,17].includes(id)?await p.evaluate(id=>id===16?activationDeviceWindow():trialOpeningWindow(),id):contract.find(r=>r.id===id).window;
+    const window=current().locator('.inspector-facts > div').filter({has:p.locator('dt',{hasText:'当前统计期'})}).locator('dd');
+    const expectedWindow=await p.evaluate(id=>metric(id).kind==='na'?contractFor(id).window:topicMetricWindow(id),id);
     check(await window.innerText()===expectedWindow,`Factual window drift ${id}`);
    }
    const priority=p.locator('.page-observation');
@@ -135,7 +135,7 @@ async(parent)=>{
    results.push({kind:'layout',route,width,height,fontSize:size});
   }
   check(!errors.length,errors.join('; '));
-  return {status:'PASS',placements:cases.size,checks:['current subject and explicit registration across all metrics and shared placements','facts use original window without invented diagnosis',
+  return {status:'PASS',placements:cases.size,checks:['current subject and explicit registration across all metrics and shared placements','facts use current reporting period without invented diagnosis',
    'quality entry and independent page observation','native disclosure and reading history','income/MRR distinct analysis, saved baseline and drafts',
    'filters and missing-data registration boundary','3 desktop widths and 150%/200% text','keyboard action reachability and overlay checks'],results,errors};
  }catch(error){error.message+=`\nRoute: ${p.url()}\nBrowser errors: ${JSON.stringify(errors)}`;throw error;}

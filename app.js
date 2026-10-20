@@ -6486,7 +6486,7 @@ function metricInspector(id,page) {
   if(id===38&&value.kind==='group'){const source=structureMetricViews();if(source.views){fact('国家／App平台分母',`${number(source.views[0].denominator)} 全部注册用户`);fact('型号分母',`${number(source.views[2].denominator)} 当前绑定设备`);fact('历史覆盖','仅当前快照；没有12个月结构历史，不生成趋势');}}
   summary.fields.forEach(([label,text])=>fact(label,text));
   fact('统计对象',metricEntityLabel(contract.entity));
-  fact('时间窗口',id===17?trialOpeningWindow():id===16?activationDeviceWindow():contract.window);
+  fact('当前统计期',value.kind==='na'?contract.window:topicMetricWindow(id));
   if([9,10,12].includes(id)&&value.kind!=='na'){const p=registrationProjection(id);fact('注册批次',`W${p.current.week} · ${p.current.start}—${p.current.end}`);if(id===10)fact('7天绑定',`${p.current.registered>=30?percent(p.current.bound7/p.current.registered):'无可靠比例'} · ${number(p.current.bound7)} / ${number(p.current.registered)}人`);if(id===12)fact('30日参照',`W${p.d30.week} · 观察至${p.d30.observed30Through}${p.d30.mature30?'':'，观察中'}`);}
   if(id===28&&value.kind==='group'){const p=userRetentionProjection();fact('入组方式',userRetentionTypeLabels[p.type]);fact('同批人数／批次',`${number(p.current.denominator)}人 · ${p.current.start}—${p.current.end}`);fact('观察截至',p.source.asOf+' UTC零时');}
   if(id===27&&value.kind==='rate'){const p=featureUsageProjection(),r=p.current;fact('同期App活跃',`${number(r.app)}人（功能使用者的上界）`);fact('通知开／关／未知',`${number(r.config.on)} / ${number(r.config.off)} / ${number(r.config.unknown)}人`);}
