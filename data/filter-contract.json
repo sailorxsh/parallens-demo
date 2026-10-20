@@ -474,7 +474,7 @@
     "name": "Free档权益消耗率（观鸟线）",
     "page": "D",
     "entity": "用户",
-    "window": "最近完整月或指标定义中的月窗口",
+    "window": "Free权益耗尽演示汇总；权益阈值按月定义，具体统计月份未提供",
     "dimensions": [
       "country",
       "productLine",
@@ -884,7 +884,7 @@
     "name": "增值服务首次购买与复购用户",
     "page": "E",
     "entity": "用户",
-    "window": "最近完整月或指标定义中的月窗口",
+    "window": "增值Pack首购与复购演示汇总；具体购买统计期未提供",
     "dimensions": [
       "country",
       "productLine"
@@ -935,7 +935,7 @@
     "name": "不同销售渠道的用户质量",
     "page": "E",
     "entity": "销售渠道",
-    "window": "最近完整月或指标定义中的月窗口",
+    "window": "自报渠道演示样本；7日激活、30日活跃与月度付款各用自身窗口，具体统计月份未提供",
     "dimensions": [
       "salesChannel"
     ],

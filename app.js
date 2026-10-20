@@ -3173,6 +3173,7 @@ function metricHistory(id) {
   const overview=homeProjection();if(overview)return overview.histories[id]??null;
   if([9,10,12].includes(id)&&metric(id).kind!=='na')return registrationHistory(id);
   if(id===27&&metric(27).kind!=='na')return featureUsageHistory();
+  if(id===51){const p=unbindingProjection();if(p.reason||metric(id).kind==='na')return null;const rows=unbindingIndex().rows.map(m=>unbindingProjection(filterState,m.month));return {title:'月度解绑设备数',unit:'台',labels:rows.map(r=>r.month),values:rows.map(r=>r.opening?r.devices:null),selectedPeriod:p.month,note:'各完整月内设备去重；不同月份可能重复，不累计为全年独立设备。回绑成熟状态另列。'};}
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
   if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
@@ -5625,6 +5626,7 @@ function topicMetricStructure(id) {
   if(!row||!validHeadcount(row[1]))return unavailable('去重共享用户数待核验；每台设备共享人数分布待补。');
   return dataTable({title:'共享覆盖 · 总体快照',columns:['观察项','数量'],rows:[['通过共享获得访问权限的去重用户',number(row[1])+'人']],note:'共享用户与设备不是同一统计对象，不相加；每台设备共享人数分布待补关系明细。'},'topic-mini-table');
  }
+ if(id===27&&current.kind==='rate'){const p=featureUsageProjection();if(p.reason)return null;const r=p.current;return dataTable({title:'账号通知总开关 · 期末快照',columns:['配置','主账号','占同范围复合活跃'],rows:['on','off','unknown'].map((key,i)=>[['已确认开','已确认关','未知'][i],number(r.config[key])+'人',percent(r.config[key]/r.denominator)]),note:'三类互斥；未知不当作关闭。这里是App内账号配置，不等于系统授权或推送送达。'},'topic-mini-table');}
  const m=current;if(m.kind==='count'&&[15,52,53].includes(id)){
   let title,rows,note;
   if(id===15){const p=bindingDeviceRows();if(!p.rows)return null;title='当前设备 · 互斥等待分层';rows=['超过3天、未满7天','7–13天','14天及以上'].map(label=>[label,number(p.rows.filter(r=>bindingWaitBand(r,p.at)===label).length)+'台']);note='同一设备只归一层，合计回到当前清单；等待分层不代表预测风险。';}
@@ -5640,7 +5642,7 @@ function topicMetricStructure(id) {
  if(id===36){columns=['增值包','有效权益主账号','渗透率'];rows=[['任一增值包',number(v.anyPack.numerator)+'人',topicRateText(v.anyPack)],...Object.entries(v.byPack).map(([name,part])=>[name,number(part.numerator)+'人',topicRateText(part)])];note='各包可重叠，人数不可相加；分母为同日付费权益主账号。';}
  if(id===38){const source=structureMetricViews();if(source.reason)return null;const container=element('div','topic-structure-dimensions');for(const view of source.views)container.append(dataTable({title:view.label,columns:['类别','数量','占比'],rows:view.rows.map(([label,n])=>[label,number(n)+view.unit,percent(n/view.denominator)]),note:`同口径分母 ${number(view.denominator)}${view.unit}；本维度独立归一化。`},'topic-mini-table'));return container;}
  if(id===39){columns=['型号','主账号','30天活跃率','订阅率'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners)+'人',percent(r.activeRate),percent(r.subscriptionRate)]);note='同型号主账号为分母；各型号可能共享主账号，不能相加。';}
- if(id===40){columns=['自报渠道','样本主账号','7日激活','活跃率','订阅率','月付款人数','ARPPU'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners),percent(r.activation7dRate),percent(r.activeRate),percent(r.subscriptionRate),number(r.monthlyPayers),'$'+r.ARPPU.toFixed(2)]);note='自报渠道合成样本；不同窗口单独解释，不视为平台归因或因果。';}
+ if(id===40){columns=['自报渠道','样本主账号','7日激活','活跃率','订阅率','月付款人数','ARPPU'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners),percent(r.activation7dRate),percent(r.activeRate),percent(r.subscriptionRate),number(r.monthlyPayers),'$'+r.ARPPU.toFixed(2)]);note='自报渠道合成样本；不同窗口单独解释，不视为平台归因或因果。30日激活率待补；未提供具体统计月份。';}
  if(id===51){columns=['观察项','当前结果'];rows=[['去重解绑设备',number(v.observedUnboundDevices)+'台'],['解绑事件',number(v.unboundEvents)+'次'],['月初绑定设备解绑率',topicRateText(v.unboundDeviceRate,'台')],['7日回绑',topicRateText(v.reboundWithin7d,'台')],['30日回绑',topicRateText(v.reboundWithin30d,'台')]];note=`解绑批次 ${v.cohort}；未成熟观察窗不补零。`;}
  if(!rows)return null;
  const node=dataTable({title:'当前构成与完整摘要',columns,rows,note},'topic-mini-table');return node;
@@ -5679,12 +5681,14 @@ function renderTopicOverview(page) {
     const structure=topicMetricStructure(id);if(structure)card.append(structure);
     if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(dataTable(versions,'topic-mini-table'));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
     if(id===23)card.append(element('p','topic-context','续订以当月到期主账号为分母；流失与取消以期初有效订阅为分母，人数可重叠，不能相加。取消不等于立即失去权益。'));
+    if(id===22)card.append(element('p','topic-context','各权益耗尽人群可重叠；任一权益耗尽为去重并集，不能把子项人数相加。'));
+    if(id===50)card.append(element('p','topic-context','前三项为互斥设备状态；共享两项分别是已绑定已激活、已绑定未激活的子集，不与前三项相加。'));
     if(id===29)card.append(element('p','topic-context','当前未使用池与历史回流入组不同；历史入组日期未提供，不用于跨期归因。'));
     if(id===12){const part=registrationProjection(12);if(!part.reason)card.append(element('p','topic-context',`D7采用W${part.current.week}，D30采用W${part.d30.week}；分别核对观察窗。`));}
     if(id===21)card.append(element('p','topic-net-change',`净增 ${topicNetChange(m)}人 · 期末减期初`));
     if(s.context)card.append(element('p','topic-context',s.context));
     const history=metricHistory(id),trend=headlineTrend(id);
-    if(trend&&history){if(rows.length>1||id===27)trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');card.append(trend);}
+    if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');card.append(trend);}
     else card.append(element('p','topic-no-history',m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
    }
    const context=metricFilterContext(id);if(context.ignored.length)card.append(element('p','metric-filter-scope',`未应用：${context.ignoredText}`));
