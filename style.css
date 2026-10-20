@@ -423,7 +423,7 @@ h1 {font-size:clamp(1.65rem,2.15vw,2.3rem);margin-bottom:.25rem}
 .inspector-facts>div {display:grid;grid-template-columns:4.5rem minmax(0,1fr);gap:.45rem;border-bottom:1px solid #e8eee5;padding:.5rem 0;font-size:.75rem;line-height:1.5}
 .inspector-facts dt {color:#58695b}
 .inspector-facts dd {margin:0;color:#334a38;overflow-wrap:anywhere;text-wrap:pretty}
-.inspector-source {font-size:.75rem;color:#607567;line-height:1.55;margin:.8rem 0}
+.inspector-source {font-size:.75rem;color:var(--muted);line-height:1.55;margin:.8rem 0}
 .inspector-link {display:flex;justify-content:space-between;background:#214a34;border:1px solid #214a34;color:#fff;padding:.55rem .7rem;border-radius:.25rem;font-size:.77rem;font-weight:700}
 .inspector-link:hover {background:#163c29}
 .issue-register {border:1px solid #b6c9bb;background:#edf3ee;color:#214a34;border-radius:.3rem;padding:.5rem .75rem;font:inherit;font-size:.8rem;font-weight:650;cursor:pointer;margin:.35rem 0 .65rem}
