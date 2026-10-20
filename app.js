@@ -5656,26 +5656,32 @@ function topicMetricStructure(id) {
 }
 // Compact overview charts use raw scoped counts; the original table remains available.
 function topicStructureGraphic(id,structure) {
- if(![3,34,36,38,48].includes(id)||!structure.querySelector('table'))return structure;
+ if(![3,5,27,30,34,36,38,48,52].includes(id)||!structure.querySelector('table'))return structure;
  const m=metric(id),groups=[];
  if(id===34){const p=paidRightsComposition();if(p.reason)return structure;groups.push({title:'付费权益构成',stack:true,denominator:p.parent.total,rows:['仅订阅','仅增值Pack','订阅和Pack都有'].map((label,i)=>({label,n:p.counts[i]}))});}
  if(id===3){const s=sourceData.snapshot;groups.push({title:'MRR组成',stack:true,money:true,denominator:s.totalMRR,rows:[{label:'基础订阅',n:s.baseMRR},{label:'增值Pack',n:s.packMRR}]});}
  if(id===36){const v=m.value,parts=[['任一增值包',v.anyPack],...Object.entries(v.byPack)];if(parts.some(([,r])=>r.kind!=='rate'||!Number.isFinite(r.value)))return structure;groups.push({title:'增值包渗透 · 各包可重叠',rate:true,rows:parts.map(([label,r])=>({label,n:r.numerator,rate:r.value}))});}
  if(id===38){const p=structureMetricViews();if(p.reason)return structure;for(const v of p.views)groups.push({title:v.label,denominator:v.denominator,unit:v.unit,rows:v.rows.map(([label,n])=>({label,n})).sort((a,b)=>b.n-a.n)});}
  if(id===48){const rows=sourceData.diagnostics.F.tables.find(t=>t.title==='每主账号绑定设备数分层').rows;groups.push({title:'主账号持有设备数',denominator:rows.reduce((n,r)=>n+r[1],0),rows:rows.map(r=>({label:r[0],n:r[1]}))});}
- const wrap=element('div','topic-visual-summary');
+ if(id===5){for(const [line,parts] of Object.entries(m.value)){const denominator=Object.values(parts).reduce((a,b)=>a+b,0);if(denominator<30)return structure;groups.push({title:groupLabels[line]+' · '+number(denominator)+'主账号',stack:true,denominator,rows:Object.entries(parts).map(([key,n])=>({label:statusHistoryFields[key]??groupLabels[key],n,color:statusHistoryColors[key]}))});}}
+ if(id===27){const p=featureUsageProjection();if(p.reason)return structure;const r=p.current;if(r.denominator<30)return structure;groups.push({title:'账号通知总开关',stack:true,denominator:r.denominator,rows:['on','off','unknown'].map((key,i)=>({label:['已确认开','已确认关','未知'][i],n:r.config[key],color:['#356d51','#9eaa9a','#d4d9d1'][i]}))});}
+ if(id===30){const v=m.value;groups.push({title:'互斥活跃组合 · 每个主账号仅归一行',matrix:true,denominator:v.composite,rows:activityCombinations.map(c=>({label:c.label.replace('\n',''),n:v.exclusiveCells[c.key],sources:c.sources})).sort((a,b)=>b.n-a.n)});}
+ if(id===52){const p=riskProjection();if(p.reason)return structure;const r=p.current;groups.push({title:'风险命中 · 互斥构成',denominator:r.intentOnly+r.behaviorOnly+r.both,rows:[{label:'仅意图层',n:r.intentOnly},{label:'仅行为叠加层',n:r.behaviorOnly},{label:'两者同时命中',n:r.both}]});}
+ const wrap=element('div','topic-visual-summary'+([5,38].includes(id)?' topic-visual-columns':''));
  for(const g of groups){
   if(g.rows.some(r=>!Number.isFinite(r.n)||r.n<0))return structure;
   const figure=element('figure','topic-composition'),caption=element('figcaption','',g.title);figure.append(caption);
   const scale=g.rate?1:g.stack?g.denominator:Math.max(...g.rows.map(r=>r.n),1);
   if(!(scale>0))return structure;
   if(!g.rate&&!g.stack)figure.append(element('p','topic-chart-scale',`数量尺度 0–${number(scale)}${g.unit||'人'}；占比分母 ${number(g.denominator)}${g.unit||'人'}`));
-  const stack=g.stack?element('div','topic-stack'):null;if(stack){stack.setAttribute('aria-hidden','true');g.rows.forEach((r,i)=>{const mark=element('span','topic-stack-segment');mark.style.width=(r.n/scale*100)+'%';mark.dataset.tone=String(i);stack.append(mark);});figure.append(stack);}
+  const stack=g.stack?element('div','topic-stack'):null;if(stack){stack.setAttribute('aria-hidden','true');g.rows.forEach((r,i)=>{const mark=element('span','topic-stack-segment');mark.style.width=(r.n/scale*100)+'%';mark.dataset.tone=String(i);if(r.color)mark.style.backgroundColor=r.color;stack.append(mark);});figure.append(stack);}
+  if(g.matrix)figure.append(element('p','topic-chart-scale','来源矩阵：App / 内容 / 推送；实心为包含，空心为不包含。'));
   for(const [i,r] of g.rows.entries()){
    const row=element('div','topic-bar-row');row.dataset.value=String(r.n);row.dataset.scale=String(scale);
    const label=element('span','topic-bar-label',r.label),value=element('span','topic-bar-value',g.money?'$'+number(r.n):number(r.n)+(g.unit||'人'));
    if(g.rate||g.denominator>=30)value.append(element('span','topic-bar-share',' · '+percent(g.rate?r.rate:r.n/g.denominator)));
-   if(g.stack){const key=element('span','topic-color-key');key.dataset.tone=String(i);key.setAttribute('aria-hidden','true');label.prepend(key);}
+   if(g.stack){const key=element('span','topic-color-key');key.dataset.tone=String(i);if(r.color)key.style.backgroundColor=r.color;key.setAttribute('aria-hidden','true');label.prepend(key);}
+   if(g.matrix){const sources=element('span','topic-source-matrix');sources.setAttribute('aria-hidden','true');for(const source of ['app','content','pushClicked'])sources.append(element('span',r.sources.includes(source)?'included':'',r.sources.includes(source)?'●':'○'));label.prepend(sources);}
    row.append(label,value);
    if(!g.stack){const track=element('div','topic-bar-track'),mark=element('span','topic-bar-mark');track.setAttribute('aria-hidden','true');mark.style.width=((g.rate?r.rate:r.n/scale)*100)+'%';track.append(mark);row.append(track);}
    figure.append(row);
@@ -5684,7 +5690,7 @@ function topicStructureGraphic(id,structure) {
   wrap.append(figure);
  }
  // Keep scope qualifications visible even when the exact-value table is closed.
- if(id!==38)structure.querySelectorAll('.table-note').forEach(note=>wrap.append(note.cloneNode(true)));
+ if(id!==38){const notes=new Set();structure.querySelectorAll('.table-note').forEach(note=>{if(!notes.has(note.textContent)){wrap.append(note.cloneNode(true));notes.add(note.textContent);}});}
  const details=element('details','topic-chart-data');details.append(element('summary','','查看完整数据表'),structure);wrap.append(details);return wrap;
 }
 function drawTopicSparkline(box,history) {

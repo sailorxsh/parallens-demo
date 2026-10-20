@@ -1116,3 +1116,10 @@ article.trial-sample-item {cursor:auto}
 .topic-chart-scale,.topic-visual-summary>.table-note {font-size:.75rem;line-height:1.6;margin:.5rem 0}
 .topic-chart-data>summary {font-size:.75rem;cursor:pointer;color:#795124;padding:.5rem 0}
 .topic-chart-data[open]>summary {margin-bottom:.5rem}
+
+.topic-source-matrix {display:inline-grid;grid-template-columns:repeat(3,1.3rem);margin-right:.65rem;color:#647367;font-size:.85rem;text-align:center}
+.topic-source-matrix .included {color:#244b3b}
+
+.topic-visual-columns {display:flex;flex-wrap:wrap;gap:.8rem 1.5rem}
+.topic-visual-columns>.topic-composition {flex:1 1 20rem;min-width:0}
+.topic-visual-columns>.table-note,.topic-visual-columns>.topic-chart-data {flex:0 0 100%;min-width:0}
