@@ -5769,7 +5769,7 @@ function renderTopicOverview(page) {
     if(s.context&&!contextCovered)card.append(element('p','topic-context',s.context));
     const history=metricHistory(id),trend=headlineTrend(id);
     if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');const range=topicTrendRange(history);if(range)trend.append(range);card.append(trend);}
-    else card.append(element('p','topic-no-history',m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
+    else card.append(element('p','topic-no-history',[28,43].includes(id)?'按入组批次对照 · 未成熟观察不计零':m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
    }
    const context=metricFilterContext(id);if(context.ignored.length)card.append(element('p','metric-filter-scope',`未应用：${context.ignoredText}`));
    if(id===17&&context.composition?.length)card.append(element('p','metric-filter-scope',`开启者构成条件：${context.composition.map(([key,v])=>`${filterLabels[key]} ${optionLabel(key,v)}`).join('、')}；不改变总体开启率。`));
