@@ -11,7 +11,7 @@ async(parent)=>{
    await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
    await p.evaluate(size=>{document.documentElement.style.fontSize=`${size}px`;detailCharts.forEach(c=>{refreshChartTypography(c);c.resize();});},font);
    const box=p.locator('#D-panel-groups .detail-chart').first();await box.locator('svg').waitFor();
-   await box.scrollIntoViewIfNeeded();await box.evaluate(n=>window.scrollBy(0,n.getBoundingClientRect().top-450));await p.evaluate(async()=>{await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});
+   await p.locator('.workspace-locations button').first().click();await p.evaluate(async()=>{await document.fonts.ready;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});
    const state=await box.evaluate(n=>{
     const c=echarts.getInstanceByDom(n),o=c.getOption(),r=n.getBoundingClientRect(),xy=c.convertToPixel({seriesIndex:0},[1,0]);
     const tooltip=o.tooltip[0].formatter([0,1].map(seriesIndex=>({dataIndex:1,seriesIndex,seriesName:o.series[seriesIndex].name,value:0,marker:''})));
