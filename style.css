@@ -1047,6 +1047,8 @@ article.trial-sample-item {cursor:auto}
 .topic-metrics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;align-items:start}
 .topic-metric {min-width:0;display:flex;flex-direction:column;padding:1.05rem 1.15rem;border:1px solid var(--line);border-radius:.55rem;background:var(--paper);scroll-margin-top:5rem}
 .topic-metric-wide {grid-column:1/-1}
+/* Three compact metrics share a row only when each retains a readable measure. */
+.topic-metrics:has(>.topic-metric:nth-child(3):last-child):not(:has(>.topic-metric-wide)) {grid-template-columns:repeat(auto-fit,minmax(min(100%,24rem),1fr))}
 .topic-group-pair {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,30rem),1fr));gap:0 .8rem;align-items:start}
 .topic-group-pair>.topic-group {min-width:0}
 .topic-group-pair .topic-metrics {grid-template-columns:minmax(0,1fr)}

@@ -17,6 +17,14 @@ async parent=>{
    }
    if(width===1600&&size===16)await p.screenshot({path:`output/playwright/v188-spacing/${b.browserType().name()}-G.png`,fullPage:true});results.push({width,size,geometry});
   }
+  for(const code of ['A','C','E'])for(const width of [1366,1600,1920])for(const size of [16,32]){
+   await p.setViewportSize({width,height:1000});await p.goto(new URL('.',parent.url()).href+'#/'+code);await ready();await p.evaluate(size=>document.documentElement.style.fontSize=size+'px',size);await ready();
+   const state=await p.evaluate(()=>{const grid=document.querySelector('.topic-group .topic-metrics');return {columns:new Set([...grid.children].map(n=>Math.round(n.getBoundingClientRect().left))).size,ids:[...grid.children].map(n=>n.dataset.metricId),overflow:document.documentElement.scrollWidth>innerWidth+1,cards:[...grid.children].map(n=>({width:n.getBoundingClientRect().width,overflow:n.scrollWidth>n.clientWidth+1}))};});
+   const expected=size===32?1:width>=1600?3:2;
+   check(state.columns===expected,'Unexpected compact columns '+JSON.stringify({code,width,size,state}));check(!state.overflow&&!state.cards.some(n=>n.overflow),'Compact content overflow '+JSON.stringify({code,width,size,state}));
+   const ids={A:['7','9','16'],C:['8','41','44'],E:['34','35','3']}[code];check(JSON.stringify(state.ids)===JSON.stringify(ids),'Compact metric order changed');results.push({code,width,size,state});
+   if(width===1600&&size===16)await p.screenshot({path:`output/playwright/v190-density/${b.browserType().name()}-${code}.png`,fullPage:true});
+  }
   return {status:'PASS',results};
  }finally{await c.close();}
 }
