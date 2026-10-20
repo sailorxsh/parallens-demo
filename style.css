@@ -1028,3 +1028,6 @@ article.trial-sample-item {cursor:auto}
 .anomaly-event-table th,.anomaly-event-table td {white-space:normal;overflow-wrap:anywhere;padding:.45rem .35rem}
 .anomaly-event-table th:first-child {width:24%}
 .anomaly-event-table th:nth-child(2) {width:24%}
+
+/* Keep a complete registration period readable; the shared wrapper scrolls wide evidence. */
+.trial-opening-data th:first-child,.trial-opening-data td:first-child {white-space:nowrap}

@@ -477,14 +477,15 @@
       "id": 17,
       "page": "D",
       "entity": "用户Cohort",
-      "window": "完整观察窗内的指定批次",
+      "window": "所选完整注册批次；注册后0≤首次开启延时<168小时，最新W12为2026-09-07—09-13，完整观察至2026-09-20 UTC",
       "businessDimensions": [
         "appPlatform",
         "country",
         "plan",
         "productLine",
         "subscriptionPlatform",
-        "week"
+        "week",
+        "billingCycle"
       ],
       "demonstrableDimensions": [
         "appPlatform",
@@ -492,9 +493,21 @@
         "plan",
         "productLine",
         "subscriptionPlatform",
+        "week",
+        "billingCycle"
+      ],
+      "unavailableDimensions": [],
+      "rateDimensions": [
+        "country",
+        "appPlatform",
         "week"
       ],
-      "unavailableDimensions": []
+      "compositionOnlyDimensions": [
+        "productLine",
+        "plan",
+        "billingCycle",
+        "subscriptionPlatform"
+      ]
     },
     {
       "id": 18,

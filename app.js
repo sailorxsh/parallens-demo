@@ -11,7 +11,7 @@ const defaultFindingMetric={A:13,B:25,C:42,D:18,E:3,F:8,G:54};
 const primaryTrendMetric={A:13,B:4,C:42,D:18,E:35,F:48,G:54};
 const primaryHeroIds={A:[9,10,13,15],B:[4,24,25,29],C:[8,41,42,46],D:[2,18,21,23],E:[3,34,35,39],F:[7,8,48,49],G:[53,54,15,52]};
 const findingRuleVersion='demo-2026-10-18-v5';
-const findingSource=id=>({54:'30个完整UTC日同源质量计数v1',4:'同源每日活跃窗口频数v1',25:'同源每日活跃窗口频数v1',30:'同源活跃频数与七类互斥构成v1',11:'同源合成绑定频数v1',13:'同源合成激活频数v1',15:'合成设备台账逐台计数',41:'合成设备行为间隔聚合',44:'合成设备行为间隔与独立回流群',18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
+const findingSource=id=>({9:'同源合成注册批次v1',10:'同源合成注册批次v1',12:'同源合成注册批次v1',17:'同源注册分母与7天开启频数v1',54:'30个完整UTC日同源质量计数v1',4:'同源每日活跃窗口频数v1',25:'同源每日活跃窗口频数v1',30:'同源活跃频数与七类互斥构成v1',11:'同源合成绑定频数v1',13:'同源合成激活频数v1',15:'合成设备台账逐台计数',41:'合成设备行为间隔聚合',44:'合成设备行为间隔与独立回流群',18:'合成试用明细交集重算',42:'周×型号×固件合成触发汇总',27:'合成功能人数',29:'合成活跃间隔分层',45:'型号×固件合成请求',46:'型号×固件合成请求',2:'互斥订阅状态',6:'互斥订阅状态'})[id]??'汇总值与模拟分片估算';
 const main = document.querySelector('#main');
 main?.addEventListener('toggle',()=>updateScrollableTables(),true);
 document.querySelector('.skip-link')?.addEventListener('click',event=>{
@@ -238,6 +238,7 @@ function renderSavedIssues() {
     const details=element('details','saved-issue-details');details.append(element('summary','','查看保存详情'));
     for(const [field,label] of [['baseline','登记基线'],['baselineAt','基线周期'],['updatedAt','保存时间'],['note','处理说明'],['target','验收条件'],['reviewValue','复查实测值'],['reviewedAt','实际复查日'],['linkedSample','关联记录']])
       if(field==='baseline'&&[9,10,12].includes(record.evidenceId)&&record.baseline?.startsWith('注册批次证据v1：'))details.append(registrationBaselineDetails(record.baseline));
+      else if(field==='baseline'&&record.evidenceId===17&&record.baseline?.startsWith('试用开启证据v1：'))details.append(trialOpeningBaselineDetails(record.baseline));
       else if(field==='baseline'&&record.evidenceId===28&&record.baseline?.startsWith('新客留存证据v1：'))details.append(userRetentionBaselineDetails(record.baseline));
       else if(field==='baseline'&&record.evidenceId===27&&record.baseline?.startsWith('功能配置证据v1：'))details.append(featureUsageBaselineDetails(record.baseline));
       else if(field==='baseline'&&record.evidenceId===52&&record.baseline?.startsWith('风险证据v1：'))details.append(riskBaselineDetails(record.baseline));
@@ -320,6 +321,7 @@ function actionBaselineWindow(id) {
   if(id===35&&currentPaymentMonth())return `完整月 ${currentPaymentMonth()}`;
   if(id===23){const part=renewalProjection();return part.reason?'月度续订观察期待核验':`月度续订观察期末 ${new Date(Date.parse(part.current.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)} · 到期月 ${part.month}`;}
   if(id===24)return `完整月 ${retentionSelection().month}`;
+  if(id===17)return trialOpeningWindow();
   if(id===16)return activationDeviceWindow();
   if(id===43)return deviceRetentionWindow();
   if(id===52)return riskWindow();
@@ -337,6 +339,8 @@ function actionBaselineWindow(id) {
 function baselineWindowEnd(window) {
   if(typeof window!=='string')return null;
   const observed=observedBaselineEnd(window);if(observed)return observed;
+  const opening=/^试用开启观察期末 (\d{4}-\d\d-\d\d) · 注册批次 W[1-9]\d* · (\d{4}-\d\d-\d\d)—(\d{4}-\d\d-\d\d)$/.exec(window);
+  if(opening)return opening.slice(1).every(d=>Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d)&&new Date(opening[2]).getUTCDay()===1&&Date.parse(opening[3])-Date.parse(opening[2])===6*86400000&&Date.parse(opening[1])-Date.parse(opening[3])===7*86400000?opening[1]:null;
   const firstContent=/^首次内容完整周v1 · (\d{4}-\d\d-\d\d)—(\d{4}-\d\d-\d\d)（UTC）$/.exec(window);
   if(firstContent)return firstContent.slice(1).every(d=>Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d)&&new Date(firstContent[1]).getUTCDay()===1&&Date.parse(firstContent[2])-Date.parse(firstContent[1])===6*86400000?firstContent[2]:null;
   // Only interpret the explicit saved window formats. Never substitute today's
@@ -845,11 +849,13 @@ const metricEntityLabel=entity=>({
 })[entity]??entity;
 const policyFor=id=>sourceData.filterPolicy.metrics.find(item=>item.id===id);
 const effectiveFor=(id,state=filterState)=>Object.entries(state).filter(([key,value])=>
-  value&&value!=='All'&&policyFor(id).businessDimensions.includes(key));
+  value&&value!=='All'&&(id===17?policyFor(id).rateDimensions:policyFor(id).businessDimensions).includes(key));
 function metricFilterContext(id) {
-  const applied=effectiveFor(id),ignored=selectedFilters().filter(([key])=>!policyFor(id).businessDimensions.includes(key));
-  return {applied,ignored,ignoredText:ignored.map(([key,value])=>`${filterLabels[key]} ${optionLabel(key,value)}`).join('、')};
+  const applied=effectiveFor(id),composition=id===17?selectedFilters().filter(([key])=>trialOpeningCompositionKeys.includes(key)):[];
+  const ignored=selectedFilters().filter(([key])=>!policyFor(id).businessDimensions.includes(key));
+  return {applied,composition,ignored,ignoredText:ignored.map(([key,value])=>`${filterLabels[key]} ${optionLabel(key,value)}`).join('、')};
 }
+
 const trialState=(state=filterState)=>Object.fromEntries(effectiveFor(18,state));
 function deviceEventMetric(state=filterState,weekNumber=state.week??sourceData.weekly.at(-1).week,group='all') {
   const scoped=Object.fromEntries(effectiveFor(42,state));
@@ -1129,6 +1135,96 @@ const activityCombinations=[
   {key:'contentPushOnly',label:'内容＋\n推送',sources:['content','pushClicked']},
   {key:'allThree',label:'三者\n都有',sources:['app','content','pushClicked']},
 ];
+// #17: cohort conversion and attributes of starters have different populations.
+const trialOpeningCompositionKeys=['productLine','plan','billingCycle','subscriptionPlatform'];
+const trialOpeningIndexes=new WeakMap();
+function trialOpeningRegistrationCounts() {
+  const reg=sourceData.diagnostics?.A?.registrationFacts;
+  if(!reg)return sourceData.registrationCohortCounts;
+  if(reg.version!=='synthetic-registration-cohorts-v1'||!Array.isArray(reg.cohorts))return null;
+  return {version:reg.version,asOf:reg.asOf,cohorts:reg.cohorts.map(c=>({week:c.week,start:c.start,end:c.end,observationThrough:c.observed7Through,
+    groups:['US','UK','DE','Other'].flatMap(country=>['iOS','Android'].map(appPlatform=>({country,appPlatform,registered:c.records.filter(r=>r.country===country&&r.appPlatform===appPlatform).reduce((n,r)=>n+r.registered,0)})))}))};
+}
+function trialOpeningIndex() {
+  const source=sourceData.diagnostics?.D?.trialOpeningFacts,reference=trialOpeningRegistrationCounts();
+  const bad=()=>({reason:'试用开启频数、注册分母、7天观察窗或开启构成不一致；待核验，不回退到旧分片。'});
+  if(!source||typeof source!=='object'||!reference)return bad();
+  // A loaded registration source may change independently during backfill checks.
+  const cached=trialOpeningIndexes.get(source),signature=JSON.stringify(reference);if(cached?.signature===signature)return cached.index;
+  const verify=()=>{
+    const whole=n=>Number.isSafeInteger(n)&&n>=0,date=v=>typeof v==='string'&&/^\d{4}-\d\d-\d\d$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
+    if(source.version!=='synthetic-trial-opening-v1'||source.status!=='approved-synthetic'||source.classification!=='entirely_synthetic'||source.timezone!=='UTC'||source.asOf!==sourceData.snapshot.asOf||reference.asOf!==source.asOf||reference.version!==source.registrationSource||!Array.isArray(source.cohorts)||source.cohorts.length!==12||!Array.isArray(reference.cohorts)||reference.cohorts.length!==12||
+      JSON.stringify(source.rateDimensions)!==JSON.stringify(['country','appPlatform','week'])||JSON.stringify(source.compositionOnlyDimensions)!==JSON.stringify(trialOpeningCompositionKeys))return bad();
+    const keys=['US','UK','DE','Other'].flatMap(country=>['iOS','Android'].map(app=>`${country}|${app}`));
+    for(const [i,c]of source.cohorts.entries()) {
+      const original=sourceData.weekly[i],ref=reference.cohorts[i];
+      if(!c||!ref||c.week!==original.week||c.week!==ref.week||c.start!==ref.start||c.end!==ref.end||c.observationThrough!==ref.observationThrough||!date(c.start)||!date(c.end)||!date(c.observationThrough)||new Date(c.start).getUTCDay()!==1||Date.parse(c.end)-Date.parse(c.start)!==6*86400000||Date.parse(c.observationThrough)-Date.parse(c.end)!==7*86400000||c.observationThrough>source.asOf||!Array.isArray(c.groups)||c.groups.length!==8||!Array.isArray(ref.groups)||ref.groups.length!==8)return bad();
+      for(const[j,r]of c.groups.entries()) {
+        if(!r||`${r.country}|${r.appPlatform}`!==keys[j]||`${ref.groups[j]?.country}|${ref.groups[j]?.appPlatform}`!==keys[j]||!whole(r.registered)||r.registered!==ref.groups[j].registered||!whole(r.trialStarted7d)||r.trialStarted7d>r.registered||!whole(r.notStarted7d)||r.trialStarted7d+r.notStarted7d!==r.registered||!Array.isArray(r.openings)||!Array.isArray(r.firstOpeningLagHourCounts))return bad();
+        const seen=new Set();let count=0,previous=-1,lagCount=0;
+        for(const cell of r.firstOpeningLagHourCounts){if(!Array.isArray(cell)||cell.length!==2||!Number.isInteger(cell[0])||cell[0]<0||cell[0]>=168||cell[0]<=previous||!whole(cell[1]))return bad();previous=cell[0];lagCount+=cell[1];}
+        if(lagCount!==r.trialStarted7d)return bad();
+        for(const o of r.openings){const key=trialOpeningCompositionKeys.map(k=>o?.[k]).join('|');if(!o||seen.has(key)||!whole(o.count)||!o.count||!['Bird','Hunting'].includes(o.productLine)||!(o.productLine==='Bird'?['Plus','Pro']:['Starter','Plus','Pro']).includes(o.plan)||!['monthly','annual'].includes(o.billingCycle)||!(r.appPlatform==='iOS'?['App Store','Web']:['Google Play','Web']).includes(o.subscriptionPlatform))return bad();seen.add(key);count+=o.count;}
+        if(count!==r.trialStarted7d)return bad();
+      }
+      if(c.registered!==original.registrationCohort.registered||c.trialStarted7d!==original.registrationCohort.trialStarted7d||c.groups.reduce((n,r)=>n+r.registered,0)!==c.registered||c.groups.reduce((n,r)=>n+r.trialStarted7d,0)!==c.trialStarted7d)return bad();
+    }
+    const last=source.cohorts.at(-1),raw=sourceData.metrics.m17;
+    if(raw.kind!=='rate'||raw.numerator!==last.trialStarted7d||raw.denominator!==last.registered)return bad();
+    return {source,rows:source.cohorts};
+  };
+  const index=verify();trialOpeningIndexes.set(source,{signature,index});return index;
+}
+function trialOpeningProjection(state=filterState) {
+  const index=trialOpeningIndex();if(index.reason)return index;
+  const filters=effectiveFor(17,state).filter(([key])=>key!=='week'),week=Number(state.week??index.rows.at(-1).week);
+  const rows=index.rows.map(c=>{const groups=c.groups.filter(r=>filters.every(([key,value])=>r[key]===value));return {...c,groups,registered:groups.reduce((n,r)=>n+r.registered,0),trialStarted7d:groups.reduce((n,r)=>n+r.trialStarted7d,0)};});
+  const current=rows.find(c=>c.week===week);return current?{source:index.source,rows,current,previous:rows[rows.indexOf(current)-1]??null}:{reason:'注册周无效，未回退到默认批次。'};
+}
+function trialOpeningMetric(state=filterState) {const p=trialOpeningProjection(state);if(p.reason)return pending(p.reason);const c=p.current;return c.registered<30?{...na(c.registered?'同批注册人数少于30，保留计数，不展示可靠开启率':'同批无注册用户，保留0计数，不补0%'),numerator:c.trialStarted7d,denominator:c.registered}:{kind:'rate',numerator:c.trialStarted7d,denominator:c.registered,value:c.trialStarted7d/c.registered};}
+function trialOpeningHistory(){const p=trialOpeningProjection();return p.reason?null:{title:'注册后7天试用开启率',unit:'%',labels:p.rows.map(c=>'W'+c.week),values:p.rows.map(c=>c.registered>=30?c.trialStarted7d/c.registered*100:null),details:p.rows.map(c=>({numerator:c.trialStarted7d,denominator:c.registered,basisLabel:`${c.start}—${c.end} 7天开启 / 同批注册`,numeratorUnit:'人',denominatorUnit:'人'})),selectedPeriod:'W'+p.current.week,note:trialOpeningNote};}
+const trialOpeningNote='同一注册批次、国家×注册App合成频数；首次试用延时0≤小时数<168，每人最多计一次。产品线、套餐、周期和订阅平台仅为已开启者属性，不为未开启者构造分母。与#18到期试用批次不同，不做用户身份关联。';
+function trialOpeningComposition(state=filterState,cohort=trialOpeningProjection(state).current) {
+  if(!cohort)return {reason:'开启构成来源不可用。'};
+  const filters=trialOpeningCompositionKeys.filter(key=>state[key]&&state[key]!=='All').map(key=>[key,state[key]]);
+  const all=cohort.groups.flatMap(r=>r.openings),rows=all.filter(r=>filters.every(([key,value])=>r[key]===value));
+  const grouped=new Map();for(const r of rows){const key=trialOpeningCompositionKeys.map(k=>r[k]).join('|');const prior=grouped.get(key);if(prior)prior.count+=r.count;else grouped.set(key,{...r});}
+  return {rows:[...grouped.values()].sort((a,b)=>trialOpeningCompositionKeys.map(k=>a[k]).join('|').localeCompare(trialOpeningCompositionKeys.map(k=>b[k]).join('|'))),count:rows.reduce((n,r)=>n+r.count,0),total:cohort.trialStarted7d,filters};
+}
+function trialOpeningWindow(){const p=trialOpeningProjection();return p.reason?'当前范围暂无可用基线周期':`试用开启观察期末 ${p.current.observationThrough} · 注册批次 W${p.current.week} · ${p.current.start}—${p.current.end}`;}
+function trialOpeningBaseline(){const p=trialOpeningProjection();return '试用开启证据v1：'+JSON.stringify({source:p.source.version,asOf:p.source.asOf,rateFilters:effectiveFor(17),compositionFilters:trialOpeningComposition().filters,current:p.current,previous:p.previous});}
+function trialOpeningBaselineDetails(value) {
+  const box=element('details','trial-opening-baseline-details');box.append(element('summary','','查看首次保存的注册批次与开启计数'));
+  try{const p=JSON.parse(value.slice('试用开启证据v1：'.length));box.append(dataTable({title:'首次保存 · 两期试用开启',columns:['用途','注册批次','同批注册','7天开启','观察至UTC'],rows:[['当前',p.current],['上一期',p.previous]].filter(([,c])=>c).map(([label,c])=>[label,`W${c.week} · ${c.start}—${c.end}`,c.registered,c.trialStarted7d,c.observationThrough]),note:trialOpeningNote}));
+    const state=Object.fromEntries(p.compositionFilters??[]);
+    box.append(element('p','table-note',`首次保存的开启构成条件：${(p.compositionFilters??[]).map(([key,value])=>`${filterLabels[key]} ${optionLabel(key,value)}`).join('、')||'全部开启方案'}；不作为总体开启率分母。`));
+    for(const [label,c]of [['当前',p.current],['上一期',p.previous]])if(c){const part=trialOpeningComposition(state,c),detail=element('details','trial-opening-saved-period');detail.append(element('summary','',`${label} W${c.week} · 查看首次保存的分组与开启构成`),dataTable({title:'首次保存 · 同批注册分组',columns:['国家','注册App','同批注册','7天开启'],rows:c.groups.map(r=>[optionLabel('country',r.country),r.appPlatform,r.registered,r.trialStarted7d]),note:trialOpeningNote}),dataTable({title:'首次保存 · 匹配的开启方案',columns:['产品线','首次套餐','周期','订阅平台','人数'],rows:part.rows.map(r=>[optionLabel('productLine',r.productLine),r.plan,optionLabel('billingCycle',r.billingCycle),r.subscriptionPlatform,r.count]),note:`匹配 ${number(part.count)} / ${number(part.total)} 名已开启者。` }));box.append(detail);}
+  }
+  catch{box.append(element('p','table-note','首次保存的证据格式待核对；保留原文，不使用当前数据补写。'));}return box;
+}
+function trialOpeningHistoryTable(p=trialOpeningProjection()){return {title:'注册批次 · 12周开启计数',columns:['注册批次','同批注册（人）','7天开启（人）','未开启（人）','开启率','7天观察至UTC'],rows:p.rows.map(c=>[`W${c.week} · ${c.start}—${c.end}`,c.registered,c.trialStarted7d,c.registered-c.trialStarted7d,c.registered>=30?percent(c.trialStarted7d/c.registered):c.registered?'样本不足':'无注册用户',c.observationThrough]),note:trialOpeningNote};}
+function trialOpeningEvidence(panel,append) {
+  const p=trialOpeningProjection();if(p.reason)return;const c=p.current,part=trialOpeningComposition(),history=trialOpeningHistory();
+  const summary=element('p','table-note trial-opening-population',`注册批次 W${c.week} · ${c.start}—${c.end}；7天观察至 ${c.observationThrough} UTC。总体 ${number(c.trialStarted7d)} / ${number(c.registered)} 人；开启构成匹配 ${number(part.count)} / ${number(part.total)} 名已开启者。后者是构成占比，不是方案开启率。`);
+  const link=element('a','insight-link','查看已开启者构成 →');link.href=routeHref('D',17,'groups');summary.append(' ',link);summary.dataset.evidenceKind='change';panel.append(summary);
+  append({metricId:17,title:'注册后7天试用开启率 · 12个成熟注册批次',unit:'%',labels:history.labels,details:history.details,selectedPeriod:history.selectedPeriod,series:[{name:'试用开启率',values:history.values}],note:trialOpeningNote},trialOpeningHistoryTable(p),'change');
+  const block=element('section','trial-opening-composition');block.dataset.evidenceKind='groups';block.append(element('h3','','已开启者构成 · 方案属性不作为开启率分母'));
+  const controls=element('div','binding-list-controls');
+  for(const key of trialOpeningCompositionKeys) {
+    const label=element('label','',`${filterLabels[key]}（仅#17开启构成）`),select=element('select','');select.dataset.compositionDimension=key;select.setAttribute('aria-label',`${filterLabels[key]}（仅#17开启构成）`);
+    for(const value of ['All',...availableOptions('D',key)]){const o=element('option','',value==='All'?'全部':optionLabel(key,value));o.value=value;select.append(o);}select.value=filterState[key]??'All';
+    select.addEventListener('change',()=>{changeFilter('D',key,select.value);document.querySelector(`.trial-opening-composition [data-composition-dimension="${key}"]`)?.focus({preventScroll:true});});label.append(select);controls.append(label);
+  }
+  block.append(controls,element('p','table-note',`本组控件与页面筛选同步；仅改变#17开启构成，国家／App／注册周仍决定总体开启率。其他D页指标各按自身规则响应。当前匹配 ${number(part.count)} / ${number(part.total)} 名已开启者，不为未开启者补方案归属。`));panel.append(block);
+  const plans=['Starter','Plus','Pro'],planCounts=plans.map(plan=>part.rows.filter(r=>r.plan===plan).reduce((n,r)=>n+r.count,0));
+  append({metricId:17,title:'首次试用套餐 · 已开启者人数',unit:'人',labels:plans,series:[{name:'已开启者',values:planCounts}],note:'已按当前产品线、套餐、周期和订阅平台筛选。各套餐计数合计当前匹配开启者；不把人数或构成占比解释为套餐开启率。'},
+    {title:'已开启者 · 套餐计数',columns:['首次套餐','匹配开启者（人）'],rows:plans.map((plan,i)=>[plan,planCounts[i]]),note:trialOpeningNote},'groups');
+  const groupedTable={title:'已开启者 · 完整方案构成',columns:['产品线','首次试用套餐','计费周期','开启订阅平台','人数'],rows:part.rows.map(r=>[optionLabel('productLine',r.productLine),r.plan,optionLabel('billingCycle',r.billingCycle),r.subscriptionPlatform,r.count]),note:`匹配 ${number(part.count)} 人；该注册范围同批开启 ${number(part.total)} 人。`};
+  for(const spec of [trialOpeningHistoryTable(p),{title:'当前注册批次 · 国家×App分母核对',columns:['国家','注册App','同批注册','7天开启','未开启'],rows:c.groups.map(r=>[optionLabel('country',r.country),r.appPlatform,r.registered,r.trialStarted7d,r.notStarted7d]),note:trialOpeningNote},groupedTable]){const table=dataTable(spec);table.dataset.evidenceKind='data';panel.append(table);}
+  const counts=dataTable(groupedTable);counts.dataset.evidenceKind='groups';panel.append(counts);
+  panel.querySelectorAll('.data-table-scroll').forEach(table=>table.classList.add('trial-opening-data'));
+}
+
 // #16 is an independent first-content ledger, not the App-bound #43 retention pool.
 const activationDeviceIndexes=new WeakMap();
 function activationDeviceIndex() {
@@ -2302,6 +2398,7 @@ function projectMetric(id,state=filterState) {
     const rate=part=>({kind:'rate',...part,value:part.numerator/part.denominator});
     return {kind:'group',value:{anyPack:rate(part.anyPack),byPack:Object.fromEntries(part.products.map(({name,...part})=>[name,rate(part)]))}};
   }
+  if(id===17)return trialOpeningMetric(state);
   if(id===24)return retentionMetric(state);
   if(id===43)return deviceRetentionMetric(state);
   if(id===38){const source=structureMetricViews();if(source.reason)return pending(source.reason);}
@@ -2667,6 +2764,7 @@ function renewalEvidence(panel,appendPair) {
 function trendValues(id) {
   const overview=homeProjection();if(overview)return overview.trends[id]??null;
   if([9,10,12].includes(id))return registrationHistory(id)?.values??null;
+  if(id===17)return trialOpeningHistory()?.values??null;
   if(id===16)return activationDeviceHistory()?.values??null;
   if(id===52)return riskHistory()?.values??null;
   if(id===54){const p=qualityProjection();return p.rows?p.rows.map(r=>r.loss===null?null:r.loss*100):null;}
@@ -3072,6 +3170,7 @@ function metricHistory(id) {
   if(!headlineTrendIds.has(id)||metric(id)?.kind==='na')return null;
   if(id===34&&trendValues(34)?.at(-1)!==metric(34).value)return null;
   if(id===7){const part=accountStockHistory();return part.rows?{labels:part.rows.map(r=>r.date),values:part.rows.map(r=>r.registered),unit:'人',title:'累计注册用户',comparisonLabel:'较上月末快照',note:'12个完整月末＋当前快照；最后一段是月内变化，不是完整月新增。'+part.note}:null;}
+  if(id===17)return trialOpeningHistory();
   if(id===16)return activationDeviceHistory();
   if(id===52)return riskHistory();
   if(id===54)return qualityHistory();
@@ -3650,7 +3749,7 @@ function miniCard({id,label,page,value,unit='',note='',critical=false,alert=fals
     scope+=`；未应用：${filterContext.ignoredText}`;
   }
   const source=measure.kind!=='na'&&filterContext.applied.length?
-    ([4,25,30].includes(id)?'同源国家×App活跃窗口频数':[11,13].includes(id)?'同源合成绑定／激活频数':id===16?'独立合成首次内容设备逐台计数':id===15?'合成设备台账逐台计数':id===41?'合成设备行为间隔汇总':id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
+    (id===17?'同源注册分母与7天开启频数':[9,10,12].includes(id)?'同源国家×注册App×注册批次频数':[4,25,30].includes(id)?'同源国家×App活跃窗口频数':[11,13].includes(id)?'同源合成绑定／激活频数':id===16?'独立合成首次内容设备逐台计数':id===15?'合成设备台账逐台计数':id===41?'合成设备行为间隔汇总':id===42?'合成触发事件汇总':'按适用条件模拟分片估算'):'';
   const context=[scope,source].filter(Boolean).join('；');
   if(context)link.append(element('p','metric-filter-scope',context));
   body.append(link);
@@ -4272,6 +4371,7 @@ function metricSecondaryValues(summary) {
 }
 function actionBaselineValue(id) {
   if([9,10,12].includes(id)&&metric(id).kind!=='na')return registrationBaseline(id);
+  if(id===17&&metric(17).kind==='rate')return trialOpeningBaseline();
   if(id===27&&metric(27).kind==='rate')return featureUsageBaseline();
   if(id===28&&metric(28).kind==='group')return userRetentionBaseline();
   if(id===52&&metric(52).kind==='count')return riskBaseline();
@@ -5073,11 +5173,11 @@ function metricEvidence(id,page) {
   const item=catalogItem(id),contract=contractFor(id),value=metric(id);
   const panel=element('section','detail-section metric-evidence');panel.id=`metric-evidence-${id}`;
   panel.append(sectionTitle('04  /  METRIC EVIDENCE',`#${String(id).padStart(2,'0')} ${item.name} · 数据核对`,
-    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):[9,10,12].includes(id)?'同源合成注册批次 · 12周':id===28?'12批次同源合成新客留存':id===27?'同源功能／通知频数 · 84日':id===52?'同源合成账号 · 12期风险快照':id===51?'12月同源合成解绑台账':id===54?'30个完整UTC日 · 独立质量计数':id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===16?'独立合成首次内容设备 · 12个完整周':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
+    value.kind==='na'?(value.availability==='pending'?'缺少同范围数据':'当前范围不适用'):id===17?'同注册批次 · 7天开启计数':[9,10,12].includes(id)?'同源合成注册批次 · 12周':id===28?'12批次同源合成新客留存':id===27?'同源功能／通知频数 · 84日':id===52?'同源合成账号 · 12期风险快照':id===51?'12月同源合成解绑台账':id===54?'30个完整UTC日 · 独立质量计数':id===53?'30窗同源异常事件 · ID去重':id===26?'完整UTC日 · 同源合成会话频数':id===7?'国家×App同源合成账号存量':[4,25,30].includes(id)?'同源活跃窗口频数 · 84日':id===23?'月度同源合成频数 · 人数重算':id===43?'同源合成激活批次 · 设备频数':id===24?'合成月度留存分组 · 人数重算':[11,13].includes(id)?'同源合成频数 · 成功率与耗时':id===16?'独立合成首次内容设备 · 12个完整周':id===15?'合成设备台账 · 逐台计数':[41,44].includes(id)?'合成行为间隔事实 · 同群重算':id===18?'合成试用明细 · 逐条聚合':id===42?'周×型号×固件合成触发汇总':id===46?technicalRequestSource(id):selectedFilters().length?'当前筛选的模拟分片':'当前底表模拟值'));
   const dimensions=(id===18?[...trialFactDimensions]:policyFor(id).demonstrableDimensions)
     .filter(key=>relevantFilters(page).includes(key));
   const observed=[11,13,18].includes(id)?cohortObservation(id):null;
-  const evidenceWindow=id===16?activationDeviceWindow():id===52?riskWindow():id===51?unbindingWindow():observed&&!observed.reason?`W${observed.week} · ${observed.start}—${observed.end}；观察截至 ${observed.observedThrough}（UTC）`:contract.window;
+  const evidenceWindow=id===17?trialOpeningWindow():id===16?activationDeviceWindow():id===52?riskWindow():id===51?unbindingWindow():observed&&!observed.reason?`W${observed.week} · ${observed.start}—${observed.end}；观察截至 ${observed.observedThrough}（UTC）`:contract.window;
   const intro=element('p','evidence-meta',`统计对象：${metricEntityLabel(contract.entity)} · 窗口：${evidenceWindow} · 本指标可演示筛选：${dimensions.map(key=>filterLabels[key]).join('、')||'无'}。`);
   if(id===52)intro.append(element('span','metric-filter-scope risk-source-coverage',value.kind==='na'?'风险来源不可用，不生成名单或导出。':riskSourceCoverage));
   panel.append(intro);
@@ -5091,7 +5191,8 @@ function metricEvidence(id,page) {
   const filterContext=metricFilterContext(id);
   if(selectedFilters().length)intro.append(element('span','metric-filter-scope',
     `${filterContext.applied.length?`本项应用：${filterContext.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、')}`:'本项仍为总体范围'}${filterContext.ignored.length?`；未应用：${filterContext.ignoredText}（不适用于本项）`:''}。`));
-  if(value.kind==='na'&&(id!==23||!renewalProjection().current)&&(id!==36||packPenetrationFacts().reason)&&(id!==46||technicalHistoryProjection().reason)) {panel.append(element('p','na-note',`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}。`));return {node:panel,specs:[]};}
+  if(id===17)intro.append(element('span','metric-filter-scope trial-opening-scope','总体开启率只应用国家、注册App和注册周；产品线、套餐、周期及订阅平台仅应用于已开启者构成。'));
+  if(value.kind==='na'&&(id!==17||trialOpeningProjection().reason)&&(id!==23||!renewalProjection().current)&&(id!==36||packPenetrationFacts().reason)&&(id!==46||technicalHistoryProjection().reason)) {panel.append(element('p','na-note',`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}。`));return {node:panel,specs:[]};}
   if(hasRegistrationBaseline(id))panel.append(registerIssueButton(page,id,{compact:true}));
   if(id===24){const table=dataTable(retentionTable(),'retention-calculation');table.dataset.evidenceKind='data';panel.append(table);}
   if(id===54)panel.append(element('p','table-note quality-threshold-note',dataQualityState(value).reason));
@@ -5114,6 +5215,7 @@ function metricEvidence(id,page) {
     if(spec.note&&spec.note!==tableSpec.note)plot.append(element('p','table-note',spec.note));
     pair.append(plot,dataTable(tableSpec));panel.append(pair);specs.push([box,spec]);
   };
+  if(id===17){trialOpeningEvidence(panel,appendEvidencePair);return {node:panel,specs};}
   if(id===16){activationDeviceEvidence(panel,appendEvidencePair);return {node:panel,specs};}
   if(id===52){riskEvidence(panel,appendEvidencePair,page);return {node:panel,specs};}
   if(id===51){unbindingEvidence(panel,appendEvidencePair);return {node:panel,specs};}
@@ -5630,6 +5732,7 @@ function actionRecord(page,evidenceId) {
   form.noValidate=true;
   const header=element('div','action-record-header');
   const badge=element('span','action-stage-badge');header.append(element('strong','',`问题单 ${issueId}`),badge);
+  const trialOpeningBaselineSaved=evidenceId===17&&baseline.startsWith('试用开启证据v1：');
   const registrationBaselineSaved=[9,10,12].includes(evidenceId)&&baseline.startsWith('注册批次证据v1：');
   const userRetentionBaselineSaved=evidenceId===28&&baseline.startsWith('新客留存证据v1：');
   const featureBaselineSaved=evidenceId===27&&baseline.startsWith('功能配置证据v1：');
@@ -5640,7 +5743,8 @@ function actionRecord(page,evidenceId) {
   const deviceStateBaseline=evidenceId===50&&baseline.startsWith('设备状态计数：');
   const sessionBaseline=evidenceId===26&&baseline.startsWith('会话日证据v1：');
   const statusCountBaseline=evidenceId===5&&baseline.startsWith('状态人数：');
-  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${registrationBaselineSaved?'同源注册、绑定与首图计数':userRetentionBaselineSaved?'同源入组、成熟观察与留存计数':featureBaselineSaved?'两期功能与通知计数证据':riskBaselineSaved?'风险规则、快照与计数证据':unbindingBaselineSaved?'解绑月计数与分组证据':qualityBaselineSaved?'两日质量计数证据':anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  form.append(header,element('p','table-note',`登记基线：${catalogItem(evidenceId)?.name??'当前证据'} ${trialOpeningBaselineSaved?'同源注册与两期试用开启计数':registrationBaselineSaved?'同源注册、绑定与首图计数':userRetentionBaselineSaved?'同源入组、成熟观察与留存计数':featureBaselineSaved?'两期功能与通知计数证据':riskBaselineSaved?'风险规则、快照与计数证据':unbindingBaselineSaved?'解绑月计数与分组证据':qualityBaselineSaved?'两日质量计数证据':anomalyBaselineSaved?'两窗异常事件证据':deviceStateBaseline?'完整设备状态计数':sessionBaseline?'完整日会话与分布证据':statusCountBaseline?'当前快照状态人数':baseline} · ${baselineAt}。`));
+  if(trialOpeningBaselineSaved)form.append(trialOpeningBaselineDetails(baseline));
   if(registrationBaselineSaved)form.append(registrationBaselineDetails(baseline));
   if(userRetentionBaselineSaved)form.append(userRetentionBaselineDetails(baseline));
   if(featureBaselineSaved)form.append(featureUsageBaselineDetails(baseline));
@@ -5658,6 +5762,7 @@ function actionRecord(page,evidenceId) {
   if(evidenceId===43){const c=deviceRetentionCurrent();calculationDescription.append(element('p','table-note',c.reason?c.reason:`激活批次：${c.start}—${c.end}；D7／D30分别完整观察，设备状态按激活入组时冻结。`));}
   if(evidenceId===23)calculationDescription.append(element('p','table-note',`${actionBaselineWindow(23)}；旧周度结果与月度结果不能直接比较。`));
   if(evidenceId===24)calculationDescription.append(element('p','table-note',`留存观察月：${retentionSelection().month}；完整月，分母为上一基期月的复合活跃主账号。`));
+  if(evidenceId===17)calculationDescription.append(element('p','table-note','总体开启率仅按国家、注册App及注册周计算；界面中产品线、套餐、周期和订阅平台仅筛已开启者构成，不是注册分母。'));
   if(filterContext.ignored.length)calculationDescription.append(element('span','action-scope-ignored',
     `未参与计算：${filterContext.ignoredText}（不适用于本指标）。`));
   scopeDetails.append(element('dt','','计算范围'),calculationDescription,element('dt','','界面条件'),element('dd','',scope));
@@ -5682,6 +5787,10 @@ function actionRecord(page,evidenceId) {
   const legacyObservation=[11,13,18].includes(evidenceId)&&(current.baselineAt||draft?.baselineAt)&&!observedBaselineEnd(baselineAt);
   if(legacyObservation)form.append(element('p','action-baseline-note observation-legacy-note',
     `旧登记未保存结果观察截止；当前指标为 ${currentBaseline} · ${currentWindow}。原编号、基线、窗口和草稿保留，复查日期仍按原登记窗口校验；请人工核对原观察期是否完整。`));
+  else if(evidenceId===17&&(current.baseline||draft?.baseline)){
+    if(!trialOpeningBaselineSaved)form.append(element('p','action-baseline-note trial-opening-legacy-note','旧登记未保存同源注册分母与完整7天观察窗，旧方案范围可能用于估算开启率；当前方案属性仅筛开启构成。原编号、范围、基线、周期和草稿保留，不补写历史。'));
+    else if(baseline!==currentBaseline||baselineAt!==currentWindow)form.append(element('p','action-baseline-note trial-opening-evidence-change','当前注册批次、两期计数或开启构成与首次保存不同；即使主值相同也需核对。保存进度保留首次证据。'));
+  }
   else if([9,10,12,27,28].includes(evidenceId)&&(current.baseline||draft?.baseline)){
     const saved=[9,10,12].includes(evidenceId)?registrationBaselineSaved:evidenceId===27?featureBaselineSaved:userRetentionBaselineSaved;
     const name=[9,10,12].includes(evidenceId)?'registration':evidenceId===27?'feature':'user-retention';
@@ -6100,10 +6209,12 @@ function metricInspector(id,page) {
   if(id===38&&value.kind==='group'){const source=structureMetricViews();if(source.views){fact('国家／App平台分母',`${number(source.views[0].denominator)} 全部注册用户`);fact('型号分母',`${number(source.views[2].denominator)} 当前绑定设备`);fact('历史覆盖','仅当前快照；没有12个月结构历史，不生成趋势');}}
   summary.fields.forEach(([label,text])=>fact(label,text));
   fact('统计对象',metricEntityLabel(contract.entity));
-  fact('时间窗口',id===16?activationDeviceWindow():contract.window);
+  fact('时间窗口',id===17?trialOpeningWindow():id===16?activationDeviceWindow():contract.window);
   if([9,10,12].includes(id)&&value.kind!=='na'){const p=registrationProjection(id);fact('注册批次',`W${p.current.week} · ${p.current.start}—${p.current.end}`);if(id===10)fact('7天绑定',`${p.current.registered>=30?percent(p.current.bound7/p.current.registered):'无可靠比例'} · ${number(p.current.bound7)} / ${number(p.current.registered)}人`);if(id===12)fact('30日参照',`W${p.d30.week} · 观察至${p.d30.observed30Through}${p.d30.mature30?'':'，观察中'}`);}
   if(id===28&&value.kind==='group'){const p=userRetentionProjection();fact('入组方式',userRetentionTypeLabels[p.type]);fact('同批人数／批次',`${number(p.current.denominator)}人 · ${p.current.start}—${p.current.end}`);fact('观察截至',p.source.asOf+' UTC零时');}
   if(id===27&&value.kind==='rate'){const p=featureUsageProjection(),r=p.current;fact('同期App活跃',`${number(r.app)}人（功能使用者的上界）`);fact('通知开／关／未知',`${number(r.config.on)} / ${number(r.config.off)} / ${number(r.config.unknown)}人`);}
+  if(id===17&&value.kind==='rate'){const p=trialOpeningComposition();fact('已开启者构成',`${number(p.count)} / ${number(p.total)}人；产品线／套餐／周期／订阅平台不作用于总体开启率`);}
+  if(id===17&&metricFilterContext(17).composition.length)fact('仅开启构成筛选',metricFilterContext(17).composition.map(([key,value])=>`${filterLabels[key]} ${optionLabel(key,value)}`).join('、'));
   if(id===37&&value.kind==='group')fact('数据覆盖','原模拟汇总未明确月份；暂不计算月度变化或结构占比');
   if(id===23){const part=renewalProjection();if(!part.reason){const r=part.current;fact('到期月 / 最晚观察日',`${part.month} / ${new Date(Date.parse(r.renewalObservationEndExclusive)-86400000).toISOString().slice(0,10)}`);fact('发生权益流失 / 期初',`${number(r.lostDuring)} / ${number(r.opening)}人`);fact('主动取消 / 期初',`${number(r.cancelled)} / ${number(r.opening)}人`);}}
   if([11,13,18].includes(id)){const c=cohortObservation(id);fact('本批次 / 观察截止',c.reason?c.reason:`W${c.week} · ${c.start}—${c.end} / ${c.observedThrough}（UTC）`);}
@@ -6145,7 +6256,7 @@ function metricInspector(id,page) {
   if(selectedFilters().length)fact('筛选范围',`${scope.applied.length?scope.applied.map(([key,option])=>`${filterLabels[key]} ${optionLabel(key,option)}`).join('、'):'本项仍为总体范围'}${scope.ignored.length?`；未应用：${scope.ignoredText}`:''}`);
   panel.append(rows);
   panel.append(element('p','inspector-source',value.kind==='na'?'当前条件没有可用结果。':
-    id===52?riskSourceCoverage:id===51?'月初绑定群与关系事件来自同一合成台账，按首次解绑锚定观察期；型号、原因与设备记录可逐层核对，未回绑不等于已流失。':id===7?'同一国家×App互斥合成存量逐行汇总；较上月末是月内存量变化，不是新增注册批次转化率或逐账号历史。':id===38?'现有总体人数、分母与底表比例已逐项核对；不代表付费人群，当前没有12个月历史。':
+    id===17?trialOpeningNote:[9,10,12].includes(id)?'按同一注册批次、国家×注册App合成频数重算，计数、趋势与观察窗同源；不使用独立维度分片，不代表真实事件日志。':id===52?riskSourceCoverage:id===51?'月初绑定群与关系事件来自同一合成台账，按首次解绑锚定观察期；型号、原因与设备记录可逐层核对，未回绑不等于已流失。':id===7?'同一国家×App互斥合成存量逐行汇总；较上月末是月内存量变化，不是新增注册批次转化率或逐账号历史。':id===38?'现有总体人数、分母与底表比例已逐项核对；不代表付费人群，当前没有12个月历史。':
     id===43?'按首图激活周、国家、型号与自报渠道合成频数重算；状态按入组时冻结，后续停用不剔除。D30不是D7子集，不能解释为连续使用率。':
     id===23?'按完整到期月的合成频数重算，7天为演示观察窗；取消与发生权益流失可重叠，不等于离开产品。':[4,25,30].includes(id)?'按84日同源窗口频数及当前七类互斥构成核对；国家×平台固定归属，1／7／30天与App子集不相加。':id===24?'按所选完整自然月、国家与基期App平台汇总同一合成分组；人数重算留存率，不平均分组率。不是逐账号事件日志或真实经营历史。':
     [11,13].includes(id)?'按当前批次与筛选交集汇总同一合成频数；成功率与耗时同源，不是独立分片估算，仍非真实经营日志。':
@@ -6979,7 +7090,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261020-183`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261020-184`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}

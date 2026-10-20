@@ -36,8 +36,9 @@ for(const appPlatform of ['',...source.filterPolicy.controls.appPlatform.options
 }
 assert.equal(Object.keys(home.scopes).length,45,'Home global filter combinations changed; update acceptance deliberately');
 // Small shared definitions and navigation metadata; no event rows in initial transfer.
+const registrationCounts=plain(run('trialOpeningRegistrationCounts()'));
 const common=['catalog','metrics','weekly','snapshot','stories','contract','filterPolicy','slices','modelMarket','metricTrends','entitySamples','inactivityCohorts','subscriptionFlow'];
-const heavyFields=new Set(['accountHistory','registrationFacts','sessionDepth','userRetentionFacts','riskFacts','unbindingFacts','anomalyEvents','qualityFacts','activationFacts']);
+const heavyFields=new Set(['accountHistory','registrationFacts','sessionDepth','userRetentionFacts','riskFacts','unbindingFacts','anomalyEvents','qualityFacts','activationFacts','trialOpeningFacts']);
 const diagnostics=Object.fromEntries(Object.entries(source.diagnostics).map(([p,d])=>[p,Object.fromEntries(Object.entries(d).filter(([k])=>!heavyFields.has(k)))]));
 const options=plain(run(`Object.fromEntries([
  ['B','userCohortType'],['B','userCohort'],['D','riskSnapshot'],['F','unbindingMonth'],
@@ -64,7 +65,7 @@ const requirements={
 // Metric 2/5/6/21 reconciliation is small shared data. The page's own facts are
 // independently checked by projectMetric before the corresponding value is used.
 for(const [page,r] of Object.entries(requirements))files[`route-${page}`]={version:1,revision,page,
- sources:Object.fromEntries(r.facts.map(k=>[k,source[k]])),diagnostics:Object.fromEntries(r.diagnostics.map(p=>[p,page==='A'?source.diagnostics[p]:Object.fromEntries(Object.entries(source.diagnostics[p]).filter(([k])=>k!=='activationFacts'))]))};
+ sources:{...Object.fromEntries(r.facts.map(k=>[k,source[k]])),...(page==='D'?{registrationCohortCounts:registrationCounts}:{})},diagnostics:Object.fromEntries(r.diagnostics.map(p=>[p,page==='A'?source.diagnostics[p]:Object.fromEntries(Object.entries(source.diagnostics[p]).filter(([k])=>k!=='activationFacts'&&(page==='D'||k!=='trialOpeningFacts')))]))};
 const check=process.argv.includes('--check');
 for(const [name,value] of Object.entries(files)) {
  const filename=path.join(root,'data',name+'.json'),text=JSON.stringify(value)+'\n';
