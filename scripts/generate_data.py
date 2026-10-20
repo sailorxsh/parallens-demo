@@ -38,6 +38,8 @@ for cells in sheet.iter_rows(min_row=4, max_row=57, values_only=True):
         "page": page,
     })
 next(item for item in catalog if item["id"] == 26).update({'businessQuestion': '使用深度：一天使用几次、每次看多久', 'definition': '最近完整UTC日，App主动活跃正式主账号平均使用几次、每次前台使用多久；不是打开间隔或留存。', 'formula': '人均有效会话次数＝最近完整UTC日有效会话数÷同日App主动活跃主账号数；P50/P90按合并后的有效前台时长频数用R7计算，非分组分位数平均。', 'default': '人均会话次数、P50/P90和84日独立刻度趋势；按日期查看次数与时长分布及完整频数。', 'note': '连续30分钟无有效前台交互后重开；UTC零时切分，后台不计时。次数分母对齐#25 App近1天，时长单列合格样本数；版本、用户类型及逐用户来源待补。'})
+# Approved #50: both bound states can contain shared devices; preserve counts.
+next(item for item in catalog if item["id"] == 50).update({'definition': '按当前主账号绑定关系与首次内容产出，观察已绑定已激活、已绑定未激活、已激活未绑定三类互斥设备状态；前两类各自包含有共享与无共享设备。', 'formula': '按设备当前有效关系与内容产出互斥统计：①主账号绑定且有首图②主账号绑定但无首图③有首图但无主账号绑定。共享分别作为①和②的子维度，不作为第四类相加；两类共享设备合计对应#49当前共享设备数。', 'default': '显示三类互斥设备数量，以及①和②各自的共享子项；共享子项不与父状态相加。近6个月历史待补，不生成历史变化。', 'chart': '结构图：绑定且有首图（有/无共享）／绑定未激活（有/无共享）／激活未绑定'})
 next(item for item in catalog if item["id"] == 50)["note"] = '当前状态按绑定、累计激活与共享三个父总数约束子项闭合；筛选仍是原模拟分片估算，不是逐设备关系明细。近6个月历史待补。'
 next(item for item in catalog if item["id"] == 53)["note"] = '最近24小时事件计数与30窗趋势、清单同源；国家×App×异常类型为新增合成归属。统一近4周告警基线、严重程度及影响人数待补；相关指标证据各用自身口径，不证明跨源身份或因果。'
 next(item for item in catalog if item["id"] == 29).update({
