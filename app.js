@@ -3491,6 +3491,12 @@ function modelContextTable() {
     {title:'设备型号订阅表现 · 暂不可用',columns:['状态'],rows:[[`${value.availability==='pending'?'待补数据':'不适用'}：${value.reason}`]],
       note:'未展示旧汇总比例或反推人数；补齐同范围来源后再核对型号表现。'};
 }
+// Display precision must not turn a measurable movement into a claim of equality.
+function trendMovement(delta,unit) {
+  if(!Number.isFinite(delta))return '暂无可比值';
+  if(Math.abs(delta)<1e-10)return '持平';
+  return Math.abs(delta)<.05?`${delta>0?'上升':'下降'}不足 0.1${unit}`:`${delta>0?'+':''}${delta.toFixed(1)}${unit}`;
+}
 function headlineTrend(id) {
   const history=metricHistory(id);
   if(!history)return null;
@@ -3498,8 +3504,8 @@ function headlineTrend(id) {
   const current=history.values[index],before=history.values[index-1];
   const delta=current==null||before==null?null:current-before;
   const moneyChange=history.unit==='美元/人'&&delta!==null?arppuChangeLabel(delta):null;
-  const deltaText=id===26?sessionDepthChange(current,before,'次/人',2):delta==null?'暂无可比值':moneyChange?(moneyChange==='持平'?'与上期持平':`${moneyChange}（较上期）`):Math.abs(delta)<.05?'与上期持平':history.unit==='%'?
-    `${delta>0?'+':''}${delta.toFixed(1)} 个百分点`:
+  const deltaText=id===26?sessionDepthChange(current,before,'次/人',2):delta==null?'暂无可比值':moneyChange?(moneyChange==='持平'?'与上期持平':`${moneyChange}（较上期）`):Math.abs(delta)<1e-10?'与上期持平':history.unit==='%'?
+    trendMovement(delta,' 个百分点'):
     `${delta>0?'+':''}${number(Math.round(delta))}${history.unit}（${history.comparisonLabel??'较上期'}）`;
   const wrap=element('div','headline-trend');
   if(delta!==null)wrap.dataset.delta=String(delta);
@@ -3575,7 +3581,7 @@ function nodeTrendDetails(id) {
   const comparable=Number.isFinite(current)&&Number.isFinite(previous)&&(isRate||previous!==0);
   const delta=comparable?(isRate?current-previous:(current/previous-1)*100):null;
   const compare=monthly?'上月':weekly?'上周':'上期';
-  const change=delta===null?'缺少可比期':Math.abs(delta)<.05?`与${compare}持平`:`${delta>0?'+':''}${delta.toFixed(1)}${isRate?'个百分点':'%'}（较${compare}）`;
+  const change=delta===null?'缺少可比期':Math.abs(delta)<1e-10?`与${compare}持平`:`${trendMovement(delta,isRate?'个百分点':'%')}（较${compare}）`;
   const details=element('div','node-extra');
   const windowLabel=`近${series.length}${monthly?'个月':weekly?'周':'期'}${monthly||weekly?'趋势':'模拟快照'}`;
   details.append(element('span','node-extra-label',`${windowLabel} · ${labels[position]??'无可用期'}`),element('p','node-change',change));
