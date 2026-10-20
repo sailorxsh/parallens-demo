@@ -1091,3 +1091,8 @@ article.trial-sample-item {cursor:auto}
 .topic-structure-dimensions>div {min-width:0}
 
 .topic-trend-title {display:block;font-size:.72rem;font-weight:600;color:#344f3e;margin-bottom:.25rem}
+
+/* Single results use the full card measure; keep each count basis together when wrapping. */
+.topic-metric .metric-secondary-values:has(> :only-child) {grid-template-columns:minmax(0,1fr)}
+.topic-metric .metric-secondary-values dd:has(>.topic-basis) {display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .25rem}
+.topic-basis {display:inline-block;line-height:1.5}
