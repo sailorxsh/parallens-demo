@@ -33,7 +33,7 @@ async (parent) => {
       check(layout.resultRows.length===4&&layout.resultRows.every(r=>r.sameLine&&!r.overflow),'Result change and comparison period do not share a readable single line');
       check(layout.sixColumns&&layout.nodes.length===6&&layout.nodes.every(n=>n.trend&&n.change&&!n.overflow),'Six default journey trends or comparisons are missing or clipped');
       check(layout.changeVisible,'Analysis comparison delta escapes its surface');
-      check(layout.resultRows[0].text==='+50人9/24 较 9/17'&&layout.resultRows[1].text==='+3.2%9/24 较 9/1'&&
+      check(layout.resultRows[0].text==='+50人9/24 较 9/17'&&layout.resultRows[1].text==='存量 +3.2%9/24 较 9/1'&&
         layout.resultRows[2].text==='+302美元9/24 较 9/17'&&layout.resultRows[3].text==='+73人9/24 较 9/23','Result comparisons contradict their source periods');
       await p.screenshot({path:`output/playwright/v62-home-${size.width}.png`,scale:'css'});
       results.push({width:size.width,...layout});
@@ -91,9 +91,18 @@ async (parent) => {
     check(p.url().includes('#/D')&&p.url().includes('country=US')&&p.url().includes('productLine=Hunting'),'Evidence navigation dropped supported filters');
     await p.goBack();await p.locator('.home-results').waitFor();
     check(await p.getByLabel('国家/市场',{exact:true}).inputValue()==='US','Back lost filter selection');
-    // Inject inconsistent upstream stock counts in this isolated browser only.
-    await p.route('**/data/metric-values.json',async route=>{
-      const response=await route.fetch(),data=await response.json();data.m05.value.bird.paidCurrent+=5000;
+    // Derive the unavailable result through the current source reconciliation,
+    // then deliver it through the pooled home read model used by the live loader.
+    await p.goto(`${base}#/D?metric=21`);
+    await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
+    const invalid=await p.evaluate(()=>{
+      sourceData.metrics.m05.value.bird.paidCurrent+=5000;projectDataset();
+      return metric(21);
+    });
+    check(invalid.kind==='na'&&invalid.reason.includes('不闭合'),'Contradictory source stocks are not rejected');
+    await p.route('**/data/route-home.json*',async route=>{
+      const response=await route.fetch(),data=await response.json();
+      data.pool[data.scopes['||'].metrics.m21]=invalid;
       await route.fulfill({response,json:data});
     });
     await open();await p.reload();await p.locator('#trendChart svg').waitFor();

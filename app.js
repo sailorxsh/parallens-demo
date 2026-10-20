@@ -3589,7 +3589,7 @@ function nodeTrendDetails(id) {
   const box=element('div','node-sparkline');
   box.dataset.metricId=String(id);
   box.setAttribute('role','img');
-  box.setAttribute('aria-label',`${history.title}；${labels[position]??'无可用期'}值${Number.isFinite(current)?chartValue(current,unit):'不适用'}，${change}；比较期${labels[position-1]??'无'}。${history.note??''}`);
+  box.setAttribute('aria-label',`${history.title}；${labels[position]??'无可用期'}值${Number.isFinite(current)?chartValue(current,unit):'不适用'}，${change}；比较期${labels[position-1]??'无'}。趋势独立缩放，不用于跨指标比较波动幅度。${history.note??''}`);
   details.append(box);
   return details;
 }
@@ -3840,7 +3840,7 @@ function homeResult({id,label,value,page,status}) {
   if(id===21&&metric(id).kind==='group') {
     const {opening,closing}=metric(id).value;
     if(opening>0&&Number.isFinite(closing)) {
-      delta=closing-opening;change=`${delta>=0?'+':''}${(delta/opening*100).toFixed(1)}%`;
+      delta=closing-opening;change=`存量 ${delta>=0?'+':''}${(delta/opening*100).toFixed(1)}%`;
       period='9/24 较 9/1';
     }
   } else if(history) {
@@ -3881,7 +3881,7 @@ function renderHome() {
   ].forEach(item=>snap.append(homeResult(item)));
   dash.append(snap);
 
-  const journeyTitle=sectionTitle('03  /  VALUE JOURNEY','六节点经营主线','调查顺序 · 各自批次与分母，不能相乘');
+  const journeyTitle=sectionTitle('03  /  VALUE JOURNEY','六节点经营主线','调查顺序 · 各自批次与分母，不能相乘 · 趋势独立缩放');
   const rail=element('div','journey-rail');
   [
     {id:9,label:'周新增注册',value:formatMetric(9),page:'A',detail:1},
