@@ -5707,6 +5707,15 @@ function topicStructureGraphic(id,structure) {
  if(id===51){const evidence=element('a','insight-link','核对原因与设备清单 ↗');evidence.href=routeHref('F',51,'groups');bindTopicDiagnosisLink(evidence);wrap.append(evidence);}
  const details=element('details','topic-chart-data');details.append(element('summary','','查看完整数据表'),structure);wrap.append(details);return wrap;
 }
+function topicTrendRange(history) {
+ const values=history.values.filter(Number.isFinite);if(values.length<2)return null;
+ const min=Math.min(...values),max=Math.max(...values),span=max-min;
+ const count=['人','台','条','次'].includes(history.unit);
+ const precision=count?0:Math.min(6,Math.max(2,span>0?1-Math.floor(Math.log10(span)):2));
+ const format=n=>{const text=n.toLocaleString('en-US',{maximumFractionDigits:precision});return history.unit==='美元'?`$${text}`:history.unit==='美元/人'?`$${text}/人`:`${text}${history.unit??''}`;};
+ const note=element('p','topic-trend-range',span===0?`序列各期均为 ${format(min)}`:`序列范围 ${format(min)}–${format(max)} · 独立缩放`);
+ note.dataset.min=String(min);note.dataset.max=String(max);return note;
+}
 function drawTopicSparkline(box,history) {
  const values=history.values.filter(Number.isFinite);if(values.length<2){box.textContent='无可比趋势';return;}
  const min=Math.min(...values),max=Math.max(...values),spread=max-min||Math.max(1,Math.abs(max)*.02),low=min-spread*.15,high=max+spread*.15;
@@ -5749,7 +5758,7 @@ function renderTopicOverview(page) {
     if(id===21)card.append(element('p','topic-net-change',`净增 ${topicNetChange(m)}人 · 期末减期初`));
     if(s.context)card.append(element('p','topic-context',s.context));
     const history=metricHistory(id),trend=headlineTrend(id);
-    if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');card.append(trend);}
+    if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history);box.classList.add('topic-sparkline');const range=topicTrendRange(history);if(range)trend.append(range);card.append(trend);}
     else card.append(element('p','topic-no-history',m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
    }
    const context=metricFilterContext(id);if(context.ignored.length)card.append(element('p','metric-filter-scope',`未应用：${context.ignoredText}`));

@@ -1130,3 +1130,5 @@ article.trial-sample-item {cursor:auto}
 
 /* Keep the selected period round while the SVG trend stretches with its card. */
 .topic-sparkline-marker {position:absolute;width:5px;height:5px;border-radius:50%;background:#ad692c;transform:translate(-50%,-50%);pointer-events:none}
+
+.topic-trend-range {margin:.3rem 0 0;font-size:.72rem;line-height:1.5;color:var(--muted,#526856);overflow-wrap:anywhere}
