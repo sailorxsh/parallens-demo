@@ -5804,6 +5804,21 @@ function drawTopicSparkline(box,history) {
  let d='',gap=true;history.values.forEach((n,i)=>{if(!Number.isFinite(n)){gap=true;return;}const x=2+i/Math.max(1,history.values.length-1)*236,y=36-(n-low)/(high-low)*32;d+=`${gap?'M':'L'}${x.toFixed(2)},${y.toFixed(2)} `;gap=false;});
  const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',d);path.setAttribute('fill','none');path.setAttribute('stroke','currentColor');path.setAttribute('stroke-width','2');path.setAttribute('vector-effect','non-scaling-stroke');svg.append(path);const selected=history.selectedPeriod?history.labels.indexOf(history.selectedPeriod):filterState.week&&/^W\d+$/.test(history.labels[0])?history.labels.indexOf('W'+filterState.week):history.values.length-1,n=history.values[selected];if(selected>=0&&Number.isFinite(n)){const dot=element('span','topic-sparkline-marker');dot.setAttribute('aria-hidden','true');dot.style.left=((2+selected/Math.max(1,history.values.length-1)*236)/240*100)+'%';dot.style.top=((36-(n-low)/(high-low)*32)/40*100)+'%';box.replaceChildren(svg,dot);}else box.replaceChildren(svg);
 }
+function topicQualityBadge() {
+ const quality=dataQualityState(metric(54)),badge=element('span','topic-quality-status','数据质量 · '+quality.label);
+ badge.dataset.state=quality.label==='演示预警'?'warning':quality.label==='演示正常'?'normal':'unavailable';
+ return badge;
+}
+function topicQualityChecks() {
+ const quality=dataQualityState(metric(54)),box=element('div','topic-quality-checks');
+ box.append(topicQualityBadge());
+ if(quality.checks){const list=element('ul','');quality.checks.forEach(check=>{
+  const row=element('li','',`${check.name}：${!check.available?'待核验':check.warning?(check.upper?'高于':'低于')+'演示'+(check.upper?'上限':'下限'):'演示范围内'} · 演示要求 ${check.upper?'≤':'≥'}${percent(check.limit)}`);
+  row.dataset.state=!check.available?'unavailable':check.warning?'warning':'normal';list.append(row);
+ });box.append(list);}
+ else box.append(element('p','',quality.reason));
+ box.append(element('p','topic-context','阈值仅用于演示，尚未确认生产达标标准。'));return box;
+}
 function topicNetChange(m){const n=m.value.closing-m.value.opening;return (n>=0?'+':'')+number(n);}
 function renderTopicOverview(page) {
  disposeCharts();main.replaceChildren();
@@ -5811,7 +5826,7 @@ function renderTopicOverview(page) {
  top.append(home,element('p','eyebrow',`OPERATIONS / ${page} · 专题概览`),element('h1','',pages[page].title),element('p','heading-sub',pages[page].question));
  const body=element('div','detail-shell topic-overview');body.dataset.topic=page;body.append(filterBar(page));
  const highlights=element('div','topic-highlights');highlights.setAttribute('aria-label','专题重点摘要');
- for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);link.append(element('span','',s.label),element('strong','',s.text+s.unit),element('span','topic-highlight-window',topicMetricWindow(id)));highlights.append(link);}
+ for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);link.append(element('span','',s.label),element('strong','',s.text+s.unit),element('span','topic-highlight-window',topicMetricWindow(id)));if(id===54)link.append(topicQualityBadge());highlights.append(link);}
  body.append(highlights,element('p','topic-reading-note','按业务分组浏览全部指标；短趋势各用独立刻度，不比较跨图斜率。点击指标进入完整诊断。'));
  const navigation=element('nav','section-navigation topic-navigation');navigation.setAttribute('aria-label','专题业务分组');
  body.append(navigation);
@@ -5828,6 +5843,7 @@ function renderTopicOverview(page) {
    if(m.kind==='na'){card.append(element('p','na-note',displayValue(id)+'：'+m.reason));if(Number.isFinite(m.denominator))card.append(element('p','topic-context',`已知计数：${Number.isFinite(m.numerator)?number(m.numerator):'未知'} / ${number(m.denominator)}；不生成可靠比率。`));}
    else{
     const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);}
+    if(id===54)card.append(topicQualityChecks());
     const structure=topicMetricStructure(id);if(structure)card.append(topicStructureGraphic(id,structure));
     if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(topicStructureGraphic(47,dataTable(versions,'topic-mini-table')));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
     if(id===23)card.append(element('p','topic-context','续订以当月到期主账号为分母；流失与取消以期初有效订阅为分母，人数可重叠，不能相加。取消不等于立即失去权益。'));

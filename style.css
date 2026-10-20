@@ -1144,3 +1144,12 @@ article.trial-sample-item {cursor:auto}
 .topic-trend-range {margin:.3rem 0 0;font-size:.72rem;line-height:1.5;color:var(--muted,#526856);overflow-wrap:anywhere}
 
 .topic-highlight .topic-highlight-window {font-size:.72rem;line-height:1.5;overflow-wrap:anywhere}
+
+/* Keep quality status visible before entering the detailed diagnosis. */
+.topic-quality-status {display:inline-block;width:fit-content;padding:.15rem .4rem;border:1px solid #cedbcb;border-radius:.2rem;font-size:.75rem;background:#edf3e9;color:#315e41}
+.topic-quality-status[data-state=warning] {background:#ffecd9;color:#743617;border-color:#e6ad78;font-weight:600}
+.topic-quality-status[data-state=unavailable] {background:#f2f0e9;color:#5f625a;border-color:#d8d9d1}
+.topic-quality-checks {margin:.7rem 0;font-size:.75rem;line-height:1.6}
+.topic-quality-checks ul {margin:.35rem 0;padding-left:1.2rem}
+.topic-quality-checks li[data-state=warning] {color:#743617;font-weight:600}
+.topic-quality-checks p {margin-bottom:0}
