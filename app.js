@@ -5656,8 +5656,15 @@ function topicMetricStructure(id) {
 }
 // Compact overview charts use raw scoped counts; the original table remains available.
 function topicStructureGraphic(id,structure) {
- if(![3,5,27,30,34,36,38,48,52].includes(id)||!structure.querySelector('table'))return structure;
+ if(![3,5,27,30,34,36,38,39,40,48,52].includes(id)||!structure.querySelector('table'))return structure;
  const m=metric(id),groups=[];
+ if(id===39){
+  const entries=Object.entries(m.value);if(entries.some(([,r])=>[r.activeRate,r.subscriptionRate].some(v=>!Number.isFinite(v)||v<0||v>1)))return structure;
+  const rows=structure.querySelectorAll('tbody tr');entries.forEach(([,r],i)=>[r.activeRate,r.subscriptionRate].forEach((rate,j)=>{const cell=rows[i].querySelectorAll('td')[j+1],color=[245,248,242].map((n,k)=>Math.round(n-rate*[213,189,195][k]));cell.style.backgroundColor=`rgb(${color.join(',')})`;cell.dataset.rate=String(rate);const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,k)=>n+v*[.2126,.7152,.0722][k],0);cell.style.color=luminance<.179?'#fff':'#000';cell.classList.add('topic-heat-cell');}));
+  const legend=element('div','topic-heat-legend');legend.append(element('span','','活跃率／订阅率 · 统一0–100%色阶'));for(const rate of [0,.25,.5,.75,1]){const cell=element('span','',percent(rate));cell.style.backgroundColor=`rgb(${[245,248,242].map((n,k)=>Math.round(n-rate*[213,189,195][k])).join(',')})`;cell.style.color=rate>=.75?'#fff':'#000';legend.append(cell);}structure.prepend(legend);return structure;
+ }
+ if(id===40){for(const [key,title] of [['activation7dRate','注册后7日激活率'],['activeRate','激活后30天活跃率'],['subscriptionRate','订阅率'],['monthlyPayers','月付款人数'],['ARPPU','ARPPU']]){const rate=key.endsWith('Rate');groups.push({title,rate,rateOnly:rate,unit:key==='ARPPU'?'美元/人':'人',decimal:key==='ARPPU',rows:Object.entries(m.value).map(([label,r])=>({label,n:r[key],rate:rate?r[key]:undefined}))});}}
+
  if(id===34){const p=paidRightsComposition();if(p.reason)return structure;groups.push({title:'付费权益构成',stack:true,denominator:p.parent.total,rows:['仅订阅','仅增值Pack','订阅和Pack都有'].map((label,i)=>({label,n:p.counts[i]}))});}
  if(id===3){const s=sourceData.snapshot;groups.push({title:'MRR组成',stack:true,money:true,denominator:s.totalMRR,rows:[{label:'基础订阅',n:s.baseMRR},{label:'增值Pack',n:s.packMRR}]});}
  if(id===36){const v=m.value,parts=[['任一增值包',v.anyPack],...Object.entries(v.byPack)];if(parts.some(([,r])=>r.kind!=='rate'||!Number.isFinite(r.value)))return structure;groups.push({title:'增值包渗透 · 各包可重叠',rate:true,rows:parts.map(([label,r])=>({label,n:r.numerator,rate:r.value}))});}
@@ -5667,19 +5674,19 @@ function topicStructureGraphic(id,structure) {
  if(id===27){const p=featureUsageProjection();if(p.reason)return structure;const r=p.current;if(r.denominator<30)return structure;groups.push({title:'账号通知总开关',stack:true,denominator:r.denominator,rows:['on','off','unknown'].map((key,i)=>({label:['已确认开','已确认关','未知'][i],n:r.config[key],color:['#356d51','#9eaa9a','#d4d9d1'][i]}))});}
  if(id===30){const v=m.value;groups.push({title:'互斥活跃组合 · 每个主账号仅归一行',matrix:true,denominator:v.composite,rows:activityCombinations.map(c=>({label:c.label.replace('\n',''),n:v.exclusiveCells[c.key],sources:c.sources})).sort((a,b)=>b.n-a.n)});}
  if(id===52){const p=riskProjection();if(p.reason)return structure;const r=p.current;groups.push({title:'风险命中 · 互斥构成',denominator:r.intentOnly+r.behaviorOnly+r.both,rows:[{label:'仅意图层',n:r.intentOnly},{label:'仅行为叠加层',n:r.behaviorOnly},{label:'两者同时命中',n:r.both}]});}
- const wrap=element('div','topic-visual-summary'+([5,38].includes(id)?' topic-visual-columns':''));
+ const wrap=element('div','topic-visual-summary'+([5,38,40].includes(id)?' topic-visual-columns':''));
  for(const g of groups){
   if(g.rows.some(r=>!Number.isFinite(r.n)||r.n<0))return structure;
   const figure=element('figure','topic-composition'),caption=element('figcaption','',g.title);figure.append(caption);
   const scale=g.rate?1:g.stack?g.denominator:Math.max(...g.rows.map(r=>r.n),1);
   if(!(scale>0))return structure;
-  if(!g.rate&&!g.stack)figure.append(element('p','topic-chart-scale',`数量尺度 0–${number(scale)}${g.unit||'人'}；占比分母 ${number(g.denominator)}${g.unit||'人'}`));
+  if(!g.rate&&!g.stack)figure.append(element('p','topic-chart-scale',`${g.decimal?'金额':'数量'}尺度 0–${g.decimal?scale.toFixed(2):number(scale)}${g.unit||'人'}${Number.isFinite(g.denominator)?'；占比分母 '+number(g.denominator)+(g.unit||'人'):''}`));
   const stack=g.stack?element('div','topic-stack'):null;if(stack){stack.setAttribute('aria-hidden','true');g.rows.forEach((r,i)=>{const mark=element('span','topic-stack-segment');mark.style.width=(r.n/scale*100)+'%';mark.dataset.tone=String(i);if(r.color)mark.style.backgroundColor=r.color;stack.append(mark);});figure.append(stack);}
   if(g.matrix)figure.append(element('p','topic-chart-scale','来源矩阵：App / 内容 / 推送；实心为包含，空心为不包含。'));
   for(const [i,r] of g.rows.entries()){
    const row=element('div','topic-bar-row');row.dataset.value=String(r.n);row.dataset.scale=String(scale);
-   const label=element('span','topic-bar-label',r.label),value=element('span','topic-bar-value',g.money?'$'+number(r.n):number(r.n)+(g.unit||'人'));
-   if(g.rate||g.denominator>=30)value.append(element('span','topic-bar-share',' · '+percent(g.rate?r.rate:r.n/g.denominator)));
+   const label=element('span','topic-bar-label',r.label),value=element('span','topic-bar-value',g.rateOnly?percent(r.n):g.decimal?'$'+r.n.toFixed(2)+'/人':g.money?'$'+number(r.n):number(r.n)+(g.unit||'人'));
+   if(!g.rateOnly&&(g.rate||g.denominator>=30))value.append(element('span','topic-bar-share',' · '+percent(g.rate?r.rate:r.n/g.denominator)));
    if(g.stack){const key=element('span','topic-color-key');key.dataset.tone=String(i);if(r.color)key.style.backgroundColor=r.color;key.setAttribute('aria-hidden','true');label.prepend(key);}
    if(g.matrix){const sources=element('span','topic-source-matrix');sources.setAttribute('aria-hidden','true');for(const source of ['app','content','pushClicked'])sources.append(element('span',r.sources.includes(source)?'included':'',r.sources.includes(source)?'●':'○'));label.prepend(sources);}
    row.append(label,value);
@@ -5690,6 +5697,7 @@ function topicStructureGraphic(id,structure) {
   wrap.append(figure);
  }
  // Keep scope qualifications visible even when the exact-value table is closed.
+ if(id===40)wrap.append(element('p','table-note','自报渠道样本主账号：'+Object.entries(m.value).map(([label,r])=>label+' '+number(r.owners)+'人').join('；')));
  if(id!==38){const notes=new Set();structure.querySelectorAll('.table-note').forEach(note=>{if(!notes.has(note.textContent)){wrap.append(note.cloneNode(true));notes.add(note.textContent);}});}
  const details=element('details','topic-chart-data');details.append(element('summary','','查看完整数据表'),structure);wrap.append(details);return wrap;
 }
@@ -5740,7 +5748,7 @@ function renderTopicOverview(page) {
    }
    const context=metricFilterContext(id);if(context.ignored.length)card.append(element('p','metric-filter-scope',`未应用：${context.ignoredText}`));
    if(id===17&&context.composition?.length)card.append(element('p','metric-filter-scope',`开启者构成条件：${context.composition.map(([key,v])=>`${filterLabels[key]} ${optionLabel(key,v)}`).join('、')}；不改变总体开启率。`));
-   const link=element('a','topic-diagnose','查看诊断 ↗');link.id=`topic-open-${page}-${id}`;link.href=routeHref(page,id);link.setAttribute('aria-label',`查看 #${id} ${item.name} 诊断`);bindTopicDiagnosisLink(link);card.append(link);grid.append(card);
+   const link=element('a','topic-diagnose',[28,43].includes(id)?'查看12批次留存热力图 ↗':'查看诊断 ↗');link.id=`topic-open-${page}-${id}`;link.href=routeHref(page,id);link.setAttribute('aria-label',`查看 #${id} ${item.name} 诊断`);bindTopicDiagnosisLink(link);card.append(link);grid.append(card);
   }
   section.append(grid);
   const next=topicGroups[page][index+1]?.[1],compact=list=>list?.length===1&&![5,30,38,39,40].includes(list[0]);

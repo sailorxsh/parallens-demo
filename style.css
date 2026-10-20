@@ -1123,3 +1123,7 @@ article.trial-sample-item {cursor:auto}
 .topic-visual-columns {display:flex;flex-wrap:wrap;gap:.8rem 1.5rem}
 .topic-visual-columns>.topic-composition {flex:1 1 20rem;min-width:0}
 .topic-visual-columns>.table-note,.topic-visual-columns>.topic-chart-data {flex:0 0 100%;min-width:0}
+
+.topic-heat-cell {font-weight:600;text-align:center;border:3px solid #fffefa;font-variant-numeric:tabular-nums}
+.topic-heat-legend {display:flex;flex-wrap:wrap;align-items:center;gap:.3rem;font-size:.75rem;margin:.5rem 0 .8rem}
+.topic-heat-legend>span {padding:.3rem .5rem}
