@@ -5598,7 +5598,8 @@ function topicMetricRows(id) {
   return rows;
  }
  if(value.kind!=='group')return [[metricCardSummary(id).label,`${displayValue(id)}${metricCardSummary(id).unit}`],...(id===9?[['当周首次绑定用户','待补按事件发生周的来源']]:[])];
- if([5,30,36,38,39,40,51].includes(id))return [];
+ if(id===51)return [['去重解绑设备',number(v.observedUnboundDevices)+'台'],['解绑事件',number(v.unboundEvents)+'次'],['月初绑定设备解绑率',topicRateText(v.unboundDeviceRate,'台')],['7日回绑',topicRateText(v.reboundWithin7d,'台')],['30日回绑',topicRateText(v.reboundWithin30d,'台')]];
+ if([5,30,36,38,39,40].includes(id))return [];
  return Object.entries(v).filter(([key])=>Object.hasOwn(topicPartLabels,key)).map(([key,part])=>{
   let text;if(part&&typeof part==='object')text=topicRateText(part,unit);
   else if(part===null)text='样本不足';
@@ -5656,7 +5657,7 @@ function topicMetricStructure(id) {
 }
 // Compact overview charts use raw scoped counts; the original table remains available.
 function topicStructureGraphic(id,structure) {
- if(![3,5,27,30,34,36,38,39,40,48,52].includes(id)||!structure.querySelector('table'))return structure;
+ if(![3,5,15,27,30,34,36,38,39,40,47,48,51,52,53].includes(id)||!structure.querySelector('table'))return structure;
  const m=metric(id),groups=[];
  if(id===39){
   const entries=Object.entries(m.value);if(entries.some(([,r])=>[r.activeRate,r.subscriptionRate].some(v=>!Number.isFinite(v)||v<0||v>1)))return structure;
@@ -5674,6 +5675,10 @@ function topicStructureGraphic(id,structure) {
  if(id===27){const p=featureUsageProjection();if(p.reason)return structure;const r=p.current;if(r.denominator<30)return structure;groups.push({title:'账号通知总开关',stack:true,denominator:r.denominator,rows:['on','off','unknown'].map((key,i)=>({label:['已确认开','已确认关','未知'][i],n:r.config[key],color:['#356d51','#9eaa9a','#d4d9d1'][i]}))});}
  if(id===30){const v=m.value;groups.push({title:'互斥活跃组合 · 每个主账号仅归一行',matrix:true,denominator:v.composite,rows:activityCombinations.map(c=>({label:c.label.replace('\n',''),n:v.exclusiveCells[c.key],sources:c.sources})).sort((a,b)=>b.n-a.n)});}
  if(id===52){const p=riskProjection();if(p.reason)return structure;const r=p.current;groups.push({title:'风险命中 · 互斥构成',denominator:r.intentOnly+r.behaviorOnly+r.both,rows:[{label:'仅意图层',n:r.intentOnly},{label:'仅行为叠加层',n:r.behaviorOnly},{label:'两者同时命中',n:r.both}]});}
+ if(id===47){const table=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构'),rows=table?.rows;if(!rows?.length||rows.some(r=>!Number.isSafeInteger(r[1])||r[1]<0||r[2]!==rows[0][2])||rows.reduce((n,r)=>n+r[1],0)!==rows[0][2])return structure;groups.push({title:'可升级设备 · 固件版本构成',stack:true,unit:'台',denominator:rows[0][2],rows:rows.map(r=>({label:r[0],n:r[1]}))});}
+ if(id===15){const p=bindingDeviceRows();if(!p.rows)return structure;groups.push({title:'等待首图 · 互斥时长分层',unit:'台',denominator:p.rows.length,rows:['超过3天、未满7天','7–13天','14天及以上'].map(label=>({label,n:p.rows.filter(r=>bindingWaitBand(r,p.at)===label).length}))});}
+ if(id===53){const p=anomalyProjection();if(p.reason)return structure;groups.push({title:'同一24小时窗 · 发现事件分类',unit:'条',denominator:p.current.events.length,rows:['Business','Device','Quality'].map(key=>({label:optionLabel('anomalyType',key),n:p.current.events.filter(r=>r.anomalyType===key).length})).sort((a,b)=>b.n-a.n)});}
+ if(id===51){const p=unbindingProjection();if(p.reason)return structure;const reasons=unbindingReasons(p),labels=unbindingIndex().source.reasons,rows=reasons.map(r=>({label:labels[r.key],n:r.count})).sort((a,b)=>b.n-a.n);groups.push({title:'首次解绑原因 · '+p.month,unit:'台',denominator:p.devices,rows});structure.append(dataTable({title:'首次解绑原因 · 去重设备',columns:['自报原因','设备（台）'],rows:rows.map(r=>[r.label,r.n]),note:'每台仅归入首次解绑原因；模拟自报标签不证明因果。原因与版本筛选只影响诊断清单。'},'topic-mini-table'));}
  const wrap=element('div','topic-visual-summary'+([5,38,40].includes(id)?' topic-visual-columns':''));
  for(const g of groups){
   if(g.rows.some(r=>!Number.isFinite(r.n)||r.n<0))return structure;
@@ -5734,7 +5739,7 @@ function renderTopicOverview(page) {
    else{
     const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);}
     const structure=topicMetricStructure(id);if(structure)card.append(topicStructureGraphic(id,structure));
-    if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(dataTable(versions,'topic-mini-table'));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
+    if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(topicStructureGraphic(47,dataTable(versions,'topic-mini-table')));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
     if(id===23)card.append(element('p','topic-context','续订以当月到期主账号为分母；流失与取消以期初有效订阅为分母，人数可重叠，不能相加。取消不等于立即失去权益。'));
     if(id===22)card.append(element('p','topic-context','各权益耗尽人群可重叠；任一权益耗尽为去重并集，不能把子项人数相加。'));
     if(id===50)card.append(element('p','topic-context','前三项为互斥设备状态；共享两项分别是已绑定已激活、已绑定未激活的子集，不与前三项相加。'));
