@@ -1860,7 +1860,7 @@ function sessionDepthBaselineDetails(baseline) {
   return details;
 }
 function sessionDepthChange(a,b,unit,digits) {
-  if(a===null||b===null)return '暂无可比值';const delta=a-b,threshold=10**(-digits);
+  if(!Number.isFinite(a)||!Number.isFinite(b))return '暂无可比值';const delta=a-b,threshold=10**(-digits);
   return Math.abs(delta)<1e-12?'与前日持平':`${Math.abs(delta)<threshold?(delta>0?'增加不足':'减少不足')+threshold.toFixed(digits):(delta>0?'+':'−')+Math.abs(delta).toFixed(digits)} ${unit} · 较前日`;
 }
 function sessionDepthEvidence(panel,append) {
@@ -3515,7 +3515,7 @@ function headlineTrend(id) {
   if([7,46].includes(id)){const comparison=`${history.labels[index]} 较 ${history.labels[index-1]??'无前期'}；${deltaText}`;label.title=comparison;label.setAttribute('aria-label',comparison);}
   wrap.append(label);
   const box=element('div','node-sparkline headline-sparkline');box.dataset.metricId=String(id);
-  box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}${current==null?'无值':history.unit==='美元/人'?chartValue(current,history.unit):`${Number(current).toFixed(history.unit==='%'?1:0)}${history.unit}`}；${deltaText}。${history.note}`);
+  box.setAttribute('role','img');box.setAttribute('aria-label',`${history.title}趋势，${history.labels[index]}，${current==null?'无值':chartValue(current,history.unit)}；${deltaText}。${history.note}`);
   wrap.append(box);
   return wrap;
 }
@@ -6452,7 +6452,7 @@ function metricInspector(id,page) {
       const amount=history.unit==='%'?`${Math.abs(delta).toFixed(1)} 个百分点`:
         history.unit==='美元/人'?`$${Math.abs(delta).toFixed(2)}`:
           `${number(Math.abs(Math.round(delta)))} ${history.unit}`;
-      const change=history.unit==='美元/人'?arppuChangeLabel(delta):
+      const change=history.unit==='次/人'?sessionDepthChange(current,previous,'次/人',2):history.unit==='美元/人'?arppuChangeLabel(delta):
         history.unit==='%'?trendMovement(delta,' 个百分点'):Math.abs(delta)<1e-10?'持平':`${delta>0?'上升':'下降'} ${amount}`;
       fact('较上一期',`${change} · ${history.labels[index-1]} → ${history.labels[index]}`);
     }

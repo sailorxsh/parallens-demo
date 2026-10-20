@@ -5,6 +5,11 @@ async page=>{
  check(real.delta!==0&&Math.abs(real.delta)<.05,'Expected source-backed small movement fixture');
  check(real.text.includes(real.delta>0?'上升不足':'下降不足')&&!real.text.includes('持平'),'Nonzero source movement hidden');
  check(real.aria.includes('不足'),'Chart accessible summary disagrees');
+ const frequency=await page.evaluate(()=>{const h=metricHistory(26),headline=headlineTrend(26);return {delta:h.values.at(-1)-h.values.at(-2),text:headline.textContent,aria:headline.querySelector('[role=img]').getAttribute('aria-label'),details:metricInspector(26,'B').textContent,missing:[sessionDepthChange(2,undefined,'次/人',2),sessionDepthChange(NaN,2,'次/人',2),sessionDepthChange(null,2,'次/人',2)]};});
+ check(frequency.delta>0&&frequency.delta<.01,'Expected fractional session change');
+ check(frequency.text.includes('增加不足0.01')&&frequency.details.includes('增加不足0.01')&&!frequency.details.includes('上升 0 次'),'Frequency change was rounded to zero');
+ check(frequency.aria.includes('2.10次/人'),'Accessible trend truncates frequency');
+ check(frequency.missing.every(s=>s==='暂无可比值'),'Missing session comparison rendered as a number');
  const boundary=await page.evaluate(()=>{
   const original=metricHistory;const results=[];
   try{for(const delta of [0,.0001,-.0001,.049,-.049,.051,-.051,1,-1]){
@@ -19,5 +24,5 @@ async page=>{
  }
  await page.reload();await page.locator('#topic-B-metric-27 .headline-trend').waitFor();
  for(const width of [1366,1600,1920]){await page.setViewportSize({width,height:1000});for(const font of [16,32]){await page.evaluate(v=>document.documentElement.style.fontSize=v+'px',font);check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Trend text causes overflow');}}
- return {status:'PASS',real,boundary};
+ return {status:'PASS',real,frequency,boundary};
 }
