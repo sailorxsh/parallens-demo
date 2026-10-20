@@ -5637,6 +5637,8 @@ function renderTopicOverview(page) {
  for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);link.append(element('span','',s.label),element('strong','',s.text+s.unit));highlights.append(link);}
  body.append(highlights,element('p','topic-reading-note','按业务分组浏览全部指标；短趋势各用独立刻度，不比较跨图斜率。点击指标进入完整诊断。'));
  const navigation=element('nav','section-navigation topic-navigation');navigation.setAttribute('aria-label','专题业务分组');
+ body.append(navigation);
+ let pairedGroup=null;
  topicGroups[page].forEach(([label,ids],index)=>{
   const section=element('section','topic-group');section.id=`topic-${page}-group-${index}`;
   const head=sectionTitle(`0${index+1} / ${ids.length} METRICS`,label);section.append(head);
@@ -5663,10 +5665,13 @@ function renderTopicOverview(page) {
    if(id===17&&context.composition?.length)card.append(element('p','metric-filter-scope',`开启者构成条件：${context.composition.map(([key,v])=>`${filterLabels[key]} ${optionLabel(key,v)}`).join('、')}；不改变总体开启率。`));
    const link=element('a','topic-diagnose','查看诊断 ↗');link.id=`topic-open-${page}-${id}`;link.href=routeHref(page,id);link.setAttribute('aria-label',`查看 #${id} ${item.name} 诊断`);bindTopicDiagnosisLink(link);card.append(link);grid.append(card);
   }
-  section.append(grid);body.append(section);
+  section.append(grid);
+  const next=topicGroups[page][index+1]?.[1],compact=list=>list?.length===1&&![5,30,38,39,40].includes(list[0]);
+  if(!pairedGroup&&compact(ids)&&compact(next)){pairedGroup=element('div','topic-group-pair');body.append(pairedGroup);}
+  if(pairedGroup){pairedGroup.append(section);if(pairedGroup.children.length===2)pairedGroup=null;}else body.append(section);
   const button=element('button','section-navigation-item',label);button.type='button';button.dataset.target=section.id;button.setAttribute('aria-controls',section.id);button.addEventListener('click',()=>{const h=section.querySelector('h2');h.tabIndex=-1;h.focus({preventScroll:true});section.scrollIntoView({block:'start',behavior:'instant'});updateSectionNavigation();});navigation.append(button);
  });
- body.insertBefore(navigation,body.querySelector('.topic-group'));main.append(top,body);updateSectionNavigation();
+ main.append(top,body);updateSectionNavigation();
 }
 
 function metricInventory(page) {
@@ -6574,12 +6579,18 @@ function updateSectionNavigation() {
   const visibleTop=Math.max(0,navigation.getBoundingClientRect().bottom);
   const readingLine=visibleTop+Math.max(16,Math.min(160,(innerHeight-visibleTop)*0.15));
   let current=entries[0];
-  for(const item of entries)if(item.rect.top<=readingLine)current=item;
+  for(const item of entries)if(item.rect.top<=readingLine&&(!navigation.classList.contains('topic-navigation')||item.rect.top>current.rect.top+1))current=item;
   if(scrollY>0&&(current.rect.top<visibleTop||innerHeight+scrollY>=document.documentElement.scrollHeight-2)) {
     // After a heading has passed the navigation, follow the main visible content.
     // This also avoids treating a short collapsed catalog as the section at the page bottom.
     const visibleHeight=item=>Math.max(0,Math.min(innerHeight,item.rect.bottom)-Math.max(visibleTop,item.rect.top));
     current=entries.reduce((best,item)=>visibleHeight(item)>visibleHeight(best)?item:best);
+  }
+  if(navigation.classList.contains('topic-navigation')) {
+    const focusedId=document.activeElement?.closest('.topic-group')?.id;
+    const focused=entries.find(item=>item.button.dataset.target===focusedId);
+    // Paired sections share a scroll position; retain the section explicitly focused by the reader.
+    if(focused&&Math.abs(focused.rect.top-current.rect.top)<1&&focused.rect.bottom>visibleTop)current=focused;
   }
   for(const {button} of entries)if(button===current.button)button.setAttribute('aria-current','location');else button.removeAttribute('aria-current');
 }
@@ -7190,7 +7201,7 @@ async function fetchDataPart(name) {
   for(let attempt=0;attempt<2;attempt++) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(`./data/${name}.json?v=20261020-187`,{cache:'no-cache',signal:controller.signal});
+      const response=await fetch(`./data/${name}.json?v=20261020-188`,{cache:'no-cache',signal:controller.signal});
       if(!response.ok)throw new Error(`${name}: HTTP ${response.status}`);
       return await response.json();
     } catch(error) {if(attempt===1)throw error;}
