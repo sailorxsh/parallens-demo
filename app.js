@@ -5535,6 +5535,11 @@ const topicGroups={
  G:[['异常信号',[53]],['数据可信度',[54]],['关联业务风险',[15,29,42,52]]]
 };
 const topicHighlights={A:[9,13,16],B:[4,24,27],C:[41,42,46],D:[2,18,23],E:[34,35],F:[48,49],G:[53,54]};
+function topicMetricWindow(id) {
+ const registration=id===9?registrationProjection(9):null;
+ const window=registration&&!registration.reason?`事件统计周：W${registration.current.week} · ${registration.current.start}—${registration.current.end}；首次绑定事件待补`:actionBaselineWindow(id);
+ return (window.startsWith('快照 ')?contractFor(id).window:window).replaceAll('v1','').replace(/T(\d{2}:\d{2}):00Z/g,' $1 UTC');
+}
 const topicOverviewOrigins=new Map();
 function isTopicOverviewRequest() {
  const params=new URLSearchParams(location.hash.split('?')[1]??'');
@@ -5730,7 +5735,7 @@ function renderTopicOverview(page) {
  top.append(home,element('p','eyebrow',`OPERATIONS / ${page} · 专题概览`),element('h1','',pages[page].title),element('p','heading-sub',pages[page].question));
  const body=element('div','detail-shell topic-overview');body.dataset.topic=page;body.append(filterBar(page));
  const highlights=element('div','topic-highlights');highlights.setAttribute('aria-label','专题重点摘要');
- for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);link.append(element('span','',s.label),element('strong','',s.text+s.unit));highlights.append(link);}
+ for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);link.append(element('span','',s.label),element('strong','',s.text+s.unit),element('span','topic-highlight-window',topicMetricWindow(id)));highlights.append(link);}
  body.append(highlights,element('p','topic-reading-note','按业务分组浏览全部指标；短趋势各用独立刻度，不比较跨图斜率。点击指标进入完整诊断。'));
  const navigation=element('nav','section-navigation topic-navigation');navigation.setAttribute('aria-label','专题业务分组');
  body.append(navigation);
@@ -5743,8 +5748,7 @@ function renderTopicOverview(page) {
    const item=catalogItem(id),m=metric(id),s=metricCardSummary(id),card=element('article',`topic-metric${[5,30,38,39,40].includes(id)?' topic-metric-wide':''}`);card.id=`topic-${page}-metric-${id}`;card.dataset.metricId=String(id);
    const heading=element('div','metric-heading');heading.append(element('span','detail-kpi-id','#'+String(id).padStart(2,'0')),element('h3','',item.name),definition(id,item.name));card.append(heading);
    if(item.page!==page)card.append(element('p','topic-shared',`共享指标 · 归属${item.page} ${pages[item.page].title}`));
-   const registration=id===9?registrationProjection(9):null;
-   const window=registration&&!registration.reason?`事件统计周：W${registration.current.week} · ${registration.current.start}—${registration.current.end}；首次绑定事件待补`:actionBaselineWindow(id),contract=contractFor(id);card.append(element('p','topic-window',(window.startsWith('快照 ')?contract.window:window).replaceAll('v1','')));
+   card.append(element('p','topic-window',topicMetricWindow(id)));
    if(m.kind==='na'){card.append(element('p','na-note',displayValue(id)+'：'+m.reason));if(Number.isFinite(m.denominator))card.append(element('p','topic-context',`已知计数：${Number.isFinite(m.numerator)?number(m.numerator):'未知'} / ${number(m.denominator)}；不生成可靠比率。`));}
    else{
     const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);}
