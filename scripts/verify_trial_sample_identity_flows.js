@@ -9,7 +9,12 @@ async(parent)=>{
  const open=async(query='')=>{await p.goto(`${base}#/D?metric=18&panel=groups${query?'&'+query:''}`);await ready();};
  const panel=()=>p.locator('.trial-samples'),form=()=>p.locator('.action-record'),field=name=>form().locator(`[name=${name}]`);
  const stored=()=>p.evaluate(()=>localStorage.getItem('parallens-demo-actions-v1'));
- const clickSample=async index=>{const b=panel().locator('button.trial-sample-item').nth(index);await b.focus();await b.press('Enter');};
+ const clickSample=async index=>{
+  // Cross-metric samples are an explicit reference; open it as a keyboard user would.
+  const disclosure=p.locator('.workspace-context').filter({has:panel()}).filter({has:p.locator('summary')});
+  if(await disclosure.count()&&!await disclosure.evaluate(n=>n.open)){const summary=disclosure.locator('> summary');await summary.focus();await summary.press('Enter');}
+  const b=panel().locator('button.trial-sample-item').nth(index);await b.focus();await b.press('Enter');
+ };
  const save=()=>form().getByRole('button',{name:'保存本地记录',exact:true}).click();
  const scopeCases=[{}, {week:'1'}, {country:'US',appPlatform:'Android',subscriptionPlatform:'Web'},
   {appPlatform:'iOS',subscriptionPlatform:'Web'}, {subscriptionPlatform:'Web'}, {productLine:'Hunting'}];

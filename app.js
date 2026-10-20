@@ -6851,12 +6851,12 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
         return;
       }
       if(node.matches('.anomaly-event-workspace')&&selectedMetric!==53){contextual(node,'groups','其他指标清单 · #53 异常发现');return;}
-      if(selectedMetric===52&&node.matches('.trial-samples')){contextual(node,'groups','其他指标样本 · #18 试用支付失败');return;}
+      if(selectedMetric!==18&&node.matches('.trial-samples')){contextual(node,'groups','其他指标样本 · #18 试用支付失败');return;}
       if(node.matches('.entity-workspace,.structure-explorer')){panels.get('groups').append(node);return;}
       if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
       if(node.matches('.detail-chart-panel')) {
         const spec=legacy.specs.find(([box])=>node.contains(box))?.[1];
-        if((selectedMetric===50||selectedMetric===52&&spec?.metricId!==52)&&spec)contextual(node,'groups',`其他指标对照 · ${spec.title}`);
+        if(spec&&(selectedMetric===50||selectedMetric===52&&spec.metricId!==52||page==='D'&&spec.metricId&&spec.metricId!==selectedMetric))contextual(node,'groups',`其他指标对照 · ${spec.title}`);
         else if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
         else panels.get('groups').append(node);
         return;
