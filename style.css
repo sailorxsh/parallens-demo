@@ -1096,3 +1096,23 @@ article.trial-sample-item {cursor:auto}
 .topic-metric .metric-secondary-values:has(> :only-child) {grid-template-columns:minmax(0,1fr)}
 .topic-metric .metric-secondary-values dd:has(>.topic-basis) {display:flex;flex-wrap:wrap;align-items:baseline;gap:.15rem .25rem}
 .topic-basis {display:inline-block;line-height:1.5}
+
+/* Source-backed compact composition charts; tables remain keyboard accessible. */
+.topic-visual-summary {margin:.6rem 0;min-width:0}
+.topic-composition {margin:0 0 1rem;min-width:0}
+.topic-composition figcaption {font-size:.8rem;font-weight:600;margin-bottom:.7rem;color:#314b3e}
+.topic-bar-row {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .6rem;margin:.6rem 0;font-size:.75rem;line-height:1.5}
+.topic-bar-label {overflow-wrap:anywhere}
+.topic-bar-value {font-variant-numeric:tabular-nums;text-align:right}
+.topic-bar-share,.topic-chart-scale {color:#5d6d61}
+.topic-bar-track {grid-column:1/-1;height:.4rem;background:#e9eee7}
+.topic-bar-mark {display:block;height:100%;background:#39634f}
+.topic-stack {display:flex;height:1rem;margin:.7rem 0 1rem;background:#e9eee7}
+.topic-stack-segment {height:100%}
+.topic-color-key {display:inline-block;width:.55rem;height:.55rem;margin-right:.4rem}
+.topic-stack-segment[data-tone="0"],.topic-color-key[data-tone="0"] {background:#244b3b}
+.topic-stack-segment[data-tone="1"],.topic-color-key[data-tone="1"] {background:#9bb4a1}
+.topic-stack-segment[data-tone="2"],.topic-color-key[data-tone="2"] {background:#b4783b}
+.topic-chart-scale,.topic-visual-summary>.table-note {font-size:.75rem;line-height:1.6;margin:.5rem 0}
+.topic-chart-data>summary {font-size:.75rem;cursor:pointer;color:#795124;padding:.5rem 0}
+.topic-chart-data[open]>summary {margin-bottom:.5rem}

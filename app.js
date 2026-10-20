@@ -5654,6 +5654,39 @@ function topicMetricStructure(id) {
  if(!rows)return null;
  const node=dataTable({title:'当前构成与完整摘要',columns,rows,note},'topic-mini-table');return node;
 }
+// Compact overview charts use raw scoped counts; the original table remains available.
+function topicStructureGraphic(id,structure) {
+ if(![3,34,36,38,48].includes(id)||!structure.querySelector('table'))return structure;
+ const m=metric(id),groups=[];
+ if(id===34){const p=paidRightsComposition();if(p.reason)return structure;groups.push({title:'付费权益构成',stack:true,denominator:p.parent.total,rows:['仅订阅','仅增值Pack','订阅和Pack都有'].map((label,i)=>({label,n:p.counts[i]}))});}
+ if(id===3){const s=sourceData.snapshot;groups.push({title:'MRR组成',stack:true,money:true,denominator:s.totalMRR,rows:[{label:'基础订阅',n:s.baseMRR},{label:'增值Pack',n:s.packMRR}]});}
+ if(id===36){const v=m.value,parts=[['任一增值包',v.anyPack],...Object.entries(v.byPack)];if(parts.some(([,r])=>r.kind!=='rate'||!Number.isFinite(r.value)))return structure;groups.push({title:'增值包渗透 · 各包可重叠',rate:true,rows:parts.map(([label,r])=>({label,n:r.numerator,rate:r.value}))});}
+ if(id===38){const p=structureMetricViews();if(p.reason)return structure;for(const v of p.views)groups.push({title:v.label,denominator:v.denominator,unit:v.unit,rows:v.rows.map(([label,n])=>({label,n})).sort((a,b)=>b.n-a.n)});}
+ if(id===48){const rows=sourceData.diagnostics.F.tables.find(t=>t.title==='每主账号绑定设备数分层').rows;groups.push({title:'主账号持有设备数',denominator:rows.reduce((n,r)=>n+r[1],0),rows:rows.map(r=>({label:r[0],n:r[1]}))});}
+ const wrap=element('div','topic-visual-summary');
+ for(const g of groups){
+  if(g.rows.some(r=>!Number.isFinite(r.n)||r.n<0))return structure;
+  const figure=element('figure','topic-composition'),caption=element('figcaption','',g.title);figure.append(caption);
+  const scale=g.rate?1:g.stack?g.denominator:Math.max(...g.rows.map(r=>r.n),1);
+  if(!(scale>0))return structure;
+  if(!g.rate&&!g.stack)figure.append(element('p','topic-chart-scale',`数量尺度 0–${number(scale)}${g.unit||'人'}；占比分母 ${number(g.denominator)}${g.unit||'人'}`));
+  const stack=g.stack?element('div','topic-stack'):null;if(stack){stack.setAttribute('aria-hidden','true');g.rows.forEach((r,i)=>{const mark=element('span','topic-stack-segment');mark.style.width=(r.n/scale*100)+'%';mark.dataset.tone=String(i);stack.append(mark);});figure.append(stack);}
+  for(const [i,r] of g.rows.entries()){
+   const row=element('div','topic-bar-row');row.dataset.value=String(r.n);row.dataset.scale=String(scale);
+   const label=element('span','topic-bar-label',r.label),value=element('span','topic-bar-value',g.money?'$'+number(r.n):number(r.n)+(g.unit||'人'));
+   if(g.rate||g.denominator>=30)value.append(element('span','topic-bar-share',' · '+percent(g.rate?r.rate:r.n/g.denominator)));
+   if(g.stack){const key=element('span','topic-color-key');key.dataset.tone=String(i);key.setAttribute('aria-hidden','true');label.prepend(key);}
+   row.append(label,value);
+   if(!g.stack){const track=element('div','topic-bar-track'),mark=element('span','topic-bar-mark');track.setAttribute('aria-hidden','true');mark.style.width=((g.rate?r.rate:r.n/scale)*100)+'%';track.append(mark);row.append(track);}
+   figure.append(row);
+  }
+  if(g.rate)figure.append(element('p','topic-chart-scale','统一尺度 0–100%'));
+  wrap.append(figure);
+ }
+ // Keep scope qualifications visible even when the exact-value table is closed.
+ if(id!==38)structure.querySelectorAll('.table-note').forEach(note=>wrap.append(note.cloneNode(true)));
+ const details=element('details','topic-chart-data');details.append(element('summary','','查看完整数据表'),structure);wrap.append(details);return wrap;
+}
 function drawTopicSparkline(box,history) {
  const values=history.values.filter(Number.isFinite);if(values.length<2){box.textContent='无可比趋势';return;}
  const min=Math.min(...values),max=Math.max(...values),spread=max-min||Math.max(1,Math.abs(max)*.02),low=min-spread*.15,high=max+spread*.15;
@@ -5686,7 +5719,7 @@ function renderTopicOverview(page) {
    if(m.kind==='na'){card.append(element('p','na-note',displayValue(id)+'：'+m.reason));if(Number.isFinite(m.denominator))card.append(element('p','topic-context',`已知计数：${Number.isFinite(m.numerator)?number(m.numerator):'未知'} / ${number(m.denominator)}；不生成可靠比率。`));}
    else{
     const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);}
-    const structure=topicMetricStructure(id);if(structure)card.append(structure);
+    const structure=topicMetricStructure(id);if(structure)card.append(topicStructureGraphic(id,structure));
     if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(dataTable(versions,'topic-mini-table'));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
     if(id===23)card.append(element('p','topic-context','续订以当月到期主账号为分母；流失与取消以期初有效订阅为分母，人数可重叠，不能相加。取消不等于立即失去权益。'));
     if(id===22)card.append(element('p','topic-context','各权益耗尽人群可重叠；任一权益耗尽为去重并集，不能把子项人数相加。'));
