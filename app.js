@@ -5704,6 +5704,7 @@ function topicStructureGraphic(id,structure) {
  // Keep scope qualifications visible even when the exact-value table is closed.
  if(id===40)wrap.append(element('p','table-note','自报渠道样本主账号：'+Object.entries(m.value).map(([label,r])=>label+' '+number(r.owners)+'人').join('；')));
  if(id!==38){const notes=new Set();structure.querySelectorAll('.table-note').forEach(note=>{if(!notes.has(note.textContent)){wrap.append(note.cloneNode(true));notes.add(note.textContent);}});}
+ if(id===51){const evidence=element('a','insight-link','核对原因与设备清单 ↗');evidence.href=routeHref('F',51,'groups');bindTopicDiagnosisLink(evidence);wrap.append(evidence);}
  const details=element('details','topic-chart-data');details.append(element('summary','','查看完整数据表'),structure);wrap.append(details);return wrap;
 }
 function drawTopicSparkline(box,history) {
