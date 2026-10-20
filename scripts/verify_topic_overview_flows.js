@@ -15,7 +15,8 @@ async parent=>{
     const card=p.locator(`#topic-${code}-metric-${id}`),facts=await p.evaluate(id=>({kind:metric(id).kind,rows:topicMetricRows(id),value:metric(id)}),id),before=facts.value;
     check((await card.locator('.topic-window').innerText()).trim().length>0,'Missing metric time window '+id);
     check(!/undefined|NaN|\[object Object\]/.test(await card.innerText()),'Broken summary values '+id);
-    for(const [label,value]of facts.rows)check((await card.innerText()).includes(label)&&(await card.innerText()).includes(value),'A compound subitem is absent '+id+' '+label);
+    const displayed=await card.locator('.metric-secondary-values>div').evaluateAll(rows=>rows.map(row=>[row.querySelector('dt').textContent.trim(),row.querySelector('dd').textContent.trim()]));
+    for(const [label,value]of facts.rows)check(displayed.some(([name,text])=>name===label&&text===value),'A compound subitem is absent '+id+' '+label);
     await card.locator('.topic-diagnose').focus();await p.keyboard.press('Enter');await ready();
     check(await p.locator(`#metric-evidence-${id}`).count()===1&&await p.locator('.topic-overview,.detail-kpi').count()===0,'Diagnosis destination or hierarchy incorrect '+id);
     check(JSON.stringify(await p.evaluate(id=>metric(id),id))===JSON.stringify(before),'Overview and diagnosis disagree '+id);

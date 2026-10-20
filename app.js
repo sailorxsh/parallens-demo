@@ -7137,7 +7137,7 @@ function renderRoute(options={}) {
   if(!routeCore)return;
   document.querySelector('#metric-search')?.close();
   const page=currentRoutePage();
-  if(preparedRoutes.has(page)) {
+  if(preparedRoutes.has(page)&&(page&&isTopicOverviewRequest()||window.echarts||chartLibrarySettled||dataFirstRequested)) {
     loadingRouteHash=undefined;routeLoadRevision++;
     activateRouteData(page);
     renderRouteNow(options);
@@ -7201,14 +7201,17 @@ function handleRouteChange(event) {
   }
 }
 let chartLibraryReady;
+let chartLibrarySettled=false;
 function waitForChartLibrary() {
   if(window.echarts)return Promise.resolve(true);
   if(chartLibraryReady)return chartLibraryReady;
   const script=document.querySelector('#chart-library');
-  if(!script)return Promise.resolve(false);
+  if(!script){chartLibrarySettled=true;return Promise.resolve(false);}
   chartLibraryReady=new Promise(resolve=>{
-    script.addEventListener('load',()=>resolve(Boolean(window.echarts)),{once:true});
-    script.addEventListener('error',()=>resolve(false),{once:true});
+    const complete=ok=>{chartLibrarySettled=true;resolve(ok);};
+    script.addEventListener('load',()=>complete(Boolean(window.echarts)),{once:true});
+    script.addEventListener('error',()=>complete(false),{once:true});
+    if(!script.hasAttribute('src')){script.async=true;script.src=script.dataset.src;}
   });
   return chartLibraryReady;
 }
@@ -7279,6 +7282,7 @@ async function prepareRoute(options={}) {
   });
   selectReadingEntry();readingRevision++;
   showLoadingState(page);
+  if(!page||!isTopicOverviewRequest())waitForChartLibrary();
   if(!document.querySelector('dialog:modal')){main.focus({preventScroll:true});if(!options.preserveScroll)scrollTo({top:0,behavior:'instant'});}
   const loadingFocus=document.activeElement;
   document.querySelector('#announcement').textContent=page?`正在准备${pages[page].title}数据`:'正在准备经营数据';
@@ -7418,7 +7422,7 @@ async function start() {
   if(startupInProgress)return;
   startupInProgress=true;
   const revision=++routeLoadRevision,page=currentRoutePage();
-  showLoadingState(page,2);waitForChartLibrary();
+  showLoadingState(page,2);if(!page||!isTopicOverviewRequest())waitForChartLibrary();
   // Both requests start together; no event-level topic data blocks the overview.
   let ready=0;
   const progress=()=>{if(revision!==routeLoadRevision)return;ready++;
