@@ -5540,7 +5540,9 @@ const topicHighlights={A:[9,13,16],B:[4,24,27],C:[41,42,46],D:[2,18,23],E:[34,35
 function topicMetricWindow(id) {
  const registration=id===9?registrationProjection(9):null;
  const window=registration&&!registration.reason?`事件统计周：W${registration.current.week} · ${registration.current.start}—${registration.current.end}；首次绑定事件待补`:actionBaselineWindow(id);
- return (window.startsWith('快照 ')?contractFor(id).window:window).replaceAll('v1','').replace(/T(\d{2}:\d{2}):00Z/g,' $1 UTC');
+ let label=(window.startsWith('快照 ')?contractFor(id).window:window).replaceAll('v1','').replace(/T(\d{2}:\d{2}):00Z/g,' $1 UTC');
+ if(id===28)for(const [key,name]of Object.entries(userRetentionTypeLabels))label=label.replace(` · ${key} · `,` · ${name} · `);
+ return label;
 }
 const topicOverviewOrigins=new Map();
 function isTopicOverviewRequest() {
