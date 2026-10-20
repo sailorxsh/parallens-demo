@@ -3563,21 +3563,25 @@ function journeyStatus(id) {
   return {status:({11:'绑定尝试口径',23:'月度到期 · 7天合成观察窗',34:'当前有效付费权益'})[id]??'当前范围',severity:'neutral'};
 }
 function nodeTrendDetails(id) {
-  const series=trendValues(id);
-  if(!series) return element('p','node-change','当前维度无可用周趋势');
-  const snapshotHistory=Boolean(sourceData.metricTrends?.[`m${String(id).padStart(2,'0')}`]);
-  const position=filterState.week?Number(filterState.week)-1:series.length-1;
-  const current=series[position], previous=series[position-1];
-  const isRate=![9,34].includes(id);
-  const delta=previous==null||current==null?null:isRate?current-previous:(current/previous-1)*100;
-  const compare=snapshotHistory?'上期':'上周';
-  const change=delta==null?'缺少可比期':Math.abs(delta)<.05?`与${compare}持平`:`${delta>0?'+':''}${delta.toFixed(1)}${isRate?'个百分点':'%'}（较${compare}）`;
+  const history=metricHistory(id);
+  if(!history)return element('p','node-change','当前维度无可用趋势');
+  const {values:series,labels,unit}=history;
+  const weekly=labels.every(label=>/^W\d+$/.test(label));
+  const monthly=labels.every(label=>/^\d{4}-\d{2}$/.test(label));
+  const position=history.selectedPeriod?labels.indexOf(history.selectedPeriod):weekly&&filterState.week?labels.indexOf(`W${filterState.week}`):series.length-1;
+  const current=series[position],previous=series[position-1];
+  const isRate=unit==='%';
+  const comparable=Number.isFinite(current)&&Number.isFinite(previous)&&(isRate||previous!==0);
+  const delta=comparable?(isRate?current-previous:(current/previous-1)*100):null;
+  const compare=monthly?'上月':weekly?'上周':'上期';
+  const change=delta===null?'缺少可比期':Math.abs(delta)<.05?`与${compare}持平`:`${delta>0?'+':''}${delta.toFixed(1)}${isRate?'个百分点':'%'}（较${compare}）`;
   const details=element('div','node-extra');
-  details.append(element('span','node-extra-label',snapshotHistory?'近12期模拟快照':filterState.week?`近12周趋势 · 当前选W${filterState.week}`:'近12周趋势'),element('p','node-change',change));
+  const windowLabel=`近${series.length}${monthly?'个月':weekly?'周':'期'}${monthly||weekly?'趋势':'模拟快照'}`;
+  details.append(element('span','node-extra-label',`${windowLabel} · ${labels[position]??'无可用期'}`),element('p','node-change',change));
   const box=element('div','node-sparkline');
   box.dataset.metricId=String(id);
   box.setAttribute('role','img');
-  box.setAttribute('aria-label',`${snapshotHistory?'最近12期模拟快照':'最近12周趋势'}；${snapshotHistory?'最新期':filterState.week?`所选W${filterState.week}`:'最新周'}值${current==null?'不适用':id===9||id===34?number(current):percent(current/100)}，${change}`);
+  box.setAttribute('aria-label',`${history.title}；${labels[position]??'无可用期'}值${Number.isFinite(current)?chartValue(current,unit):'不适用'}，${change}；比较期${labels[position-1]??'无'}。${history.note??''}`);
   details.append(box);
   return details;
 }
@@ -4002,7 +4006,7 @@ function renderHome() {
   main.append(dash);
   document.querySelectorAll('.node-sparkline').forEach(box=>{
     const id=Number(box.dataset.metricId);
-    const history=box.classList.contains('headline-sparkline')?metricHistory(id):null;
+    const history=metricHistory(id);
     drawSparkline(box,history?.values??trendValues(id),id,history?.labels,history?.unit);
   });
   const statusBox=document.querySelector('#statusChart');if(statusBox)drawStatus(statusBox);
