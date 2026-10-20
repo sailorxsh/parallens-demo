@@ -17,10 +17,10 @@ async (page) => {
     return ids;
   };
   try {
-    await p.goto(`${base}#/B?country=US`);await p.locator('.detail-kpi').first().waitFor();
-    await p.locator('.detail-kpi[data-metric-id="25"] .definition-trigger').click();
+    await p.goto(`${base}#/B?country=US`);await p.locator('.topic-metric').first().waitFor();
+    await p.locator('#topic-B-metric-25 .definition-trigger').click();
     await p.locator('#metric-definition-popover .definition-close').click();
-    check(await p.locator('.detail-kpi[data-metric-id="25"] .definition-trigger').evaluate(node=>document.activeElement===node),
+    check(await p.locator('#topic-B-metric-25 .definition-trigger').evaluate(node=>document.activeElement===node),
       'Closing a visible definition did not restore its trigger focus');
     for(const [width,height] of [[1366,768],[1600,900],[1920,1080]]) {
       await p.setViewportSize({width,height});
@@ -29,10 +29,13 @@ async (page) => {
       check((await lookup('')).length===53,'An empty query does not expose all metrics');
       for(const [query,id] of [['DAU',25],['日活',25],['WAU',25],['周活',25],['月活',25],
         ['多设备主账号占比',48],['当前绑定设备',8],['上传成功率',46],['直播成功率',46],['推送成功率',46],
-        ['事件丢失率',54],['ID映射覆盖率',54],['＃２５',25],['dau 活跃',25]]) {
+        ['事件丢失率',54],['ID映射覆盖率',54],['＃２５',25],['dau 活跃',25],['退订',23],['设备离线',52]]) {
         check((await lookup(query)).includes(id),`Missing visible metric or subitem: ${query}`);
         check(!await dialog.evaluate(node=>node.scrollWidth>node.clientWidth+1),`Search overflows at ${width}: ${query}`);
       }
+      check((await lookup('退订')).join(',')==='23'&&(await p.locator('.metric-search-alias').innerText()).includes('不等于权益立即流失'),'Cancellation alias loses its scope');
+      check((await lookup('设备离线')).join(',')==='52'&&(await p.locator('.metric-search-alias').innerText()).includes('≥7日（流失风险信号）'),'Offline alias implies a general device list');
+      check((await lookup('电量')).length===0,'Search invents an unavailable battery metric');
       check((await lookup('DAU')).length===1,'DAU matches unrelated metrics');
       for(const query of ['#3','#03','＃３'])check((await lookup(query)).join(',')==='3',`Explicit metric ID matches other IDs: ${query}`);
       check((await lookup('#30')).join(',')==='30'&&(await lookup('#3 #30')).length===0,'Explicit metric IDs are ambiguous');
@@ -46,7 +49,7 @@ async (page) => {
       check(await p.locator('#open-metric-search').evaluate(node=>document.activeElement===node),'Dismissal lost the trigger focus');
       results.push({width,height,status:'PASS'});
     }
-    const priorFocus=p.locator('.detail-kpi[data-metric-id="25"] .detail-select');
+    const priorFocus=p.locator('#topic-B-metric-25 .topic-diagnose');
     await priorFocus.focus();await p.keyboard.press('Control+k');await p.keyboard.press('Escape');
     check(await priorFocus.evaluate(node=>document.activeElement===node),'A closed definition stole shortcut dismissal focus');
     await p.keyboard.press('Control+k');await lookup('DAU');await p.keyboard.press('Enter');
@@ -63,7 +66,7 @@ async (page) => {
     await p.locator('#C-metric-availability-42').waitFor();
     check(p.url().includes('country=US')&&p.url().includes('metric=42'),'Unavailable metric lookup discarded its scope');
     check((await p.locator('#C-metric-availability-42').innerText()).startsWith('待补数据：'),'Search disguised missing data');
-    await p.goto(`${base}#/C?functionType=Upload`);await p.locator('.detail-kpi').first().waitFor();
+    await p.goto(`${base}#/C?functionType=Upload`);await p.locator('.topic-metric').first().waitFor();
     await p.keyboard.press('Control+k');
     check((await lookup('直播成功率')).includes(46),'A selected function hides another searchable subitem');
     check((await lookup('MRR')).join(',')==='3','Original MRR search changed');
