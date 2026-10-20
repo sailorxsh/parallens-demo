@@ -73,8 +73,8 @@ async (parent) => {
       results.push({width,page:'B',id:30,view:'groups',explicitData:true});
       for(const page of ['A','B','C','D','E','F','G']) {
         await open(page);
-        check(await p.locator(`#${page}-tab-change`).getAttribute('aria-selected')==='true',`${page} hides its approved default trend`);
-        await p.locator(`#${page}-panel-change svg`).first().waitFor();
+        check(await p.locator('.topic-overview').count()===1,`${page} hides its default topic overview`);
+        check(await p.locator('.topic-metric').count()===await p.evaluate(page=>topicGroups[page].flatMap(([,ids])=>ids).length,page),`${page} omits an overview metric`);
       }
     }
     await p.setViewportSize({width:1600,height:1000});
@@ -86,12 +86,12 @@ async (parent) => {
     for(const code of ['A','B','C','D','E','F','G']){
       const inventoryContext=await parent.context().browser().newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'});p=await inventoryContext.newPage();p.on('pageerror',error=>errors.push(error.message));
       try{for(const item of catalog.filter(r=>r.page===code)){
-      if(new URL(p.url()).hash.split('?')[0]===`#/${item.page}`){await p.getByRole('button',{name:'全部指标',exact:true}).click();await p.locator('.metric-inventory-link').getByText(item.name,{exact:true}).click();try{await p.waitForFunction(id=>new URLSearchParams(location.hash.split('?')[1]??'').get('metric')===String(id)&&lastRenderedHash===location.hash,item.id);}catch(error){const actual=await p.evaluate(()=>({hash:location.hash,rendered:lastRenderedHash,busy:document.querySelector('#main')?.getAttribute('aria-busy'),subject:document.querySelector('.income-context .detail-finding')?.dataset.metricId}));await p.screenshot({path:'output/playwright/v168-destination-native-failure.png'});throw Error('Native metric destination failed: '+JSON.stringify({expected:item.id,actual,errors})+'; '+error.message);}}else await open(`${item.page}?metric=${item.id}`);
+      await open(item.page);await p.locator(`#topic-open-${item.page}-${item.id}`).click();await p.waitForFunction(id=>new URLSearchParams(location.hash.split('?')[1]??'').get('metric')===String(id)&&lastRenderedHash===location.hash,item.id);
       const root=p.locator(`#metric-evidence-${item.id}`),right=p.locator('.income-context .detail-finding').first();
       check(await root.count()===1&&await right.getAttribute('data-metric-id')===String(item.id),`#${item.id} explanation belongs to another subject`);
       await p.locator(`#${item.page}-tab-data`).click();
       check((await p.locator(`#${item.page}-panel-data`).innerText()).trim().length>20,`#${item.id} lacks inspectable numeric evidence`);
-      check(await p.locator(`#${item.page}-panel-data > .data-table-scroll table tbody tr`).count()>0,`#${item.id} complete data is empty`);
+      check(await p.locator(`#${item.page}-panel-data .data-table-scroll table tbody tr`).count()>0,`#${item.id} complete data is empty`);
       results.push({page:item.page,id:item.id,allCatalog:true});
       }}finally{await inventoryContext.close();}
     }
@@ -105,8 +105,7 @@ async (parent) => {
     await p.goBack();await p.locator('#D-tab-groups[aria-selected="true"]').waitFor();
     await p.goForward();await p.locator('#D-tab-data[aria-selected="true"]').waitFor();
     // Opening evidence through the catalog and search uses the same landing rule.
-    await p.getByRole('button',{name:'全部指标',exact:true}).click();
-    await p.locator('.metric-inventory-link').getByText('订阅状态快照',{exact:true}).click();
+    await p.locator('.topic-return').click();await p.locator('#topic-open-D-5').click();
     await p.locator('#D-tab-groups[aria-selected="true"]').waitFor();
     await p.keyboard.press('Control+k');await p.getByRole('searchbox').fill('新设备D7');await p.keyboard.press('Enter');
     await p.locator('#metric-evidence-43').waitFor();
@@ -126,7 +125,7 @@ async (parent) => {
       (await p.locator('#metric-evidence-43 .evidence-meta').innerText()).includes('国家/市场 美国'),'Filtered retention destination loses its scope');
     check(!errors.length,errors.join('; '));
     return {status:'PASS',checks:['twelve table-only metrics at three widths','six approved historical/composition destinations at three widths','four source-related charts at three widths','activity composition source cells and explicit data at three widths',
-      'A–G default trends','explicit panel and refresh','keyboard tabs and history','catalog and search destinations',
+      'A–G default complete overview','explicit panel and refresh','keyboard tabs and history','catalog and search destinations',
       'auxiliary evidence preserves issue and draft','filtered cohort destination','all 53 owned numeric tables and subject explanations'],results};
   } finally {await context.close();}
 }

@@ -5,7 +5,7 @@ async(page)=>{
   const p=await context.newPage(),errors=[],results=[];
   const check=(ok,message)=>{if(!ok)throw new Error(message);};
   p.on('pageerror',error=>errors.push(error.message));p.on('dialog',dialog=>dialog.accept());
-  const open=async hash=>{await p.goto(`${base}#/${hash}`);await p.locator('.income-workspace').waitFor();};
+  const open=async hash=>{const defaults={A:13,B:25,C:42,D:18,E:35,F:48,G:54};if(!hash.includes('?'))hash+='?metric='+defaults[hash];await p.goto(`${base}#/${hash}`);await p.locator('.income-workspace').waitFor();};
   const tab=(code,key)=>p.locator(`#${code}-tab-${key}`);
   const panel=(code,key)=>p.locator(`#${code}-panel-${key}`);
   const form=()=>p.locator('.action-record'),input=name=>form().locator(`[name="${name}"]`);
@@ -14,7 +14,7 @@ async(page)=>{
       await p.setViewportSize({width,height});
       for(const code of ['A','B','C','D','E','F','G']) {
         await open(code);await panel(code,'change').locator('svg').first().waitFor();
-        check(await p.locator('.detail-kpi').count()===4,`${code} loses headline metrics`);
+        check(await p.locator('.detail-kpi,.topic-overview').count()===0,`${code} repeats its overview inside diagnosis`);
         check(await tab(code,'change').getAttribute('aria-selected')==='true',`${code} hides its default trend`);
         const layout=await p.locator('.income-workspace-grid').evaluate(node=>{
           const l=node.children[0].getBoundingClientRect(),r=node.children[1].getBoundingClientRect();
@@ -45,11 +45,10 @@ async(page)=>{
         check(await tab(code,'change').getAttribute('aria-selected')==='true',`${code} back loses its evidence view`);
         await p.goForward();await tab(code,'groups').waitFor();
         check(await tab(code,'groups').getAttribute('aria-selected')==='true',`${code} forward loses its evidence view`);
-        await p.locator('.section-navigation-item').getByText('全部指标',{exact:true}).click();
-        const expected=await p.evaluate(code=>sourceData.catalog.filter(item=>item.page===code).length,code);
-        check(await p.locator('.income-catalog tbody tr').count()===expected,`${code} lost catalog entries`);
-        await tab(code,'data').click();
-        const link=p.locator('.detail-kpi .detail-evidence-link').first();
+        await p.locator('.topic-return').click();await p.locator('.topic-overview').waitFor();
+        const expected=await p.evaluate(code=>topicGroups[code].flatMap(([,ids])=>ids).length,code);
+        check(await p.locator('.topic-metric').count()===expected,`${code} lost discoverable metric summaries`);
+        const link=p.locator('.topic-diagnose').first();
         const target=new URL(await link.getAttribute('href'),base);
         check(!target.hash.includes('panel='),`${code} metric evidence inherits a panel that hides its chart`);
         await link.click();await p.locator('.income-workspace').waitFor();

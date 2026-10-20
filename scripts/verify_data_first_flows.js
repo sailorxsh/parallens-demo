@@ -33,6 +33,8 @@ async(parent)=>{
    await p.locator('.action-record [name="note"]').fill('Preserve this draft when the chart script arrives');
    for(const page of ['A','B','C','D','E','F','G']){
     await p.locator(`.nav-link[data-page="${page}"]`).click();await ready();
+    check(await p.locator('.topic-overview').count()===1&&await p.evaluate(()=>typeof window.echarts)==='undefined','Topic overview depends on the pending chart library');
+    await p.locator('.topic-diagnose').first().click();await ready();
     await p.getByRole('tab',{name:'完整数据',exact:true}).click();await ready();
     check(await p.locator('.income-panel:not([hidden]) table:visible').first().isVisible()&&await p.evaluate(()=>typeof window.echarts)==='undefined',
      'Data-first navigation loses complete data while charts are pending: '+page);

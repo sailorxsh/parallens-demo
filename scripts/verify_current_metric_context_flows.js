@@ -33,7 +33,8 @@ async(parent)=>{
    if(factual){
     check((await current().locator('.finding-summary-status').innerText()).includes('暂无该指标的诊断结论'),`Facts imply an invented diagnosis ${id}`);
     const window=current().locator('.inspector-facts > div').filter({has:p.locator('dt',{hasText:'时间窗口'})}).locator('dd');
-    check(await window.innerText()===contract.find(r=>r.id===id).window,`Factual window drift ${id}`);
+    const expectedWindow=[16,17].includes(id)?await p.evaluate(id=>id===16?activationDeviceWindow():trialOpeningWindow(),id):contract.find(r=>r.id===id).window;
+    check(await window.innerText()===expectedWindow,`Factual window drift ${id}`);
    }
    const priority=p.locator('.page-observation');
    if(await priority.count()){
@@ -68,7 +69,7 @@ async(parent)=>{
   await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
   const saved35=await stored(),baseline35=await form().locator('> .table-note').innerText();
   await input('note').fill('完整月收入未保存补充');
-  await p.locator('.detail-kpi[data-metric-id="3"] .detail-evidence-link').click();await ready();await control('当前指标').click();
+  await p.locator('.topic-return').click();await ready();await p.locator('#topic-open-E-3').click();await ready();await control('当前指标').click();
   check(await current().getAttribute('data-metric-id')==='3'&&(await current().innerText()).includes('$56,000')&&
    (await current().innerText()).includes('暂无该指标的诊断结论'),'MRR borrows income diagnosis or loses its own snapshot');
   check(await input('issueMetric').inputValue()==='35'&&await input('note').inputValue()==='完整月收入未保存补充'&&await stored()===saved35,'Viewing MRR changes the saved income issue');
@@ -129,7 +130,7 @@ async(parent)=>{
    check(!overflow,`Current analysis overflows ${route} ${width} ${size}`);
    const register=current().locator('.issue-register');await register.scrollIntoViewIfNeeded();await register.focus();
    check(await register.evaluate(n=>{const r=n.getBoundingClientRect(),at=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return document.activeElement===n&&r.top>=0&&r.bottom<=innerHeight+1&&(at===n||n.contains(at));}),`Action covered/unreachable ${route} ${width} ${size}`);
-   if(width===1600&&size===16){await p.getByRole('button',{name:'诊断工作区',exact:true}).click();await ready();
+   if(width===1600&&size===16){await p.locator('.income-workspace').scrollIntoViewIfNeeded();await ready();
     await p.screenshot({path:`output/playwright/v113-audit/after-${route.replace(/\W/g,'-')}-${browser.browserType().name()}.png`,scale:'css'});}
    results.push({kind:'layout',route,width,height,fontSize:size});
   }

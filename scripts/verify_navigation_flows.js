@@ -46,13 +46,14 @@ async (page) => {
     check(await p.evaluate(()=>document.activeElement.classList.contains('filter-reset')),'Reset lost focus');
     await reset();await p.goto(`${base}#/C?metric=42`);
     await verify('Direct metric URL','#/C?metric=42');
-    await p.waitForFunction(()=>document.querySelector('#metric-evidence-42').getBoundingClientRect().top<120);
+    await p.waitForFunction(()=>{const r=document.querySelector('#metric-evidence-42').getBoundingClientRect(),max=document.documentElement.scrollHeight-innerHeight;return r.top<innerHeight/2&&(r.top<120||scrollY>=max-1)&&document.activeElement===document.querySelector('#metric-evidence-42 h2');});
     await reset();await p.evaluate(()=>{location.hash='#/A';location.hash='#/G';location.hash='#/D?week=2';});
     await verify('Rapid route changes settle on the final view','#/D?week=2',null);
     const rapid=await p.evaluate(()=>window.__navigationRenders);
     check(rapid.length>=1&&rapid.length<=3&&new Set(rapid).size===rapid.length&&rapid.at(-1)==='#/D?week=2',
       `Rapid navigation repeated a view or failed to reach its final state: ${rapid.join(', ')}`);
-    check((await p.locator('.finding-title').innerText()).startsWith('W2'),'Rapid navigation rendered a stale observation');
+    check(await p.locator('.topic-metric').count()===14&&(await p.locator('#topic-D-metric-17 .topic-window').innerText()).includes('W2'),'Rapid navigation rendered a stale overview');
+    const qualitySource=(await (await parent.request.get(base+'data/diagnostics.json')).json()).G.qualityFacts;
     for(const width of [1366,1920]) {
       await p.setViewportSize({width,height:1000});
       await p.goto(`${base}#/`);await p.locator('.quality-status').waitFor();
@@ -63,15 +64,22 @@ async (page) => {
       const threshold=await p.locator('.quality-threshold-note').innerText();
       check(threshold.includes('≤3.0%')&&threshold.includes('≥95.0%')&&threshold.includes('生产达标标准'),
         'Quality evidence does not explain its demonstration thresholds');
-      for(const filters of ['country=US','appPlatform=iOS','productLine=Bird']) {
+      for(const filters of ['country=US','appPlatform=iOS','appPlatform=Android','productLine=Bird']) {
         await p.goto(`${base}#/?${filters}`);await p.locator('.quality-status').waitFor();
-        check(await p.locator('.quality-status').innerText()==='数据质量：待补数据 ↗','Unavailable filtered quality retained a normal badge');
-        check((await p.locator('#quality-status-description').innerText()).includes('缺少同范围明细'),'Missing quality data lacks its explanation');
-        await p.locator('.quality-status').click();await p.locator('#metric-evidence-54 .na-note:visible').waitFor();
-        check(p.url().includes(filters)&&p.url().includes('metric=54'),'Quality evidence lost supported filter scope');
-        check((await p.locator('#metric-evidence-54 .na-note:visible').innerText()).startsWith('待补数据：'),
-          'Filtered quality evidence is presented as a measured result');
-        check(await p.locator('#metric-evidence-54 .detail-chart[aria-label*="事件丢失率"]').count()===0,'Missing quality data retained the overall trend');
+        const pending=filters==='productLine=Bird';
+        if(pending){
+          check(await p.locator('.quality-status').innerText()==='数据质量：待补数据 ↗','Unavailable quality is shown as measured');
+          check((await p.locator('#quality-status-description').innerText()).includes('缺少同范围明细'),'Missing quality data lacks its explanation');
+          await p.locator('.quality-status').click();await p.locator('#metric-evidence-54 .na-note:visible').waitFor();
+          check((await p.locator('#metric-evidence-54 .na-note:visible').innerText()).startsWith('待补数据：'),'Filtered quality evidence is presented as a measured result');
+          check(await p.locator('#metric-evidence-54 .detail-chart[aria-label*="事件丢失率"]').count()===0,'Missing quality data retained the overall trend');
+        }else{
+          const [key,value]=filters.split('='),day=qualitySource.days.at(-1),events=day.eventGroups.filter(r=>r[key]===value),maps=day.mappingGroups.filter(r=>r[key]===value),sum=(rs,k)=>rs.reduce((n,r)=>n+r[k],0),lost=sum(events,'expected')-sum(events,'ingested'),expected=sum(events,'expected'),mapped=sum(maps,'mapped'),records=sum(maps,'records'),warning=lost/expected>qualitySource.thresholds.eventLossMax||mapped/records<qualitySource.thresholds.idMappingMin;
+          check(await p.locator('.quality-status').innerText()===`数据质量：演示${warning?'预警':'正常'} ↗`,'Quality badge disagrees with independent source counts');
+          await p.locator('.quality-status').click();await p.locator('#metric-evidence-54').waitFor();
+          const got=await p.evaluate(()=>metric(54).value);check(got.eventLoss.numerator===lost&&got.eventLoss.denominator===expected&&got.idMapping.numerator===mapped&&got.idMapping.denominator===records,'Quality link loses independently counted scope');
+        }
+        check(p.url().includes(filters)&&p.url().includes('metric=54'),'Quality evidence lost filter scope');
         await p.locator('.sidebar-nav a[data-page=""]').click();await p.locator('.quality-status').waitFor();
         if(!await p.locator('.filter-bar').evaluate(node=>node.open))await p.locator('.filter-bar summary').click();
         await p.getByRole('button',{name:'重置全部',exact:true}).click();

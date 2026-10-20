@@ -24,7 +24,7 @@ async(parent)=>{
    const calculation=p.locator('#A-panel-change .workspace-calculation > summary').first();await calculation.click();
    await p.evaluate(()=>scrollTo({top:Math.min(850,document.documentElement.scrollHeight-innerHeight),behavior:'instant'}));await ready();
    const a=await state();
-   await p.locator('.sidebar-nav [data-page=C]').click();await ready();
+   await p.evaluate(()=>{location.hash=routeHref('C',42);});await ready();
    await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();
    await p.locator('.action-record [name=note]').fill('设备证据私人草稿，未保存');
    await p.evaluate(()=>scrollTo({top:Math.min(500,document.documentElement.scrollHeight-innerHeight),behavior:'instant'}));await ready();
@@ -46,8 +46,8 @@ async(parent)=>{
     states.push({width,height,size,frames,a,b});
    }
    // Once restoration finishes, deliberate new reading positions must still be remembered.
-   await p.goBack();await ready();await p.evaluate(()=>scrollBy({top:80,behavior:'instant'}));await ready();
-   const moved=await state();check(moved.top>a.top+20,'Fixture did not exercise a deliberate new reading position');
+   await p.goBack();await ready();await p.evaluate(()=>scrollBy({top:scrollY>100?-80:80,behavior:'instant'}));await ready();
+   const moved=await state();check(Math.abs(moved.top-a.top)>20,'Fixture did not exercise a deliberate new reading position');
    await p.goForward();await ready();same(b,await state());await p.goBack();await ready();same(moved,await state());
    check(await p.evaluate(()=>!localStorage.getItem('parallens-demo-actions-v1')),'History silently persists private issue drafts');
    check(await p.evaluate(()=>!JSON.stringify(history.state).includes('私人草稿')),'Private draft leaked to browser history state');

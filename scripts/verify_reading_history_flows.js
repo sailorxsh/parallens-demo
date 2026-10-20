@@ -41,7 +41,7 @@ async(parent)=>{
    }finally{await fresh.close();}
    states.push({width,height,flow:'home → filtered D evidence and draft → E lookup → back/forward → fresh shared URL',before,other});
   }
-  await p.setViewportSize({width:1600,height:1100});await open('A');
+  await p.setViewportSize({width:1600,height:1100});await open('A?metric=13');
   const button=p.locator('.chart-legend-button').first();await button.click();
   const selected=await p.locator('.chart-legend-button').evaluateAll(ns=>ns.map(n=>[n.textContent,n.getAttribute('aria-pressed')]));
   await p.locator('.sidebar-nav [data-page=C]').click();await settle();await p.goBack();await settle();
