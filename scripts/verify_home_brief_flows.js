@@ -70,6 +70,17 @@ async (parent) => {
     }
     await p.getByRole('button',{name:'并列对照',exact:true}).click();
     check(await p.locator('#trendChart').evaluate(n=>echarts.getInstanceByDom(n).getOption().series.length)===2,'Parallel comparison lost a series');
+    for(const width of [1366,1600,1920])for(const fontSize of [16,32]) {
+      await p.setViewportSize({width,height:1080});
+      await p.evaluate(async fontSize=>{document.documentElement.style.fontSize=fontSize+'px';await document.fonts.ready;
+        await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));},fontSize);
+      const boundary=await p.evaluate(()=>{const signals=document.querySelector('.home-signals'),context=document.querySelector('.home-comparison-context');
+        return {standalone:context.previousElementSibling===signals,gap:context.getBoundingClientRect().top-signals.getBoundingClientRect().bottom,
+          overflow:document.documentElement.scrollWidth>innerWidth+1};});
+      check(boundary.standalone&&boundary.gap>=4&&!boundary.overflow,`Parallel explanation overlaps the signal cards: ${JSON.stringify({width,fontSize,...boundary})}`);
+    }
+    await p.evaluate(()=>document.documentElement.style.fontSize='16px');
+
     await p.locator('.home-signal[data-metric-id="13"]').click();
     const definition=p.locator('.home-result[data-metric-id="2"] .definition-trigger');
     await definition.click();
@@ -112,7 +123,7 @@ async (parent) => {
       'Inconsistent stock facts fabricated a net-add comparison');
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['four modules in approved order','single-line result comparisons at three desktop widths','six default journey trends',
-      'source values and periods','keyboard signal and focus','in-place comparison basis','parallel comparison','definition top-layer and focus',
+      'source values and periods','keyboard signal and focus','in-place comparison basis','parallel comparison','standalone comparison note never overlaps at three widths / 200% text','definition top-layer and focus',
       'filtered comparison recomputation','unsupported activation suppressed','evidence keeps supported filters','back preserves filters','NA comparison'],results};
   } finally {await context.close();}
 }

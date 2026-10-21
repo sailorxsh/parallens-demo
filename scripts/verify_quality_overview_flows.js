@@ -8,7 +8,7 @@ async parent=>{
    await p.setViewportSize({width,height:1000});await open(q);await p.evaluate(f=>document.documentElement.style.fontSize=f+'px',font);
    const card=p.locator('#topic-G-metric-54'),expected=q?'演示预警':'演示正常';
    check(await p.locator('#topic-highlight-G-54 .topic-quality-status').textContent()==='数据质量 · '+expected,'Summary omits current quality state');
-   check(await card.locator('.topic-quality-status').textContent()==='数据质量 · '+expected,'Card status differs from the summary');
+   check(await card.locator('.topic-quality-status').textContent()===(q?'数据质量 · ':'当前范围整体 · ')+expected,'Card status differs from the overall judgement');
    check(await card.locator('li[data-state=warning]').count()===(q?2:0),'Warning count differs from loss and mapping threshold checks');
    const text=await card.innerText();check(text.includes('≤3.0%')&&text.includes('≥95.0%')&&text.includes('尚未确认生产达标标准'),'Threshold basis or demo boundary hidden');
    check(text.includes(q?'3.7%':'2.2%')&&text.includes(q?'94.6%':'96.5%'),'Original rates altered');

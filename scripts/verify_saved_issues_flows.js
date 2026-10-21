@@ -47,7 +47,7 @@ async(parent)=>{
     for(const [key,record] of saved) {
       await open('D?country=DE&plan=Plus&week=12');
       await list();await query().fill(record.issueId);
-      check(await dialog().locator('tbody tr').count()===1,'Issue ID does not find one original record');
+      check(await dialog().locator('.saved-issues-table > table > tbody > tr[data-record-key]').count()===1,'Issue ID does not find one original record');
       await dialog().getByRole('button',{name:`打开 ${record.issueId} · ${record.scope}`,exact:true}).focus();await p.keyboard.press('Enter');await settle();
       check(!await dialog().isVisible(),'Open leaves the modal in front of evidence');
       const state=await p.evaluate(()=>({filters:filterState,issue:document.querySelector('[name="issueMetric"]').value,
@@ -59,7 +59,7 @@ async(parent)=>{
       check(state.issue===String(record.evidenceId)&&state.owner===record.owner&&state.note===record.note,'Opened another issue or lost fields');
       check(state.status===record.status&&state.due===record.due,'Stored progress or review date changed');
       if(record.evidenceId===54&&record.baseline.startsWith('质量日证据v1：')) {
-        const counts=JSON.parse(record.baseline.slice('质量日证据v1：'.length)),detail=p.locator('.quality-baseline-details');
+        const counts=JSON.parse(record.baseline.slice('质量日证据v1：'.length)),detail=p.locator('.action-record .quality-baseline-details');
         check(await detail.count()===1&&await detail.locator('tbody tr').count()===8,'Saved quality source no longer has inspectable two-day/type evidence');
         await detail.locator('> summary').click();
         const latest=await detail.locator('table').first().locator('tbody tr').last().innerText();
@@ -161,11 +161,11 @@ async(parent)=>{
     await p.reload();await ready();await list();
     for(const key of broken) {
       const row=dialog().locator(`[data-record-key="${key}"]`);
-      check(await row.count()===1&&await row.locator('button').count()===0&&Boolean(await row.locator('.saved-issue-readonly').innerText()),
+      check(await row.count()===1&&await row.locator('.saved-issue-open').count()===0&&await row.locator('.saved-issue-details-toggle').count()===1&&Boolean(await row.locator('.saved-issue-readonly').innerText()),
         'Unsupported stored scope disappeared or can open as a new issue');
     }
-    check(await dialog().locator('tbody tr').count()===saved.length+broken.length,'A stored problem disappeared or a separate action mark entered the list');
-    await query().fill('OLD-RECORD');await dialog().locator('summary').click();
+    check(await dialog().locator('.saved-issues-table > table > tbody > tr[data-record-key]').count()===saved.length+broken.length,'A stored problem disappeared or a separate action mark entered the list');
+    await query().fill('OLD-RECORD');await dialog().locator('.saved-issue-details-toggle').click();
     check((await dialog().innerText()).includes('41.0%')&&(await dialog().innerText()).includes('必须保留的旧说明'),'Read-only historical details disappeared');
     await query().fill('不会匹配的关键词');check((await dialog().innerText()).includes('没有匹配的问题'),'Search empty state disappears');
     await query().fill('');
@@ -191,9 +191,9 @@ async(parent)=>{
           overflow:document.documentElement.scrollWidth>innerWidth};
       });
       check(layout.inside&&layout.closeClickable&&!layout.overflow,`Dialog clips controls: ${width} ${font} ${JSON.stringify(layout)}`);
-      const scrollTable=dialog().locator('.data-table-scroll');
+      const scrollTable=dialog().locator('.saved-issues-table');
       if(await scrollTable.getAttribute('data-scrollable')!==null) {
-        check(await scrollTable.locator('.table-scroll-hint').isVisible(),'Wide record table has no visible scrolling instruction');
+        check(await scrollTable.locator(':scope > .table-scroll-hint').isVisible(),'Wide record table has no visible scrolling instruction');
         await scrollTable.evaluate(n=>n.scrollLeft=0);await scrollTable.focus();await p.keyboard.press('ArrowRight');
         check(await scrollTable.evaluate(n=>n.scrollLeft>0),'Wide record table does not respond to keyboard scrolling');
       }
