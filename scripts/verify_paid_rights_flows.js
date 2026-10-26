@@ -3,13 +3,14 @@ async(parent)=>{
  const base=new URL('.',parent.url()).href,engine=parent.context().browser().browserType().name(),c=await parent.context().browser().newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'}),p=await c.newPage(),errors=[],results=[];
  const check=(ok,message)=>{if(!ok)throw Error(message);};p.on('pageerror',e=>errors.push(e.message));
  const metrics=await(await parent.request.get(`${base}data/metric-values.json`)).json();
+ const core=await(await parent.request.get(`${base}data/route-core.json`)).json();
  const old=JSON.parse(fs.readFileSync('scripts/fixtures/paid-rights-before-source.json','utf8')).records;
  const ready=async()=>{await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));};
  const open=async(query='metric=36')=>{await p.goto(`${base}#/E?${query}`);await ready();};
  const reveal=async d=>{if(!await d.evaluate(n=>n.open))await d.locator(':scope > summary').click();await ready();};
  const chart=()=>p.locator('#metric-evidence-36 .detail-chart[aria-label^="五类Pack"]');
  const stored=()=>p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY));
- const setSource=async data=>{await c.route('**/data/metric-values.json',r=>r.fulfill({json:data}));await p.reload();await ready();};
+ const setSource=async data=>{let injectionHits=0;await c.route('**/data/route-core.json*',r=>{injectionHits++;return r.fulfill({json:{...core,sources:{...core.sources,metrics:data}}});});await p.reload();await ready();check(injectionHits>0,'Fault injection did not reach the current route source');};
  const sourceContext=()=>p.locator('#E-panel-groups > .workspace-context').filter({has:p.locator('summary',{hasText:'其他付费结构与型号对照'})});
  try{
   await open();await p.evaluate(records=>localStorage.setItem(ACTION_STORAGE_KEY,JSON.stringify(records)),old);await p.reload();await ready();const saved=await stored();
@@ -46,10 +47,10 @@ async(parent)=>{
    await reveal(sourceContext());check(await sourceContext().locator('.paid-rights-unavailable').count()===1&&await sourceContext().locator('.detail-chart[aria-label^="付费权益互斥结构"]').count()===0,'Secondary chart falls back to stale entitlement percentages');
    await p.locator('#E-tab-data').click();const tables=p.locator('#E-panel-data > .workspace-context').filter({has:p.locator('summary',{hasText:'查看付费专题其他完整数据'})});await reveal(tables);
    const rights=tables.locator('table').filter({has:p.locator('caption',{hasText:'权益与Pack持有结构'})});const head=await rights.locator('thead').textContent(),body=await rights.locator('tbody').textContent();check(head==='状态'&&!body.includes('9,400'),`Secondary table retains unvalidated old counts: ${label} ${head} ${body}`);
-   check(await stored()===updated,'Invalid source inspection writes old records');results.push({label,status:'guarded'});await c.unroute('**/data/metric-values.json');
+   check(await stored()===updated,'Invalid source inspection writes old records');results.push({label,status:'guarded'});await c.unroute('**/data/route-core.json*');
   }
   const changed=structuredClone(metrics);changed.m36.value.byPack['Extra Memory Pack'].numerator=1250;await setSource(changed);await open();await chart().scrollIntoViewIfNeeded();await chart().locator('svg').waitFor();
-  check(await chart().evaluate(n=>Math.abs(echarts.getInstanceByDom(n).getOption().series[0].data[0]-1250/12550*100)<1e-9),'Chart ignores changed valid count');check((await p.locator('.detail-finding[data-metric-id="36"]').innerText()).includes('4,100'),'Observation ignores changed Pack membership sum');await c.unroute('**/data/metric-values.json');await p.reload();await ready();check(await p.evaluate(()=>packPenetrationFacts().membershipSum===4050),'Restoring source does not restore original Pack counts');
+  check(await chart().evaluate(n=>Math.abs(echarts.getInstanceByDom(n).getOption().series[0].data[0]-1250/12550*100)<1e-9),'Chart ignores changed valid count');check((await p.locator('.detail-finding[data-metric-id="36"]').innerText()).includes('4,100'),'Observation ignores changed Pack membership sum');await c.unroute('**/data/route-core.json*');await p.reload();await ready();check(await p.evaluate(()=>packPenetrationFacts().membershipSum===4050),'Restoring source does not restore original Pack counts');
   for(const[width,font]of[[1366,16],[1600,16],[1920,16],[1366,32]]){
    await p.setViewportSize({width,height:1000});await open();await p.evaluate(font=>document.documentElement.style.fontSize=font+'px',font);await chart().scrollIntoViewIfNeeded();await ready();await chart().locator('svg').waitFor();
    const text=await chart().locator('svg text').evaluateAll(ns=>ns.map(n=>({text:n.textContent,b:n.getBoundingClientRect().toJSON(),font:parseFloat(getComputedStyle(n).fontSize)}))),bounds=await chart().boundingBox();

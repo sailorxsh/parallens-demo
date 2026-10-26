@@ -56,9 +56,9 @@ async parent=>{
   check(requests.length===count+1&&requests.at(-1)==='route-C.json'&&await p.evaluate(()=>activeDataPage)==='C','Retry refetches unrelated facts or fails to commit C');
   // A deployment-version mismatch must not be mistaken for valid empty data.
   await p.route('**/data/route-F.json*',async r=>{const response=await r.fetch(),payload=await response.json();payload.revision='stale-deploy';await r.fulfill({json:payload});});
-  await nav('F');await p.getByRole('button',{name:'重新加载',exact:true}).waitFor();
+  await nav('F');await p.getByRole('button',{name:'刷新整个页面',exact:true}).waitFor();
   check(await p.locator('.detail-kpi').count()===0,'Mismatched route data displays values');
-  await p.unroute('**/data/route-F.json*');await p.getByRole('button',{name:'重新加载',exact:true}).click();await ready();
+  await p.unroute('**/data/route-F.json*');p.once('dialog',dialog=>dialog.accept());await p.getByRole('button',{name:'刷新整个页面',exact:true}).click();await ready();
   check(await p.evaluate(()=>localStorage.getItem(ACTION_STORAGE_KEY))===original,'Loading, retry or route changes modify stored issue JSON');
   check(!errors.length,errors.join(';'));return {status:'PASS',engine:b.browserType().name(),initialRequests:requests.slice(0,2),datedScope:date,checks:['two overview requests only','cold saved-scope restoration','atomic source readiness','new modal and focus survive late completion','session draft retained','out-of-order route payload ignored','isolated failure and one-topic retry','deployment revision mismatch rejected','stored issue JSON unchanged']};
  }finally{releaseD?.();releaseB?.();await c.close();}

@@ -37,12 +37,10 @@ async(parent)=>{
         check(Boolean(source),'Fixture requires a valid decomposition');
         check(await details.count()===1&&!await details.evaluate(n=>n.open),'Detailed arithmetic should be available but collapsed');
         const pair=p.locator('.trial-group-evidence');
-        const summary=await pair.locator('.table-note').first().innerText();
-        check(summary.includes(`组内表现 ${signed(source.summaries.reduce((sum,item)=>sum+item.within,0))}`)&&
-          summary.includes(`人群构成 ${signed(source.summaries.reduce((sum,item)=>sum+item.mix,0))}`),'Default summary contradicts raw records');
-        const original=await pair.locator('.detail-chart').evaluate(n=>{
-          const o=echarts.getInstanceByDom(n).getOption();return {min:o.yAxis[0].min,max:o.yAxis[0].max,values:o.series[0].data.map(v=>typeof v==='number'?v:v.value)};
-        });
+        const summary=await pair.locator('.trial-comparison-contributions > .table-note').last().innerText();
+        check(summary.includes(`组内表现贡献 ${source.summaries.reduce((sum,item)=>sum+item.within,0).toFixed(2)}`)&&
+          summary.includes(`人群构成贡献 ${source.summaries.reduce((sum,item)=>sum+item.mix,0).toFixed(2)}`),'Default summary contradicts raw records');
+        const original=await pair.locator('.trial-comparison-contributions').evaluate(n=>({min:Number(n.dataset.min),max:Number(n.dataset.max),values:[...n.querySelectorAll('[data-contribution]')].map(b=>Number(b.dataset.contribution))}));
         check(original.min<=Math.min(0,...original.values)&&original.max>=Math.max(0,...original.values)&&
           original.values.every((value,index)=>Math.abs(value-source.summaries[index].total)<1e-9),'Original contribution changed or zero/data is clipped');
         await p.locator('.income-context-controls').getByRole('button',{name:'问题登记',exact:true}).click();

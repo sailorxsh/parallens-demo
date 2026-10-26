@@ -1802,9 +1802,11 @@ function accountStockHistoryEvidence(panel,append) {
   }
   for(const dimension of ['country','appPlatform']) {
     const options=sourceData.filterPolicy.controls[dimension].options,parts=options.map(option=>accountStockProjection({...filterState,[dimension]:option}));
-    const table=dataTable({title:`${filterLabels[dimension]} · 当前账号存量`,columns:['分组','累计注册（人）','当前绑定（人）','当前未绑定（人）','绑定占比'],
+    const tableSpec={title:`${filterLabels[dimension]} · 当前账号存量`,columns:['分组','累计注册（人）','当前绑定（人）','当前未绑定（人）','绑定占比'],
       rows:parts.map((r,i)=>[optionLabel(dimension,options[i]),r.registered,r.boundOwners,r.registered-r.boundOwners,ratio(r)]),
-      note:'保留另一项筛选，仅替换本分组；各行互斥，合计为移除本分组条件后的总体。当前未绑定按主账号关系计算，不等于从未绑定或流失；组间比率接近，不生成强行排名。'},'account-stock-group');table.dataset.evidenceKind='groups';panel.append(table);
+      note:'保留另一项筛选，仅替换本分组；各行互斥，合计为移除本分组条件后的总体。当前未绑定不等于从未绑定或流失；不把存量结构当作转化漏斗。'};
+    const groupPair=append({kind:'horizontalBars',stack:true,title:tableSpec.title,unit:'人',labels:options.map(option=>optionLabel(dimension,option)),
+      series:[{name:'当前绑定',values:parts.map(r=>r.boundOwners),color:chartTone('green')},{name:'当前未绑定',values:parts.map(r=>r.registered-r.boundOwners),color:'#8c9b95'}],note:tableSpec.note},tableSpec,'groups');groupPair.lastElementChild.classList.add('account-stock-group');
   }
 }
 
@@ -2061,7 +2063,10 @@ function qualityBaselineDetails(baseline) {
 function qualityEvidence(panel,appendPair) {
   const p=qualityProjection();if(p.reason)return null;
   panel.append(element('p','table-note quality-window',qualityWindow()));
-  for(const key of ['loss','mapping']){const history=qualityHistory(key);appendPair({...history,metricId:54,title:`${history.title} · 30个完整日`,series:[{name:history.title,values:history.values,details:history.details,color:chartTone(key==='loss'?'attention':'green')}]},qualityHistoryTable(p),'change');}
+  for(const key of ['loss','mapping']){const history=qualityHistory(key);const pair=appendPair({...history,metricId:54,title:`${history.title} · 30个完整日`,series:[{name:history.title,values:history.values,details:history.details,color:chartTone(key==='loss'?'attention':'green')}]},qualityHistoryTable(p),'change');
+    const gaps=p.rows.filter(r=>r[key]===null);
+    if(gaps.length){const note=element('div','quality-gap-note');const reasons=new Map();for(const r of gaps){const reason=key==='loss'?(!r.reliable?'预期事件数待核验':'无合格预期事件'):'无待关联记录';if(!reasons.has(reason))reasons.set(reason,[]);reasons.get(reason).push(r.start.slice(0,10));}for(const [reason,dates]of reasons){note.append(element('p','',`折线断点：${dates.length<=2?dates.join('、'):dates.length+'日'}，${reason}；未计算${history.title}（非0）。`));if(dates.length>2){const datesDetail=element('details','quality-gap-dates');datesDetail.append(element('summary','',`查看${dates.length}个缺数日（UTC）`),element('p','',dates.join('、')));note.append(datesDetail);}}pair.querySelector('.evidence-plot').append(note);}
+  }
   const full=dataTable(qualityHistoryTable(p),'quality-history-table');full.dataset.evidenceKind='data';panel.append(full);
   const node=element('section','entity-workspace quality-explorer');node.dataset.evidenceKind='groups';node.append(element('h3','','采集事件类型与App证据'),element('p','table-note',qualityNote));
   const platformRows=qualityAppPlatforms.map(appPlatform=>{const r=qualityProjection({...filterState,appPlatform}).current;return [appPlatform,qualityPercent(r.loss),`${qualityCount(r.lost)} / ${number(r.expected)}`,qualityPercent(r.mapping),`${number(r.mapped)} / ${number(r.records)}`];});
@@ -2072,7 +2077,14 @@ function qualityEvidence(panel,appendPair) {
   const chartPanel=element('div','detail-chart-panel'),title=element('h3',''),box=element('div','detail-chart');box.setAttribute('role','img');const scale=element('p','chart-scale-note'),detail=element('details','workspace-calculation');detail.append(element('summary','','查看30日完整计数'));chartPanel.append(title,box,scale,detail);node.append(chartPanel);
   const typeRows=Object.entries(sourceData.diagnostics.G.qualityFacts.eventTypes).map(([key,name])=>{const r=qualityProjection(filterState,key).current;return [key,name,`${qualityCount(r.lost)} / ${number(r.expected)}`,qualityPercent(r.loss)];});
   const types=dataTable({title:'最新完整日 · 事件类型',columns:['事件类型','丢失 / 预期事件','丢失率'],rows:typeRows.map(r=>r.slice(1))},'quality-type-table');node.append(types);
-  types.querySelectorAll('tbody tr').forEach((row,i)=>{const button=element('button','',typeRows[i][1]);button.type='button';button.addEventListener('click',()=>{select.value=typeRows[i][0];render();select.focus({preventScroll:true});});row.children[0].replaceChildren(button);});
+  types.querySelectorAll('tbody tr').forEach((row,i)=>{const button=element('button','',typeRows[i][1]);button.type='button';button.addEventListener('click',()=>{
+    select.value=typeRows[i][0];render();
+    const navigation=node.closest('.income-panel')?.querySelector('.workspace-locations');
+    const offset=navigation?navigation.offsetHeight+(parseFloat(getComputedStyle(navigation).top)||0)+16:16;
+    label.style.scrollMarginTop=`${offset}px`;
+    label.scrollIntoView({block:'start',behavior:'instant'});
+    select.focus({preventScroll:true});
+  });row.children[0].replaceChildren(button);});
   const render=()=>{const history=qualityHistory('loss',filterState,select.value),part=qualityProjection(filterState,select.value),spec={...history,metricId:54,title:`${history.title} · 30个完整日`,series:[{name:history.title,values:history.values,details:history.details}]};title.textContent=spec.title;box.setAttribute('aria-label',spec.title+'；'+qualityNote);const table=dataTable(qualityHistoryTable(part));detail.replaceChildren(element('summary','','查看30日完整计数'),table);scale.textContent=chartScaleNote(spec);const old=window.echarts?.getInstanceByDom(box);if(old){destroyChart(old);const i=detailCharts.indexOf(old);if(i>=0)detailCharts.splice(i,1);}drawEvidenceChart(box,spec);updateScrollableTables();};
   select.addEventListener('change',render);panel.append(node);return {node,init:render,refresh:()=>{const instance=window.echarts?.getInstanceByDom(box);if(instance&&node.getClientRects().length){refreshChartTypography(instance);instance.resize();}}};
 }
@@ -2232,7 +2244,13 @@ function unbindingEvidence(panel,appendPair){const p=unbindingProjection(),index
  const onPoint=i=>{const select=document.querySelector('[name=unbindingMonth]');if(select&&index.rows[i]){select.value=index.rows[i].month;select.dispatchEvent(new Event('change'));}};
  appendPair({metricId:51,title:'解绑设备率 · 12个完整月',unit:'%',labels,selectedPeriod:p.month,series:[{name:'解绑 / 月初绑定',values:history.map(r=>r.rate===null?null:r.rate*100),details:history.map(r=>({numerator:r.devices,denominator:r.opening,numeratorUnit:'台',denominatorUnit:'台'}))}],onPoint,note:unbindingNote},table,'change');
  appendPair({metricId:51,title:'同批次7／30日回绑率 · 12月',unit:'%',labels,selectedPeriod:p.month,series:[7,30].map(days=>({name:`${days}日回绑率`,values:history.map(r=>r['D'+days].value===null?null:r['D'+days].value*100),details:history.map(r=>({numerator:r['D'+days].numerator,denominator:r.devices,numeratorUnit:'台',denominatorUnit:'台'}))})),onPoint,note:'完整解绑月不等于回绑观察已成熟；空缺保留计数，不连接、不补0。'},table,'change');
- const models=unbindingModelsTable(),t=dataTable(models,'unbinding-model-table');t.dataset.evidenceKind='groups';[...t.querySelectorAll('tbody tr')].forEach((tr,i)=>{const model=Object.keys(index.source.models)[i],button=element('button','retention-device-select',model);button.type='button';button.disabled=!unbindingProjection({...filterState,deviceModel:model}).opening;button.addEventListener('click',()=>{changeFilter('F','deviceModel',model);});tr.firstChild.replaceChildren(button);});panel.append(t);
+ const modelNames=Object.keys(index.source.models),modelParts=modelNames.map(deviceModel=>unbindingProjection({...filterState,deviceModel}));
+ const modelSpec={kind:'horizontalBars',title:'同一解绑月 · 型号7／30日回绑',unit:'%',maxX:100,labels:modelNames,
+   series:[7,30].map((days,i)=>({name:`${days}日回绑率`,color:chartTone(i?'blue':'green'),values:modelParts.map(r=>r['D'+days].value===null?null:r['D'+days].value*100),details:modelParts.map(r=>({numerator:r['D'+days].numerator,denominator:r.devices,numeratorUnit:'台',denominatorUnit:'台'}))})),
+   note:'同型号两条共用本月解绑设备为分母；7日与30日窗口嵌套，不能相加。未成熟或无合格分母不画柱，见下方计数；解绑率使用另一分母，留在核对表。'};
+ const modelPair=appendPair(modelSpec,{...unbindingModelsTable(),title:'回绑对照 · 完整计数与解绑率'},'groups');
+ modelPair.lastElementChild.remove();
+ const models=unbindingModelsTable(),t=dataTable(models,'unbinding-model-table');t.dataset.evidenceKind='groups';[...t.querySelectorAll('tbody tr')].forEach((tr,i)=>{const model=Object.keys(index.source.models)[i],button=element('button','retention-device-select',model);button.type='button';button.disabled=!unbindingProjection({...filterState,deviceModel:model}).opening;button.addEventListener('click',()=>{changeFilter('F','deviceModel',model);});tr.firstChild.replaceChildren(button);});modelPair.append(t);
  const reasons=unbindingReasons(p),reasonSpec={title:'首次解绑原因 · 去重设备',columns:['自报原因','设备（台）'],rows:reasons.map(r=>[index.source.reasons[r.key],r.count]),note:'模拟自报标签，不证明原因。每台只取首次解绑原因；版本与原因只筛清单。'};
  appendPair({metricId:51,title:reasonSpec.title,unit:'台',onPoint:i=>{const select=panel.querySelector('[aria-label="首次解绑原因（仅清单）"]');if(select&&reasons[i]){select.value=reasons[i].key;select.dispatchEvent(new Event('change'));select.focus({preventScroll:true});}},labels:reasonSpec.rows.map(r=>r[0]),series:[{name:'去重设备',values:reasons.map(r=>r.count)}],note:reasonSpec.note},reasonSpec,'groups');
  panel.append(unbindingList(p));const full=dataTable(table,'unbinding-history-table');full.dataset.evidenceKind='data';panel.append(full);
@@ -2347,8 +2365,8 @@ function featureUsageEvidence(panel,appendPair){const p=featureUsageProjection()
  const ratesAll=p.rows.flatMap(r=>r.denominator>=30?r.users.map(n=>n/r.denominator*100):[]),low=Math.min(...ratesAll),high=Math.max(...ratesAll),span=Math.max(high-low,.5),step=chartNiceStep(span/6),axis=ratesAll.length?{minY:Math.max(0,Math.floor((low-span*.1)/step)*step),maxY:Math.min(100,Math.ceil((high+span*.1)/step)*step),intervalY:step}:{};
  appendPair({title:'三类功能使用率 · 同一滚动30天人群',unit:'%',...axis,labels,series:featureFunctions.map((key,i)=>({name:optionLabel('functionType',key),values:rates(r=>r.users[i]),details:p.rows.map(r=>({numerator:r.users[i],denominator:r.denominator,numeratorUnit:'人',denominatorUnit:'人'}))})),note},full,'change');
  const latest={title:'账号级通知配置 · 当前快照',columns:['配置','主账号（人）','同范围复合活跃（人）','占比'],rows:['on','off','unknown'].map((key,i)=>[['已确认开','已确认关','未知'][i],r.config[key],r.denominator,r.denominator>=30?percent(r.config[key]/r.denominator):'无可靠比例']),note:'开／关／未知互斥且合计回到复合活跃分母；未知不当作关闭。'+note};
- appendPair({title:latest.title,unit:'%',labels:['已确认开','已确认关','未知'],series:[{name:'主账号占比',values:['on','off','unknown'].map(key=>r.denominator>=30?r.config[key]/r.denominator*100:null)}],note:latest.note},latest,'groups');
- const details=element('details','workspace-context feature-notification-history');details.dataset.evidenceKind='groups';details.append(element('summary','','查看账号通知配置历史'));const shell=element('div','detail-chart-panel'),box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label','账号级通知开／关／未知 · 84日快照；'+note);shell.append(element('h3','','通知配置 · 各日匹配活跃人群'),box);details.append(shell,dataTable(full));panel.append(details);details.addEventListener('toggle',()=>{if(details.open)drawEvidenceChart(box,{title:'通知配置 · 各日匹配活跃人群',unit:'%',labels,minY:0,maxY:100,series:['on','off','unknown'].map((key,i)=>({name:['已确认开','已确认关','未知'][i],values:rates(r=>r.config[key])})),note});});
+ appendPair({title:latest.title,unit:'%',categoryColors:true,labels:['已确认开','已确认关','未知'],series:[{name:'主账号占比',values:['on','off','unknown'].map(key=>r.denominator>=30?r.config[key]/r.denominator*100:null)}],note:latest.note},latest,'groups');
+ const details=element('details','workspace-context feature-notification-history');details.dataset.evidenceKind='groups';details.append(element('summary','','查看账号通知配置历史'));const shell=element('div','detail-chart-panel'),box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label','账号级通知开／关／未知 · 84日快照；'+note);shell.append(element('h3','','通知配置 · 各日匹配活跃人群'),box);details.append(shell,dataTable(full));panel.append(details);details.addEventListener('toggle',()=>{if(details.open)drawEvidenceChart(box,{title:'通知配置 · 各日匹配活跃人群',unit:'%',labels,minY:0,maxY:100,series:['on','off','unknown'].map((key,i)=>({name:['已确认开','已确认关','未知'][i],color:categoryColor(['已确认开','已确认关','未知'][i]),values:rates(r=>r.config[key])})),note});});
  const table=dataTable(full,'feature-usage-calculation');table.dataset.evidenceKind='data';panel.append(table);
 }
 
@@ -2692,7 +2710,7 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
   article.append(heading);
   const link = element('a',kind==='journey'?'node-link':'card-link');
   link.href = routeHref(page,id);
-  link.setAttribute('aria-label',`${label} ${value}，查看${pages[page]?.title??'诊断'}数据`);
+
   const trend=kind==='snapshot'?headlineTrend(id):null;
   const valueNode=element('div','metric-value',value);
   if(kind==='journey'&&[9,34].includes(id)&&metric(id).kind!=='na')valueNode.append(element('span','metric-value-unit','人'));
@@ -2703,6 +2721,7 @@ function card({id,label,value,page,detail,status='',severity='neutral',star=fals
     statusLine.append(dot,element('span','',status));
     link.append(statusLine);
   }
+  link.setAttribute('aria-label',`${valueNode.textContent}${status?' '+status:''}；${label}，查看${pages[page]?.title??'诊断'}数据`);
   article.append(link);
   if (kind === 'journey') article.append(nodeTrendDetails(id));
   if (trend) article.append(trend);
@@ -3509,6 +3528,45 @@ function modelPerformanceRows() {
   return value.kind==='group'?Object.entries(value.value).sort((a,b)=>b[1].owners-a[1].owners||
     (a[0]<b[0]?-1:a[0]>b[0]?1:0)):[];
 }
+
+// Independent visual candidate: positions compare values, never completion targets.
+function comparisonPointPanel(title,rows,max,step,unit) {
+  const panel=element('section','comparison-point-panel');panel.append(element('h3','workspace-chart-title',title));
+  for(const row of rows) {
+    const item=element('div','comparison-point-row');item.dataset.value=String(row.value);item.dataset.max=String(max);
+    const head=element('div','comparison-point-heading');head.append(element('span','',row.label),element('strong','',row.display));
+    const track=element('div','comparison-point-track');track.setAttribute('aria-hidden','true');
+    const dot=element('span','comparison-point-dot');dot.style.left=`${row.value/max*100}%`;track.append(dot);
+    item.append(head,track);if(row.note)item.append(element('p','table-note',row.note));panel.append(item);
+  }
+  const axis=element('div','comparison-point-axis');axis.setAttribute('aria-hidden','true');
+  for(let value=0;value<=max;value+=step){const tick=element('span','',number(value)+unit);tick.style.left=`${value/max*100}%`;axis.append(tick);}
+  panel.append(axis);return panel;
+}
+function modelScatterEvidence() {
+  const entries=modelPerformanceRows(),node=element('section','detail-chart-panel model-scatter-evidence');node.dataset.evidenceKind='groups';node.dataset.evidenceMetric='39';
+  node.append(element('h3','workspace-chart-title','型号定位 · 活跃率与订阅率'),element('p','table-note','一型号一点，点大小相同。横纵轴使用局部范围；位置显示两项比例，不表示目标达成或因果。'));
+  const box=element('div','detail-chart model-scatter-chart');box.setAttribute('role','img');box.setAttribute('aria-label','型号二维散点图：横轴30天活跃率，纵轴主账号订阅率。使用下方型号按钮核对精确人数。');
+  const buttons=element('div','model-scatter-controls');buttons.setAttribute('role','group');buttons.setAttribute('aria-label','核对型号数据');
+  const detail=element('div','model-scatter-detail');detail.setAttribute('aria-live','polite');
+  const items=entries.map(([name,v])=>({name,...v}));let chart;const controls=[];
+  const inspect=(index,highlight=false)=>{const v=items[index];if(!v)return;controls.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));detail.replaceChildren(element('strong','',v.name),element('span','',`主账号样本 ${number(v.owners)} 人`),element('span','',`30天活跃 ${percent(v.activeRate)} · ${number(v.activeOwners)} 人`),element('span','',`有效订阅 ${percent(v.subscriptionRate)} · ${number(v.subscribedOwners)} 人`));if(highlight&&chart){chart.dispatchAction({type:'downplay'});chart.dispatchAction({type:'highlight',seriesIndex:0,dataIndex:index});}};
+  items.forEach((v,i)=>{const button=element('button','',v.name);button.type='button';button.setAttribute('aria-label',`${v.name}，核对型号数据`);button.addEventListener('focus',()=>inspect(i,true));button.addEventListener('click',()=>inspect(i,true));controls.push(button);buttons.append(button);});
+  node.append(box,buttons,detail,element('p','table-note','人数以同型号主账号为分母；仅覆盖已归属主型号的合成样本。这些汇总点不支持相关性或原因判断。'));
+  const details=element('details','workspace-calculation');details.append(element('summary','','查看型号人数与比例验算'),dataTable(modelCalculationTable()));node.append(details);inspect(0);
+  return {node,box,spec:{kind:'modelScatter',title:'型号定位 · 活跃与订阅',labels:items.map(v=>v.name),series:[],items,inspect,attach:c=>chart=c}};
+}
+function firstImageQuantiles() {
+  const v=metric(14).value,panel=element('section','detail-chart-panel quantile-point-comparison');panel.dataset.evidenceMetric='14';
+  const max=Math.ceil(Math.max(v.p50Minutes,v.p90Minutes)*1.1/500)*500;
+  panel.append(comparisonPointPanel('绑定→首图耗时 · P50与P90',[
+    {label:'P50 · 50%分位',value:v.p50Minutes,display:number(v.p50Minutes)+' 分钟',note:`${Math.floor(v.p50Minutes/60)}小时${v.p50Minutes%60?number(v.p50Minutes%60)+'分钟':''}`},
+    {label:'P90 · 90%分位',value:v.p90Minutes,display:number(v.p90Minutes)+' 分钟',note:`${Math.floor(v.p90Minutes/60)}小时${v.p90Minutes%60?number(v.p90Minutes%60)+'分钟':''}`}
+  ],max,500,''));
+  panel.append(element('p','table-note','横轴单位：分钟。样本中50%／90%的首图耗时不超过对应分位值；不是全部绑定设备的激活比例。'),element('p','table-note','原始事件起止日、样本量及未产出首图设备的处理方式未注明；两处分位不能还原完整分布。'));
+  return panel;
+}
+
 function modelSubscriptionHeatmap() {
   const entries=modelPerformanceRows();
   if(!entries.length)return null;
@@ -3524,7 +3582,7 @@ function modelCalculationTable() {
   return {title:'型号活跃与订阅 · 人数验算',columns:['型号','主账号（人）','活跃（人）','活跃率','订阅（人）','订阅率'],
     rows:entries.map(([name,part])=>[name,part.owners,part.activeOwners,percent(part.activeRate),
       part.subscribedOwners,percent(part.subscriptionRate)]),
-    note:`${contract.window}。按当前范围主账号人数降序，同规模按型号名排列，与矩阵从上到下顺序一致。活跃率＝30天活跃主账号÷该型号主账号；订阅率＝有效订阅主账号÷该型号主账号。按同一市场×主型号合成汇总重算；当前范围 ${number(entries.reduce((sum,[,part])=>sum+part.owners,0))} 个已归属主型号的主账号，不代表全部合资格主账号。型号内多设备占比待补同范围绑定关系明细。`};
+    note:`${contract.window}。按当前范围主账号人数降序，同规模按型号名排列。活跃率＝30天活跃主账号÷该型号主账号；订阅率＝有效订阅主账号÷该型号主账号。按同一市场×主型号合成汇总重算；当前范围 ${number(entries.reduce((sum,[,part])=>sum+part.owners,0))} 个已归属主型号的主账号，不代表全部合资格主账号。型号内多设备占比待补同范围绑定关系明细。`};
 }
 function modelContextTable() {
   const value=metric(39);
@@ -3770,9 +3828,41 @@ function subscriptionStatusHistory() {
   product.addEventListener('change',render);measure.addEventListener('change',render);return {node,init:render};
 }
 
+const pendingLibraryCharts=new WeakMap();
+let chartLibraryRetry;
+function showChartLibraryFallback(box,message,redraw) {
+  box.classList.add('chart-fallback');box.setAttribute('role','group');
+  box.dataset.chartLibraryPending='true';pendingLibraryCharts.set(box,redraw);
+  const status=element('p','',message);status.setAttribute('role','status');
+  const retry=element('button','filter-reset','重新加载图表');retry.type='button';
+  retry.addEventListener('click',async()=>{
+    const hadFocus=document.activeElement===retry;
+    retry.disabled=true;status.textContent='正在重新加载图表；数据表与未保存草稿保留。';
+    if(!chartLibraryRetry) {
+      const old=document.querySelector('#chart-library'),fresh=document.createElement('script');
+      fresh.id='chart-library';fresh.dataset.src=old.dataset.src;fresh.defer=true;
+      old.replaceWith(fresh);chartLibraryReady=undefined;chartLibrarySettled=false;
+      chartLibraryRetry=waitForChartLibrary().finally(()=>{chartLibraryRetry=undefined;});
+    }
+    const ok=await chartLibraryRetry;
+    if(!ok) {
+      if(box.isConnected){retry.disabled=false;status.textContent='图表仍未加载，请检查网络后重试；完整数据与草稿保留。';if(hadFocus&&document.activeElement===document.body)retry.focus({preventScroll:true});}
+      return;
+    }
+    const restoreFocus=document.activeElement===retry||hadFocus&&document.activeElement===document.body;
+    document.querySelectorAll('[data-chart-library-pending]').forEach(node=>{
+      const draw=pendingLibraryCharts.get(node);delete node.dataset.chartLibraryPending;
+      pendingLibraryCharts.delete(node);draw?.();
+    });
+    if(restoreFocus&&box.isConnected){box.tabIndex=-1;box.focus({preventScroll:true});}
+    document.querySelector('#announcement').textContent='图表资源已加载，当前页面图表已恢复；草稿保持。';
+  });
+  box.replaceChildren(status,retry);
+}
+
 function drawStatus(box) {
   box.dataset.drawn='1';
-  if (!window.echarts) {box.removeAttribute('role');box.textContent='图表不可用；下方保留完整状态人数表。';return;}
+  if (!window.echarts) {showChartLibraryFallback(box,'图表不可用；下方保留完整状态人数表。',()=>drawStatus(box));return;}
   statusChart=createChart(box);
   const spec=subscriptionStatusSpec();
   setChartOption(statusChart,()=>({
@@ -3878,10 +3968,10 @@ function homeResult({id,label,value,page,status}) {
   const article=element('article','home-result');article.dataset.metricId=String(id);
   const heading=element('div','metric-heading');heading.append(element('h3','metric-label',label),definition(id,label));
   const link=element('a','home-result-link');link.href=routeHref(page,id);
-  link.setAttribute('aria-label',`${label} ${value}${metric(id).kind==='na'?'':id===3?'美元每月':'人'}，查看${pages[page].title}数据`);
+
   const valueNode=element('div','metric-value',value);
   if(metric(id).kind!=='na')valueNode.append(element('span','metric-value-unit',id===3?'/ 月':'人'));
-  link.append(valueNode);article.append(heading,link);
+  link.append(valueNode);link.setAttribute('aria-label',`${valueNode.textContent}；${label}，查看${pages[page].title}数据`);article.append(heading,link);
   const compare=element('div','home-result-comparison');
   const history=metricHistory(id);
   let delta=null,change='暂无可比值',period='',fullPeriod='';
@@ -4011,7 +4101,7 @@ function renderHome() {
       basis.append(element('p','',`${selected.beforeLabel}：${number(selected.before.numerator)} / ${number(selected.before.denominator)}；${selected.afterLabel}：${number(selected.after.numerator)} / ${number(selected.after.denominator)}。分母为${selected.scope}中的主账号。来源：${selected.source}。`));
       if(selected.series.some(value=>!Number.isFinite(value)))basis.append(element('p','','样本少于30的周在折线上留空；合并率仍按全周期合格人数计算。'));
       const link=element('a','insight-link','核对分组证据 ↗');link.href=routeHref(selected.page,selected.id,'groups');
-      link.setAttribute('aria-label',`进入${pages[selected.page].title}，核对${selected.name}分组证据`);
+      link.setAttribute('aria-label',`核对分组证据：${selected.name}，进入${pages[selected.page].title}`);
       const action=element('div','home-signal-actions');action.append(link,basis);
       const movement=`较前期${trendMovement(selected.delta,' 个百分点')}`;
       const adverse=selected.delta<=-.05;
@@ -4179,6 +4269,7 @@ function evidenceTrendAxis(spec) {
   return axis;
 }
 function chartScaleNote(spec) {
+  if(spec.kind==='horizontalBars')return `横轴从0开始，单位：${spec.unit}；${spec.stack?'各段互斥，合计为该组总量。':'各行使用同一尺度，精确值及分母见数据表。'}`;
   if(spec.kind==='waterfall') {
     const axis=trendAxisDomain([waterfallLevels(spec)],spec.unit);
     return `点表示期初/期末存量，柱表示各环节增减；${trendAxisNote(axis,spec.unit).replace('为观察趋势采用非零起点','局部范围展示流转')}`;
@@ -4244,13 +4335,13 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
   const activation=trendValues(13),conversion=trendValues(18);
   if(!activation&&!conversion) {node.className='chart-fallback';node.removeAttribute('role');node.textContent='当前筛选与这两条周趋势均不适用；下方数据表说明可用性。';return;}
   if (!window.echarts) {
-    node.className='chart-fallback';
-    node.removeAttribute('role');
-    node.textContent='趋势图暂未加载。下方“查看趋势数据表”保留完整数据。';
+    showChartLibraryFallback(node,'趋势图暂未加载。下方“查看趋势数据表”保留完整数据。',()=>drawTrend(focusId,comparison));
     return;
   }
   if (chart) destroyChart(chart);
   chart=createChart(node);
+  const restoredScaleNote=node.parentElement.querySelector(':scope > .chart-scale-note');
+  if(restoredScaleNote?.textContent)restoredScaleNote.hidden=false;
   const weeks=dataset.weekly;
   const selected=comparison??homeComparisons().find(item=>item.id===focusId);
   const lines=[{id:13,name:'7日价值激活率（观鸟）',values:activation,color:metricTrendColor(13),pattern:'solid',details:weeklyRateDetails(13)},
@@ -4286,7 +4377,7 @@ function drawTrend(focusId=homeTrendFocus,comparison) {
       }:{}),
     })),
   }));
-  interactiveChartLegend(node,chart,lines,'激活与转正周度趋势',44);
+  interactiveChartLegend(node,chart,lines,'激活与转正周度趋势',52);
   bindChartTableSelection(chart,document.querySelector('.trend-table-wrap table'),params=>
     `${periodLabel(`W${weeks[params.dataIndex].week}`)} · ${lines[params.seriesIndex].name} ${chartValue(params.value,'%')}`,
     {columnFor:params=>lines[params.seriesIndex].id===13?1:2});
@@ -4337,14 +4428,19 @@ const metricCardLabels={2:'有效订阅主账号',4:'复合活跃主账号（MAU
     49:'设备共享率',52:'流失高危主账号',53:'近24小时异常发现',54:'事件丢失率'};
 const metricCountUnits={2:'人',4:'人',9:'人',15:'台',16:'台',34:'人',52:'人',53:'条'};
 const metricSearchSubitems={
-  11:['首次绑定失败原因','蓝牙配对','WiFi连接','App流程','绑定过程耗时'],
+  11:['首次绑定失败原因','蓝牙配对','WiFi连接','App流程','绑定过程耗时','绑定耗时 P50','绑定耗时 P90'],
+  13:['价值激活耗时','激活耗时 P50','激活耗时 P90'],
+  18:['支付失败率（成熟试用批次，非全站支付）'],
   7:['当前绑定主账号'],8:['当前绑定设备'],
   22:['Free权益用满主账号'],29:['季节阈值未使用主账号'],
   23:['退订／主动取消（不等于权益立即流失）'],
   52:['设备离线≥7日（流失风险信号）'],
+  26:['人均有效会话','会话时长 P50','会话时长 P90'],
+  27:['直播使用率','事件回看使用率','AI识别查看使用率','账号级通知配置','已确认开','已确认关'],
   25:['DAU 日活 近1天','WAU 周活 近7天','MAU 月活 近30天','App DAU','App WAU','App MAU'],
   41:['日活设备','近24小时活跃设备','周活设备','月活设备','近30天设备活跃率'],44:['21天未使用设备','30天未使用设备','7天设备回流'],
-  30:['复合活跃主账号','互斥活跃组合','App主动活跃','内容活跃','推送点击活跃'],
+  51:['7日回绑','30日回绑','解绑设备率','去重解绑'],
+  30:['活跃来源','复合活跃主账号','互斥活跃组合','App主动活跃','内容活跃','推送点击活跃'],
   35:['月内订阅付款主账号'],39:['型号订阅率最高','所选型号订阅率','同型号活跃率'],
   46:['关键功能最低成功率','上传成功率','直播成功率','推送成功率'],54:['ID映射覆盖率']
 };
@@ -4686,6 +4782,10 @@ function bindChartTableSelection(instance,table,describe,{indexFor=params=>param
 }
 function drawEvidenceChart(box,spec,legendSelection) {
   evidenceChartSpecs.set(box,spec);
+  if(!window.echarts) {
+    showChartLibraryFallback(box,'图表未加载；下方保留完整数据表。',()=>drawEvidenceChart(box,spec,legendSelection));
+    return;
+  }
   if(box.classList.contains('chart-render-error'))return;
   const panel=box.closest('.detail-chart-panel,.evidence-pair,.home-contribution');
   const details=panel?.querySelector(':scope > .chart-data,:scope > .workspace-calculation,:scope > .home-contribution-actions > .chart-data');
@@ -4844,7 +4944,7 @@ function structureExplorer(views,{idPrefix='structure',onSelect}={}) {
   return {node:section,init:()=>select(0)};
 }
 function seriesForStructure(view) {
-  return {title:view.label,unit:view.unit,structureComposition:true,labels:view.rows.map(row=>row[0]),
+  return {title:view.label,unit:view.unit,structureComposition:true,categoryColors:true,labels:view.rows.map(row=>row[0]),
     series:[{name:'数量',values:view.rows.map(row=>row[1]),details:view.rows.map(([,n])=>({numerator:n,denominator:view.denominator,numeratorUnit:view.unit,denominatorUnit:view.unit,basisLabel:`占比 ${percent(n/view.denominator)} · 分组 / 总体`}))}],note:view.note};
 }
 function categoryAxisLayout(box,spec,left,right) {
@@ -4867,7 +4967,43 @@ function drawDetailChart(box,spec) {
   detailCharts.push(instance);
   if(box.parentElement?.classList.contains('chart-legend-frame'))box.parentElement.querySelector('.chart-legend')?.remove();
   const isTimeline=isTimelineSpec(spec);
+  if(spec.kind==='modelScatter') {
+    const values=spec.items.map(v=>[v.activeRate*100,v.subscriptionRate*100]);
+    const domain=arr=>({min:Math.max(0,Math.floor((Math.min(...arr)-3)/5)*5),max:Math.min(100,Math.ceil((Math.max(...arr)+3)/5)*5)}),x=domain(values.map(v=>v[0])),y=domain(values.map(v=>v[1]));
+    setChartOption(instance,()=>({animationDuration:chartAnimationDuration(300),grid:{left:46,right:32,top:40,bottom:55,containLabel:true},
+      tooltip:{...chartTooltipStyle(),trigger:'item',formatter:p=>{const v=spec.items[p.dataIndex];return `${v.name}<br>30天活跃率 ${percent(v.activeRate)} · ${number(v.activeOwners)} / ${number(v.owners)} 人<br>主账号订阅率 ${percent(v.subscriptionRate)} · ${number(v.subscribedOwners)} / ${number(v.owners)} 人`;}},
+      xAxis:{type:'value',min:x.min,max:x.max,interval:5,name:'30天活跃率',nameLocation:'middle',nameGap:32,axisLabel:{formatter:'{value}%'},splitLine:{lineStyle:{color:'#e7ede6'}}},
+      yAxis:{type:'value',min:y.min,max:y.max,interval:5,name:'主账号订阅率',nameLocation:'end',nameTextStyle:{align:'left'},axisLabel:{formatter:'{value}%'},splitLine:{lineStyle:{color:'#e7ede6'}}},
+      series:[{type:'scatter',symbolSize:chartText(12),data:spec.items.map((v,i)=>({name:v.name,value:values[i],label:{position:values[i][1]===Math.min(...values.map(p=>p[1]))?'bottom':'top'}})),
+        itemStyle:{color:'#28654d',borderColor:'#fffefa',borderWidth:2},label:{show:true,formatter:'{b}',fontSize:chartText(12),color:'#213b31',distance:chartText(7)},labelLayout:{moveOverlap:'shiftY'},emphasis:{itemStyle:{borderColor:'#b45d17',borderWidth:3}}}]
+    }),{responsive:true});
+    spec.attach(instance);instance.on('mouseover',p=>{if(p.componentType==='series')spec.inspect(p.dataIndex);});instance.on('click',p=>{if(p.componentType==='series')spec.inspect(p.dataIndex,true);});return instance;
+  }
   if(spec.kind==='deviceRetentionHeatmap'){drawDeviceRetentionHeatmap(instance,box,spec);return instance;}
+  if(spec.kind==='horizontalBars') {
+    box.classList.add('horizontal-evidence-chart');
+    box.style.height=`${Math.max(10,5+spec.labels.length*(spec.series.length>1&&!spec.stack?3.6:2.6))}rem`;
+    const colors=spec.series.map((line,index)=>line.color??chartSeriesColor(spec,line,index));
+    setChartOption(instance,()=>{
+      const labelWidth=Math.max(...spec.labels.map(label=>window.echarts.format.getTextRect(label.replace(/\n/g,''),'12px DM Sans, PingFang SC, sans-serif').width));
+      const left=Math.min(172,Math.max(78,labelWidth+16));
+      const totals=spec.labels.map((_,i)=>spec.series.reduce((n,line)=>n+(line.values[i]??0),0));
+      const extent=spec.stack?Math.max(0,...totals):Math.max(0,...spec.series.flatMap(line=>line.values.filter(Number.isFinite)));
+      const step=chartNiceStep((extent||1)/4),max=spec.maxX??Math.ceil((extent||1)*1.12/step)*step;
+      return {legend:{show:false},animationDuration:chartAnimationDuration(250),grid:{left,right:76,top:12,bottom:38},
+        xAxis:{type:'value',min:0,max,interval:spec.maxX?spec.maxX/5:step,splitNumber:4,axisLabel:{formatter:v=>chartValue(v,spec.unit),color:'#58695b'},splitLine:{lineStyle:{color:'#e7ede6'}}},
+        yAxis:{type:'category',inverse:true,data:spec.labels,axisTick:{show:false},axisLine:{show:false},axisLabel:{interval:0,formatter:label=>label.replace(/\n/g,''),color:'#405a48',width:chartText(left-16),overflow:'break',lineHeight:chartText(16)}},
+        tooltip:{...chartTooltipStyle(),trigger:'axis',axisPointer:{type:'shadow'},formatter:params=>{
+          const i=params[0]?.dataIndex;if(i===undefined)return '';
+          return [spec.labels[i],...spec.series.map(line=>`${line.name}：${Number.isFinite(line.values[i])?chartValue(line.values[i],spec.unit):'未成熟或无合格分母'}${chartBasis(chartPointDetail(spec,line,i))?'<br>'+chartBasis(chartPointDetail(spec,line,i)):''}`)].join('<br>');
+        }},
+        series:spec.series.map((line,index)=>({name:line.name,type:'bar',stack:spec.stack?'total':undefined,barMaxWidth:18,
+          itemStyle:{color:colors[index]},data:line.values,label:{show:!spec.stack||index===spec.series.length-1,position:'right',color:'#405a48',fontSize:chartText(12),formatter:p=>Number.isFinite(p.value)?chartValue(spec.stack?spec.series.reduce((n,l)=>n+((instance.getOption().legend?.[0]?.selected??{})[l.name]===false?0:l.values[p.dataIndex]??0),0):p.value,spec.unit):''}}))};
+    },{responsive:true});
+    interactiveChartLegend(box,instance,spec.series.map((line,index)=>({...line,color:colors[index],pattern:'bar'})),spec.title,38);
+    return instance;
+  }
+
   const colors=spec.series.map((line,index)=>chartSeriesColor(spec,line,index));
   if(spec.kind==='groupContribution') {
     setChartOption(instance,()=>{
@@ -5059,7 +5195,7 @@ function drawDetailChart(box,spec) {
   };
   const percentageLabels=spec.unit==='%'?[...plotted,trendAxis?.min??barAxis?.min??spec.minY??0,trendAxis?.max??barAxis?.max??spec.maxY??100].map(axisValue):[];
   // Measure the same base font used by SVG labels; shared typography scales this gutter with the text.
-  const percentageReserve=percentageLabels.length?Math.ceil(Math.max(...percentageLabels.map(label=>window.echarts.format.getTextRect(label,'12px "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif').width)))+12:46;
+  const percentageReserve=percentageLabels.length?Math.ceil(Math.max(...percentageLabels.map(label=>window.echarts.format.getTextRect(label.replace(/\n/g,''),'12px "DM Sans", "PingFang SC", "Microsoft YaHei", sans-serif').width)))+12:46;
   const leftReserve=spec.unit==='%'?Math.max(46,percentageReserve):['美元','个百分点'].includes(spec.unit)?70:spec.unit==='人'||spec.unit==='台'?62:46;
   const categoryLayout=()=>categoryAxisLayout(box,spec,leftReserve,rightReserve);
   setChartOption(instance,()=>{
@@ -5096,7 +5232,7 @@ function drawDetailChart(box,spec) {
         markLine:index===0&&spec.selectedPeriod?{silent:true,symbol:'none',label:{show:false},lineStyle:{type:'dashed',color:'#718777'},data:[{xAxis:spec.selectedPeriod}]}:undefined,
         barMaxWidth:52,symbol:selectedIndex>=0?(_,point)=>point.dataIndex===selectedIndex?'emptyCircle':['circle','rect','triangle'][index%3]:['circle','rect','triangle'][index%3],
         ...(selectedIndex>=0?{showAllSymbol:true}:{}),
-        lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??colors[index%colors.length]},
+        lineStyle:{width:2.5,type:['solid','dashed','dotted'][index%3]},itemStyle:{color:line.color??(!isTimeline&&spec.categoryColors&&spec.series.length===1?params=>categoryColor(spec.labels[params.dataIndex])??colors[index%colors.length]:colors[index%colors.length])},
         endLabel:{show:isTimeline&&(Number.isFinite(line.values.at(-1))||spec.endLastValid&&line.values.some(Number.isFinite)),formatter:params=>endText(line,params.value),
           color:chartLabelColor(line.color??colors[index%colors.length]),fontSize:chartText(12),fontWeight:600,width:chartText(rightReserve-12),overflow:'truncate'},
         label:{show:!isTimeline&&spec.series.length===1&&spec.labels.length<=8,position:'top',formatter:params=>chartValue(params.value,spec.unit),
@@ -5268,8 +5404,39 @@ function bindingFailureEvidence() {
       rows:[...ordered.map(([cause,n])=>[cause,n,failed,share(n),sourceData.diagnostics.A.tables.find(t=>t.title==='首次绑定失败原因 · W12')?.rows.find(r=>r[0]===cause)?.[3]??'核对绑定日志']),['合计',failed,failed,share(failed),'总尝试−成功尝试']],note:scope+note}};
 }
 
+// D18 comparison: present existing counts without introducing new business rules.
+function trialComparisonScale(values) {
+ const valid=values.filter(Number.isFinite);if(!valid.length)return null;
+ const lo=Math.min(...valid),hi=Math.max(...valid),span=Math.max(5,hi-lo),step=chartNiceStep(span/4);
+ return {min:Math.max(0,Math.floor((lo-span*.15)/step)*step),max:Math.min(100,Math.ceil((hi+span*.15)/step)*step)};
+}
+function trialComparisonRatePlot(rates,scale,label) {
+ const node=element('div','trial-comparison-plot');
+ if(!scale||rates.some(v=>!Number.isFinite(v))){node.append(element('p','table-note','支付尝试不足30次或无尝试，保留计数，不绘制比率。'));return node;}
+ const track=element('div','trial-comparison-track'),positions=rates.map(v=>(v-scale.min)/(scale.max-scale.min)*100);
+ const join=element('span','trial-comparison-join');join.style.left=`${Math.min(...positions)}%`;join.style.width=`${Math.abs(positions[1]-positions[0])}%`;track.append(join);
+ positions.forEach((position,i)=>{const point=element('span',`trial-comparison-point ${i?'recent':'prior'}`);point.style.left=`${position}%`;track.append(point)});
+ node.setAttribute('role','img');node.setAttribute('aria-label',`${label}：前期${rates[0].toFixed(1)}%，近期${rates[1].toFixed(1)}%；刻度${scale.min.toFixed(1)}至${scale.max.toFixed(1)}%。`);
+ node.dataset.rates=JSON.stringify(rates);node.dataset.scale=JSON.stringify(scale);
+ const axis=element('div','trial-comparison-axis');axis.append(element('span','',`${Number(scale.min.toFixed(1))}%`),element('span','','独立刻度'),element('span','',`${Number(scale.max.toFixed(1))}%`));node.append(track,axis);return node;
+}
+function trialComparisonContribution(parts,select) {
+ const area=element('section','trial-comparison-contributions');area.setAttribute('aria-label','互斥分组对总体变化的贡献');area.append(element('h3','','哪些组贡献了变化？'),element('p','table-note','贡献使用同一期总体成熟试用为分母；点击分组核对组内变化。'));
+ const extent=Math.max(.1,...parts.changes.map(Math.abs)),low=Math.min(0,...parts.changes)<0?-extent:0,high=Math.max(0,...parts.changes)>0?extent:0;
+ const end=low===high?extent:high,position=v=>(v-low)/(end-low)*100;
+ area.dataset.min=low;area.dataset.max=end;
+ parts.groups.forEach((group,i)=>{const button=element('button','trial-comparison-contribution');button.type='button';button.setAttribute('aria-controls','trial-selected-group');button.dataset.index=i;button.dataset.contribution=parts.changes[i];
+ const label=element('span','trial-comparison-contribution-label');label.append(element('span','',group.name),element('strong','',`${parts.changes[i]>0?'+':''}${parts.changes[i].toFixed(2)} pp`));
+ const track=element('span','trial-comparison-contribution-track'),zero=element('span','trial-comparison-zero'),bar=element('span','trial-comparison-bar');zero.style.left=`${position(0)}%`;bar.style.left=`${Math.min(position(0),position(parts.changes[i]))}%`;bar.style.width=`${Math.abs(position(parts.changes[i])-position(0))}%`;track.append(zero,bar);button.append(label,track);button.addEventListener('click',()=>select(i));area.append(button);});
+ const axis=element('div','trial-comparison-axis');axis.append(element('span','',`${low.toFixed(2)} pp`),element('span','','pp＝百分点；0为贡献基准'),element('span','',`${end.toFixed(2)} pp`));area.append(axis,element('p','table-note',`组内表现贡献 ${parts.effects.reduce((sum,e)=>sum+e.within,0).toFixed(2)} pp；人群构成贡献 ${parts.effects.reduce((sum,e)=>sum+e.composition,0).toFixed(2)} pp。算术拆分不证明原因。`));return area;
+}
+
 function attachTrialGroupInspection(pair,parts,spec) {
-  pair.classList.add('trial-group-evidence');
+  pair.classList.add('trial-group-evidence','trial-comparison');
+  const delta=(parts.overall[1].value-parts.overall[0].value)*100;
+  const headline=element('header','trial-comparison-head');
+  headline.append(element('p','eyebrow','总体变化 → 分组贡献 → 组内核对'),element('h3','',Math.abs(delta)<.05?'总体转正率与前期持平':`总体转正率${delta>0?'上升':'下降'} ${Math.abs(delta).toFixed(1)} 个百分点`),element('p','table-note',`前9个成熟周 W1–9：${percent(parts.overall[0].value)} → 近3个成熟周 W10–12：${percent(parts.overall[1].value)}`));pair.prepend(headline);
+  const scales=[trialComparisonScale(parts.groups.flatMap(g=>g.summaries.map(p=>p.numerator/p.denominator*100))),trialComparisonScale(parts.groups.flatMap(g=>g.summaries.map(p=>p.attempts>=30?p.failed/p.attempts*100:null)))];
   const plot=pair.querySelector('.evidence-plot'),grid=element('div','trial-group-grid');
   const controls=element('div','trial-group-controls');controls.setAttribute('role','group');controls.setAttribute('aria-label','选择核对试用分组');
   const detail=element('section','trial-group-detail');detail.id='trial-selected-group';detail.setAttribute('aria-label','所选分组证据');
@@ -5278,7 +5445,7 @@ function attachTrialGroupInspection(pair,parts,spec) {
   const calculate=element('button','trial-group-calculation','查看该组贡献计算');calculate.type='button';
   const note=element('p','table-note','查看分组不改变总体解读、筛选或问题单。两段周期长短不同，人数合计不能直接比较；同步变化不证明因果。');
   detail.append(heading,period,values,calculate,note);
-  plot.before(grid);grid.append(plot,detail);grid.before(controls);
+  plot.before(grid);grid.append(plot,detail);grid.before(controls);plot.hidden=true;
   const buttons=[],inspection={index:0,chart:null,openCalculation:null};
   inspection.hideTooltip=()=>{
     if(!inspection.chart)return;
@@ -5292,14 +5459,16 @@ function attachTrialGroupInspection(pair,parts,spec) {
   inspection.select=(index,announce=true)=>{
     if(!Number.isInteger(index)||!parts.groups[index])return;
     inspection.index=index;const group=parts.groups[index];
-    buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
+    buttons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));pair.querySelectorAll('.trial-comparison-contribution').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));
     heading.textContent=`所选分组 · ${group.name}`;values.replaceChildren();
-    const row=(title,rates,counts)=>{const node=element('div','trial-group-value');node.append(element('h4','',title),
-      element('p','trial-group-rate',rates.join(' → ')),element('p','trial-group-counts',counts.join(' → ')));values.append(node);};
+    const row=(title,rates,counts,raw,scale)=>{const node=element('div','trial-group-value');node.append(element('h4','',title),
+      element('p','trial-group-rate',rates.join(' → ')),element('p','trial-group-counts',counts.join(' → ')));
+      if(raw){const change=raw[1]-raw[0],readable=raw.every(Number.isFinite);const changeText=element('p','trial-comparison-delta',readable?(Math.abs(change)<.05?'与前期持平':`${change>0?'上升':'下降'} ${Math.abs(change).toFixed(1)} 个百分点`):'样本不足，不比较比率');if(!readable||Math.abs(change)<.05)changeText.classList.add('is-neutral');node.querySelector('h4').after(changeText);node.querySelector('.trial-group-counts').before(trialComparisonRatePlot(raw,scale,title));}
+      if(title==='支付失败率')node.classList.add('trial-comparison-failure');values.append(node);};
     row('转正率',group.summaries.map(part=>percent(part.numerator/part.denominator)),
-      group.summaries.map(part=>`${number(part.numerator)} 转正 / ${number(part.denominator)} 成熟试用`));
+      group.summaries.map(part=>`${number(part.numerator)} 转正 / ${number(part.denominator)} 成熟试用`),group.summaries.map(p=>p.numerator/p.denominator*100),scales[0]);
     row('支付失败率',group.summaries.map(part=>part.attempts>=30?percent(part.failed/part.attempts):part.attempts?'样本不足30次':'无支付尝试'),
-      group.summaries.map(part=>`${number(part.failed)} 失败 / ${number(part.attempts)} 支付尝试`));
+      group.summaries.map(part=>`${number(part.failed)} 失败 / ${number(part.attempts)} 支付尝试`),group.summaries.map(p=>p.attempts>=30?p.failed/p.attempts*100:null),scales[1]);
     row('占总体成熟试用',group.summaries.map((part,i)=>percent(part.denominator/parts.overall[i].denominator)),
       group.summaries.map((part,i)=>`${number(part.denominator)} 该组 / ${number(parts.overall[i].denominator)} 总体`));
     pair.querySelectorAll('.chart-selected,.chart-selected-cell').forEach(node=>node.classList.remove('chart-selected','chart-selected-cell'));
@@ -5309,9 +5478,16 @@ function attachTrialGroupInspection(pair,parts,spec) {
   };
   parts.groups.forEach((group,index)=>{const button=element('button','trial-group-choice',group.name);button.type='button';button.setAttribute('aria-controls',detail.id);
     button.addEventListener('click',()=>inspection.select(index));buttons.push(button);controls.append(button);});
-  calculate.addEventListener('click',()=>inspection.openCalculation?.(inspection.index));
+  calculate.addEventListener('click',()=>{
+    const disclosure=pair.querySelector(':scope > .workspace-calculation'),row=disclosure?.querySelectorAll('tbody tr')[inspection.index];
+    if(!row)return;disclosure.open=true;pair.querySelectorAll('.chart-selected').forEach(n=>n.classList.remove('chart-selected'));
+    row.classList.add('chart-selected');row.tabIndex=-1;row.focus({preventScroll:true});row.scrollIntoView({block:'nearest'});
+    document.querySelector('#announcement').textContent=`已展开${parts.groups[inspection.index].name}的贡献计算，筛选和问题单保持不变。`;
+  });
   inspection.setChart=instance=>{inspection.chart=instance;highlight();};
   spec.groupInspection=inspection;
+  grid.before(trialComparisonContribution(parts,index=>inspection.select(index)));
+  period.append(document.createTextNode(' 空心为前期，实心为近期；两图刻度不同，不比较线长。'));
   const strongest=parts.changes.reduce((best,value,index)=>Math.abs(value)>Math.abs(parts.changes[best])?index:best,0);
   inspection.select(strongest,false);
 }
@@ -5346,6 +5522,10 @@ function metricEvidence(id,page) {
   const specs=[];
   if(id===15)panel.append(bindingDeviceList(page));
   const appendEvidencePair=(spec,tableSpec,kind='groups')=>{
+    const horizontal = kind==='groups' && !spec.kind && (
+      [30,36,50,52].includes(id) || id===11&&spec.title.includes('失败原因') ||
+      id===23&&spec.title.includes('主原因') || id===51&&spec.title.includes('解绑原因'));
+    if(horizontal)spec={...spec,kind:'horizontalBars'};
     const pair=element('div','evidence-pair');
     pair.dataset.evidenceKind=kind;
     pair.dataset.evidenceMetric=String(id);
@@ -5575,7 +5755,7 @@ function metricEvidence(id,page) {
   } else if(id===30&&value.kind==='group') {
     const v=value.value,labels=activityCombinations.map(item=>item.label),counts=activityCombinations.map(item=>v.exclusiveCells[item.key]);
     const note=`${contract.window}。每人只计入一个组合，七类合计 ${number(v.composite)} 人；标签列出的就是该组全部来源，App＋内容不含推送。App ${number(v.app)}、内容 ${number(v.content)}、推送点击 ${number(v.pushClicked)} 是可重叠来源，不能相加。当前范围按国家×平台同源合成频数重算，与#4和#25的近30天人数一致。`;
-    appendEvidencePair({title:'复合活跃 · 七类互斥构成',unit:'人',labels,series:[{name:'主账号',values:counts}],note},
+    appendEvidencePair({title:'复合活跃 · 七类互斥构成',unit:'人',categoryColors:true,labels,series:[{name:'主账号',values:counts}],note},
       {title:'复合活跃互斥构成 · 人数与占比',columns:['互斥组合','主账号（人）','复合活跃分母（人）','占比'],
         rows:[...activityCombinations.map((item,index)=>[item.label.replace('\n',''),counts[index],v.composite,
           v.composite>=30?percent(counts[index]/v.composite):'样本不足（少于30人）']),
@@ -5614,9 +5794,7 @@ function metricEvidence(id,page) {
       groupTable.dataset.evidenceKind='groups';panel.append(groupTable);
     }
   } else if(id===39&&value.kind==='group') {
-    const spec={...modelSubscriptionHeatmap(),title:'设备型号经营表现 · 当前筛选'};
-    const box=element('div','detail-chart');box.setAttribute('role','img');box.setAttribute('aria-label',spec.title);
-    panel.append(box,element('p','table-note',spec.note));specs.push([box,spec]);
+    const scatter=modelScatterEvidence();panel.append(scatter.node);specs.push([scatter.box,scatter.spec]);
   } else if(id===46&&value.kind==='group') {
     const entries=Object.entries(value.value).sort((a,b)=>a[1].value-b[1].value);
     const failures=entries.map(([,part])=>({numerator:part.denominator-part.numerator,denominator:part.denominator,
@@ -5786,7 +5964,7 @@ function topicMetricStructure(id) {
  if(id===30){columns=['互斥活跃来源','主账号','占复合活跃'];rows=activityCombinations.map(item=>[item.label.replace('\n',''),number(v.exclusiveCells[item.key])+'人',v.composite>=30?percent(v.exclusiveCells[item.key]/v.composite):'样本不足']);note=`七类互斥组合合计 ${number(v.composite)} 人；App ${number(v.app)}、内容 ${number(v.content)}、推送 ${number(v.pushClicked)} 为可重叠来源，不能相加。`;}
  if(id===36){columns=['增值包','有效权益主账号','渗透率'];rows=[['任一增值包',number(v.anyPack.numerator)+'人',topicRateText(v.anyPack)],...Object.entries(v.byPack).map(([name,part])=>[name,number(part.numerator)+'人',topicRateText(part)])];note='各包可重叠，人数不可相加；分母为同日付费权益主账号。';}
  if(id===38){const source=structureMetricViews();if(source.reason)return null;const container=element('div','topic-structure-dimensions');for(const view of source.views)container.append(dataTable({title:view.label,columns:['类别','数量','占比'],rows:view.rows.map(([label,n])=>[label,number(n)+view.unit,percent(n/view.denominator)]),note:`同口径分母 ${number(view.denominator)}${view.unit}；本维度独立归一化。`},'topic-mini-table'));return container;}
- if(id===39){columns=['型号','主账号','30天活跃率','订阅率'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners)+'人',percent(r.activeRate),percent(r.subscriptionRate)]);note='同型号主账号为分母；各型号可能共享主账号，不能相加。';}
+ if(id===39){columns=['主型号','主账号','30天活跃率','订阅率'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners)+'人',percent(r.activeRate),percent(r.subscriptionRate)]);note=`主账号按主型号互斥归属；当前范围样本共 ${number(Object.values(v).reduce((sum,r)=>sum+r.owners,0))} 人，不代表全部合资格主账号。两项比率均以各型号主账号为分母。`;}
  if(id===40){columns=['自报渠道','样本主账号','7日激活','活跃率','订阅率','月付款人数','ARPPU'];rows=Object.entries(v).map(([name,r])=>[name,number(r.owners),percent(r.activation7dRate),percent(r.activeRate),percent(r.subscriptionRate),number(r.monthlyPayers),'$'+r.ARPPU.toFixed(2)]);note='自报渠道合成样本；不同窗口单独解释，不视为平台归因或因果。30日激活率待补；未提供具体统计月份。';}
  if(id===51){columns=['观察项','当前结果'];rows=[['去重解绑设备',number(v.observedUnboundDevices)+'台'],['解绑事件',number(v.unboundEvents)+'次'],['月初绑定设备解绑率',topicRateText(v.unboundDeviceRate,'台')],['7日回绑',topicRateText(v.reboundWithin7d,'台')],['30日回绑',topicRateText(v.reboundWithin30d,'台')]];note=`解绑批次 ${v.cohort}；未成熟观察窗不补零。`;}
  if(!rows)return null;
@@ -5936,8 +6114,7 @@ if(summaries.children.length===1&&!evidences.children.length)summaries.classList
 }
 
 }
-function applyTopicPalette(root,page){for(const id of topicHighlights[page]||[]){const card=root.querySelector('.topic-metric[data-metric-id="'+id+'"]');if(!card)continue;card.classList.add('priority');const badge=document.createElement('span');badge.className='priority-label';badge.textContent='重点';badge.title='沿用本页已有重点摘要';card.querySelector('.metric-heading').append(badge)}
-const colors={
+const categoryColorMap={
 '仅App':'var(--category-green)','仅内容':'var(--category-blue)','仅推送':'var(--category-ochre)','App＋内容':'var(--category-teal)','App＋推送':'var(--category-orange)','内容＋推送':'var(--category-olive)','三者都有':'var(--category-slate)',
 '仅订阅':'var(--category-green)','基础订阅':'var(--category-green)','仅增值Pack':'var(--category-blue)','增值Pack':'var(--category-blue)','订阅和Pack都有':'var(--category-orange)',
 '已确认开':'var(--category-green)','已确认关':'var(--category-blue)','未知':'var(--category-neutral)',
@@ -5947,8 +6124,16 @@ const colors={
 'Bird Lite':'var(--category-green)','Bird Pro':'var(--category-blue)','Hunt Pro':'var(--category-orange)','K6':'var(--category-ochre)',
 '任一增值包':'var(--category-green)','Extra Memory Pack':'var(--category-blue)','Device Pack':'var(--category-teal)','观鸟 AI Agent Pack':'var(--category-orange)','HD Pack':'var(--category-ochre)','狩猎 AI Agent Pack':'var(--category-olive)'
 };
-Object.assign(colors,Object.fromEntries(Object.entries(statusHistoryFields).map(([key,label])=>[label,statusHistoryColors[key]])));
-for(const figure of root.querySelectorAll('.topic-composition'))for(const row of figure.querySelectorAll('.topic-bar-row')){const label=row.querySelector('.topic-bar-label');if(!label)continue;const name=[...label.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.textContent).join('').trim();const color=colors[name];if(!color)continue;row.dataset.category=name;const mark=row.querySelector('.topic-bar-mark');if(mark)mark.style.backgroundColor=color;const key=row.querySelector('.topic-color-key');if(key){key.style.backgroundColor=color;const tone=key.dataset.tone;const segment=figure.querySelector('.topic-stack-segment[data-tone="'+tone+'"]');if(segment)segment.style.backgroundColor=color;}}
+Object.assign(categoryColorMap,Object.fromEntries(Object.entries(statusHistoryFields).map(([key,label])=>[label,`var(${subscriptionStateTokens[key]})`])));
+function categoryColor(label){
+ const color=categoryColorMap[String(label).replace(/\s*\n\s*/g,'').trim()];
+ if(!color)return null;
+ const token=/^var\((--[^)]+)\)$/.exec(color);
+ return token?getComputedStyle(document.documentElement).getPropertyValue(token[1]).trim():color;
+}
+function applyTopicPalette(root,page){for(const id of topicHighlights[page]||[]){const card=root.querySelector('.topic-metric[data-metric-id="'+id+'"]');if(!card)continue;card.classList.add('priority');const badge=document.createElement('span');badge.className='priority-label';badge.textContent='重点';badge.title='沿用本页已有重点摘要';card.querySelector('.metric-heading').append(badge)}
+
+for(const figure of root.querySelectorAll('.topic-composition'))for(const row of figure.querySelectorAll('.topic-bar-row')){const label=row.querySelector('.topic-bar-label');if(!label)continue;const name=[...label.childNodes].filter(n=>n.nodeType===Node.TEXT_NODE).map(n=>n.textContent).join('').trim();const color=categoryColor(name);if(!color)continue;row.dataset.category=name;const mark=row.querySelector('.topic-bar-mark');if(mark)mark.style.backgroundColor=color;const key=row.querySelector('.topic-color-key');if(key){key.style.backgroundColor=color;const tone=key.dataset.tone;const segment=figure.querySelector('.topic-stack-segment[data-tone="'+tone+'"]');if(segment)segment.style.backgroundColor=color;}}
 }
 
 function topicHighlightComparison(id){
@@ -5967,14 +6152,51 @@ function topicHighlightComparison(id){
   return comparison;
 }
 
+function topicCrossPeriodObservation(page) {
+ const id=page==='A'?13:page==='D'?18:null;
+ if(!id||filterErrors.length||metric(id).kind!=='rate')return null;
+ const comparison=weeklyRateComparison(id);
+ // A selected week already has its adjacent-week comparison in the summary.
+ if(!comparison||comparison.selectedWeek||![comparison.before,comparison.after].every(row=>
+   Number.isFinite(row?.numerator)&&Number.isFinite(row?.denominator)&&row.denominator>=30))return null;
+ const wrap=element('aside','topic-cross-period');wrap.setAttribute('aria-label','已有跨期观察');wrap.dataset.metricId=String(id);
+ const name=id===13?'7日价值激活':'试用转正';
+ wrap.append(element('p','',`跨期观察 · ${name}：${comparison.beforeLabel} ${percent(comparison.beforeRate/100)} → ${comparison.afterLabel} ${percent(comparison.afterRate/100)}，${homeComparisonChange(comparison)}。`));
+ const link=element('a','',id===13?'核对激活变化 ↗':'核对分组贡献 ↗');
+ link.id=`topic-cross-period-${page}-${id}`;link.href=routeHref(page,id,id===18?'groups':'change');bindTopicDiagnosisLink(link);wrap.append(link);
+ return wrap;
+}
+
+function enhanceActivityCompositionOverview(card) {
+ if(!card)return;
+ const m=metric(30);if(m.kind!=='group')return;const old=card.querySelector('.topic-composition');if(!old)return;const v=m.value,rows=activityCombinations.map(c=>({...c,n:v.exclusiveCells[c.key]})).sort((a,b)=>b.n-a.n);if(rows.some(r=>!Number.isFinite(r.n)||r.n<0))return;const scale=Math.max(...rows.map(r=>r.n),1),figure=element('figure','overlap-chart');figure.append(element('figcaption','','互斥活跃组合 · 每个主账号仅归一行'),element('p','table-note','实心表示包含该来源，空心表示不包含；横条从0起，同一数量尺度。'));const head=element('div','overlap-head');for(const label of ['App','内容','推送','组合 · 人数（0–'+number(scale)+'） / 占复合活跃'])head.append(element('span','',label));figure.append(head);for(const r of rows){const row=element('div','overlap-row');row.dataset.key=r.key;row.dataset.value=r.n;row.dataset.scale=scale;const name=element('span','overlap-name',r.label.replace(/\s+/g,''));for(const key of ['app','content','pushClicked']){const cell=element('span','overlap-source'+(r.sources.includes(key)?' included':''),r.sources.includes(key)?'●':'○');cell.setAttribute('aria-hidden','true');row.append(cell);}const track=element('div','overlap-track'),bar=element('span','overlap-bar');track.setAttribute('aria-hidden','true');bar.style.width=(r.n/scale*100)+'%';const sourceRow=[...old.querySelectorAll('.topic-bar-row')].find(n=>n.dataset.category===r.label.replace('\n',''));const tone=sourceRow?.querySelector('.topic-bar-mark')?.style.backgroundColor;if(tone)bar.style.backgroundColor=tone;track.append(bar);const value=element('span','overlap-value');value.append(element('strong','',number(r.n)+'人'),element('span','',v.composite>=30?percent(r.n/v.composite):'样本不足'));const body=element('div','overlap-body'),label=element('div','overlap-label');label.append(name,value);body.append(label,track);row.append(body);figure.append(row);}old.replaceWith(figure);
+}
+function enhanceDeviceStateOverview(card) {
+ if(!card)return;
+  const p=deviceStateProjection();if(p.reason)return;
+  card.classList.add('device-state-overview');
+  const v=p.value,figure=element('figure','state-figure');figure.setAttribute('aria-label','设备互斥状态与其中共享设备');
+  figure.append(element('figcaption','','三类状态互斥；共享包含在各自状态内'));
+  const max=Math.max(v.boundActivated,v.boundNotActivated,v.activatedUnbound,1);
+  figure.append(element('p','table-note',`统一数量尺度 0–${number(max)}台 · 橙色斜纹表示其中共享，不能重复相加。`));
+  for(const [label,key,shared]of [['已绑定且已激活','boundActivated','sharedBoundActivated'],['已绑定未激活','boundNotActivated','sharedBoundNotActivated'],['已激活未绑定','activatedUnbound',null]]){
+   const row=element('div','state-row');row.dataset.key=key;row.dataset.count=v[key];if(shared)row.dataset.shared=v[shared];
+   const head=element('div','state-row-head');head.append(element('span','',label),element('strong','',number(v[key])+'台'),element('span','state-subset',shared?'其中共享 '+number(v[shared])+'台':'共享交叉计数未提供'));
+   const track=element('div','state-track');track.setAttribute('aria-hidden','true');const total=element('span','state-total');total.style.width=(v[key]/max*100)+'%';track.append(total);if(shared){const subset=element('span','state-shared');subset.style.width=(v[shared]/max*100)+'%';track.append(subset);}row.append(head,track);figure.append(row);
+  }
+  figure.append(element('p','table-note','仅展示已提供的三类状态，不表示全部设备；没有未绑定且未激活计数。筛选沿用模拟分片估算，未接入逐设备关系明细。'));
+  card.querySelector('.card-core').replaceChildren(figure);card.querySelector('.context-notes .topic-context')?.remove();
+}
+
 function renderTopicOverview(page) {
  disposeCharts();main.replaceChildren();
  const top=element('div','detail-heading');const home=element('a','back-link','← 返回经营总览');home.href=routeHref();
  top.append(home,element('p','eyebrow',`OPERATIONS / ${page} · 专题概览`),element('h1','',pages[page].title),element('p','heading-sub',pages[page].question));
  const body=element('div','detail-shell topic-overview');body.dataset.topic=page;body.append(filterBar(page));
  const highlights=element('div','topic-highlights');highlights.setAttribute('aria-label','专题重点摘要');
- for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);const reading=element('div','topic-highlight-reading');reading.append(element('strong','',s.text+s.unit));const comparison=topicHighlightComparison(id);if(comparison)reading.append(comparison);link.append(element('span','',s.label),reading,element('span','topic-highlight-window',topicMetricWindow(id)));if(id===54)link.append(topicQualityBadge());highlights.append(link);}
- body.append(highlights,element('p','topic-reading-note','按业务分组浏览全部指标；短趋势各用独立刻度，不比较跨图斜率。点击指标进入完整诊断。'));
+ for(const id of topicHighlights[page]){const s=metricCardSummary(id),link=element('a','topic-highlight');link.id=`topic-highlight-${page}-${id}`;link.href=routeHref(page,id);bindTopicDiagnosisLink(link);const reading=element('div','topic-highlight-reading');reading.append(element('strong','',s.text+s.unit));const comparison=topicHighlightComparison(id);if(comparison)reading.append(comparison);const caption=element('div','topic-highlight-caption');caption.append(element('span','',s.label),element('span','topic-highlight-action','核对证据 ↗'));link.append(caption,reading,element('span','topic-highlight-window',topicMetricWindow(id)));if(id===54)link.append(topicQualityBadge());highlights.append(link);}
+ body.append(highlights);const crossPeriod=topicCrossPeriodObservation(page);if(crossPeriod)body.append(crossPeriod);
+ body.append(element('p','topic-reading-note','按业务分组浏览全部指标；短趋势各用独立刻度，不比较跨图斜率。点击指标进入完整诊断。'));
  const navigation=element('nav','section-navigation topic-navigation');navigation.setAttribute('aria-label','专题业务分组');
  body.append(navigation);
  topicGroups[page].forEach(([label,ids],index)=>{
@@ -5988,7 +6210,7 @@ function renderTopicOverview(page) {
    card.append(element('p','topic-window',topicMetricWindow(id)));
    if(m.kind==='na'){card.append(element('p','na-note',displayValue(id)+'：'+m.reason));if(Number.isFinite(m.denominator))card.append(element('p','topic-context',`已知计数：${Number.isFinite(m.numerator)?number(m.numerator):'未知'} / ${number(m.denominator)}；不生成可靠比率。`));}
    else{
-    const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);}
+    const rows=topicMetricRows(id);if(rows.length){const values=metricSecondaryValues({fields:rows});for(const row of values.children){const dd=row.querySelector('dd'),parts=dd.textContent.split(' · ');if(parts.length===2){dd.replaceChildren(element('span','topic-main-value',parts[0]),element('span','topic-basis',' · '+parts[1]));}}if([12,28,43].includes(id))for(const row of values.children){const key=row.querySelector('dt').textContent.split(' ')[0],rate=m.value?.[key];if(rate?.kind==='rate'&&Number.isFinite(rate.value)){row.classList.add('topic-retention-cell');const color=[245,248,242].map((n,i)=>Math.round(n-rate.value*[213,189,195][i]));row.style.backgroundColor=`rgb(${color.join(',')})`;const luminance=color.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);if(luminance<.179)row.classList.add('topic-retention-dark');}}card.append(values);if(values.querySelector('.topic-retention-cell')){const legend=element('div','retention-scale-key');legend.append(element('span','','0%'));const swatches=element('span','retention-scale-swatches');swatches.setAttribute('aria-hidden','true');for(const rate of [0,.25,.5,.75,1]){const swatch=element('i','');swatch.style.backgroundColor=`rgb(${[245,248,242].map((n,i)=>Math.round(n-rate*[213,189,195][i])).join(',')})`;swatches.append(swatch);}legend.append(swatches,element('span','','100%'),element('span','','统一色阶 · 越深越高'));card.append(legend);}}
     if(id===54)card.append(topicQualityChecks());
     const structure=topicMetricStructure(id);if(structure)card.append(topicStructureGraphic(id,structure));
     if(id===47){const versions=sourceData.diagnostics.C.tables?.find(t=>t.title==='当前可升级设备固件结构');if(!effectiveFor(47).length&&versions)card.append(topicStructureGraphic(47,dataTable(versions,'topic-mini-table')));else card.append(element('p','topic-context','版本详细构成待补当前范围明细；不以总体版本人数替代筛后值。'));}
@@ -6002,12 +6224,12 @@ function renderTopicOverview(page) {
     const contextCovered=structure?.querySelector('table')&&[3,30,34,51].includes(id);
     if(s.context&&!contextCovered)card.append(element('p','topic-context',s.context));
     const history=metricHistory(id),trend=headlineTrend(id);
-    if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history,id);box.classList.add('topic-sparkline');const range=topicTrendRange(history);if(range)trend.append(range);card.append(trend);}
+    if(trend&&history){if(rows.length>1||[27,51].includes(id))trend.prepend(element('span','topic-trend-title',history.title+' · 趋势'));const box=trend.querySelector('.headline-sparkline');drawTopicSparkline(box,history,id);box.classList.add('topic-sparkline');if(history.labels?.length){const domain=element('div','topic-time-domain');domain.setAttribute('aria-label','趋势覆盖期');domain.append(element('span','',history.labels[0]+' → '+history.labels.at(-1)),element('span','',history.labels.length+'个观测点'));box.after(domain);}const range=topicTrendRange(history);if(range)trend.append(range);card.append(trend);}
     else card.append(element('p','topic-no-history',[28,43].includes(id)?'按入组批次对照 · 未成熟观察不计零':m.kind==='group'?'当前构成 · 无可比历史':'当前结果 · 无可比历史'));
    }
    const context=metricFilterContext(id);if(context.ignored.length)card.append(element('p','metric-filter-scope',`未应用：${context.ignoredText}`));
    if(id===17&&context.composition?.length)card.append(element('p','metric-filter-scope',`开启者构成条件：${context.composition.map(([key,v])=>`${filterLabels[key]} ${optionLabel(key,v)}`).join('、')}；不改变总体开启率。`));
-   const link=element('a','topic-diagnose',[28,43].includes(id)?'查看12批次留存热力图 ↗':'查看诊断 ↗');link.id=`topic-open-${page}-${id}`;link.href=routeHref(page,id);link.setAttribute('aria-label',`查看 #${id} ${item.name} 诊断`);bindTopicDiagnosisLink(link);card.append(link);grid.append(card);
+   const link=element('a','topic-diagnose',[28,43].includes(id)?'查看12批次留存热力图 ↗':'查看诊断 ↗');link.id=`topic-open-${page}-${id}`;link.href=routeHref(page,id);link.setAttribute('aria-label',`${[28,43].includes(id)?'查看12批次留存热力图':'查看诊断'}：#${id} ${item.name}`);bindTopicDiagnosisLink(link);card.append(link);grid.append(card);
   }
   section.append(grid);
   body.append(section);
@@ -6024,6 +6246,158 @@ function renderTopicOverview(page) {
   navigation.append(scope);
  }
  arrangeTopicGroups(body,page);applyTopicPalette(body,page);
+ if(page==='B'){
+  body.classList.add('b-continuous-study');
+  const evidence=body.querySelector('#evidence-B-27'),owner=body.querySelector('#topic-B-metric-27');
+  if(evidence&&owner){
+   evidence.querySelector('.evidence-title')?.remove();
+   evidence.querySelector('.evidence-caption')?.remove();
+   evidence.classList.add('b-inline-evidence');
+   owner.insertBefore(evidence,owner.querySelector('.topic-diagnose'));
+   owner.querySelector('.evidence-jump')?.remove();
+  }
+ }
+
+ if(page==='E'){
+  body.classList.add('e-continuous-study');
+  for(const id of [34,3]){
+   const owner=body.querySelector('#topic-E-metric-'+id),evidence=body.querySelector('#evidence-E-'+id);
+   if(owner&&evidence){
+    evidence.querySelector('.evidence-title')?.remove();evidence.querySelector('.evidence-caption')?.remove();
+    evidence.classList.add('e-inline-evidence');owner.insertBefore(evidence,owner.querySelector('.topic-diagnose'));
+    owner.querySelector('.evidence-jump')?.remove();
+   }
+  }
+  const services=body.querySelector('#topic-E-group-1 .topic-metrics');
+  const first=body.querySelector('#topic-E-metric-37'),packs=body.querySelector('#topic-E-metric-36');
+  if(services&&first&&packs){arrangeContextCard(first);services.replaceChildren(first,packs);}
+ }
+ const joinedIds={A:[15],C:[47],D:[3,52],F:[48,49,51,47],G:[53,15,52]}[page]||[];
+ for(const id of joinedIds){
+  const card=body.querySelector('#topic-'+page+'-metric-'+id),evidence=body.querySelector('#evidence-'+page+'-'+id);
+  if(!card||!evidence)continue;
+  const pair=card.closest('.summary-evidence-pair');
+  const wide=!!pair||(page==='F'&&id===51);
+  if(pair){pair.replaceChildren(card);pair.classList.remove('summary-evidence-pair');pair.classList.add('joined-pair-host');}
+  else if(page==='F'&&id===51){evidence.before(card);card.classList.add('wide');}
+  card.classList.add('joined-metric');if(wide)card.classList.add('joined-wide');
+  card.querySelector('.evidence-jump')?.remove();
+  evidence.querySelector('.evidence-title')?.remove();evidence.querySelector('.evidence-caption')?.remove();
+  const content=element('div','joined-content'),summary=element('div','joined-summary');
+  for(const n of [...card.children])if(!n.matches('.metric-heading,.topic-window,.topic-shared,.topic-diagnose'))summary.append(n);
+  content.append(summary,evidence);card.insertBefore(content,card.querySelector('.topic-diagnose'));
+ }
+ if(page==='G'){
+  const grid=body.querySelector('#topic-G-group-2 .topic-metrics');
+  const cards=[15,42,52,29].map(id=>body.querySelector('#topic-G-metric-'+id));
+  if(grid&&cards.every(Boolean)){
+   const left=element('div','risk-column'),right=element('div','risk-column');
+   left.append(cards[0],cards[1]);right.append(cards[2],cards[3]);
+   grid.replaceChildren(left,right);grid.classList.add('risk-columns');
+  }
+ }
+ if(page==='F'){
+  const grid=body.querySelector('#topic-F-group-1 .summary-grid');
+  if(grid){grid.classList.add('joined-rows');for(const card of grid.children)card.classList.add('joined-wide');}
+ }
+ for(const card of body.querySelectorAll('.joined-metric.joined-wide')){
+  if(card.id==='topic-F-metric-49'||card.id==='topic-G-metric-53')continue;
+  const summary=card.querySelector('.joined-summary');if(!summary)continue;
+  const meta=element('div','joined-summary-heading');
+  for(const n of [...card.children])if(n.matches('.metric-heading,.topic-shared,.topic-window'))meta.append(n);
+  summary.prepend(meta);const action=card.querySelector(':scope>.topic-diagnose');if(action)summary.append(action);
+  card.classList.add('joined-top-aligned');
+ }
+ // Keep diagnosis actions at the lower-right edge without covering evidence.
+ for(const id of ({A:[14],C:[8,45,47],D:[20,22],F:[47,48,51],G:[29]}[page]||[])){
+  const card=body.querySelector(`#topic-${page}-metric-${id}`),link=card?.querySelector('.topic-diagnose');
+  if(!link)continue;
+  card.classList.add('diagnosis-corner');
+  if(card.classList.contains('joined-top-aligned'))card.append(link);
+ }
+ if(page==='C'){
+  const card=body.querySelector('#topic-C-metric-47'),details=card?.querySelector('.topic-chart-data'),link=card?.querySelector('.topic-diagnose');
+  if(details&&link){const footer=element('div','compact-evidence-actions');details.before(footer);footer.append(details,link);}
+ }
+ if(page==='B'&&metric(25).kind==='group'){
+  const card=body.querySelector('#topic-B-metric-25'),v=metric(25).value,figure=element('figure','window-count-chart');
+  figure.append(element('figcaption','','同一截止时点 · 三个滚动窗口'));
+  const max=Math.max(...activityWindows.flatMap(w=>[v[w.composite],v[w.app]]),1);
+  figure.append(element('p','chart-scale-note',`人数同尺度：0—${number(max)}人；条形从0起点`));
+  for(const w of activityWindows){const group=element('div','window-count-group');group.append(element('h4','',w.name));
+   for(const [key,label,tone]of [[w.composite,'复合活跃','composite'],[w.app,'App活跃','app']]){const row=element('div','window-count-row');row.dataset.value=v[key];row.dataset.key=key;row.dataset.scale=max;row.append(element('span','',label));const track=element('div','window-count-track'),bar=element('span','window-count-bar '+tone);bar.style.width=`${v[key]/max*100}%`;bar.setAttribute('aria-hidden','true');track.append(bar);row.append(track,element('strong','',number(v[key])+'人'));group.append(row);}figure.append(group);}
+  card.querySelector('.metric-secondary-values').replaceWith(figure);card.classList.add('window-graphic-card');
+  card.querySelector('.topic-context').textContent='窗口嵌套、人数不可相加；App活跃属于复合活跃，不作堆叠。';
+ }
+ if(page==='D'&&metric(21).kind==='group'){
+  const card=body.querySelector('#topic-D-metric-21'),v=metric(21).value,notes=card.querySelector('.context-notes');
+  const layout=element('div','flow-graphic-layout'),summary=element('div','flow-anchors');
+  for(const [label,value]of [['期初有效订阅',v.opening],['期末有效订阅',v.closing]]){const box=element('div','flow-anchor');box.append(element('span','',label),element('strong','',number(value)+'人'));summary.append(box);}
+  const net=v.closing-v.opening;summary.append(element('p','flow-net',`净增 ${net>=0?'+':''}${number(net)}人`));
+  const rows=[['trialPaid','试用转正流入',v.trialPaid],['directPaid','直接付费流入',v.directPaid],['recovered','恢复流入',v.recovered],['lost','权益流失',-v.lost]],max=Math.max(...rows.map(r=>Math.abs(r[2])),1),figure=element('figure','flow-delta-chart');
+  figure.append(element('figcaption','','当月累计变化构成'),element('p','chart-scale-note',`← 流失　｜　流入 →　同尺度 ±${number(max)}人`));
+  for(const [key,label,value]of rows){const row=element('div','flow-delta-row');row.dataset.key=key;row.dataset.value=value;row.dataset.scale=max;row.append(element('span','',label));const track=element('div','flow-delta-track'),bar=element('span','flow-delta-bar '+(value<0?'loss':'gain'));bar.style.width=`${Math.abs(value)/max*50}%`;bar.style.left=`${value<0?50-Math.abs(value)/max*50:50}%`;bar.setAttribute('aria-hidden','true');track.append(bar);row.append(track,element('strong','',`${value>0?'+':''}${number(value)}人`));figure.append(row);}
+  figure.append(element('p','table-note',`${number(v.opening)} + ${number(v.trialPaid)} + ${number(v.directPaid)} + ${number(v.recovered)} − ${number(v.lost)} = ${number(v.closing)}人`));
+  layout.append(summary,figure);card.querySelector('.card-core').replaceWith(layout);card.classList.remove('context-card');card.classList.add('flow-graphic-card');notes.querySelector('.topic-net-change')?.remove();notes.querySelector('.topic-context')?.remove();notes.querySelector('.topic-no-history').textContent='当月累计流入／流失；不是逐日时间趋势。';
+ }
+ // Overview comparisons preserve source counts and distinguish rates from totals.
+ for(const id of (page==='C'?[41]:page==='D'?[20,22]:[])) {
+  const value=metric(id),card=body.querySelector(`#topic-${page}-metric-${id}`);
+  if(value.kind==='na'||!card)continue;
+  const values=card.querySelector('.metric-secondary-values');if(!values)continue;
+  let rows,max,scale;
+  if(id===41){const p=deviceActivitySummary(41);if(p.reason)continue;
+   rows=[['active1','近24小时',p.active1],['active7','近7天',p.active7],['active30','近30天',p.active30]].map(([key,label,n])=>({key,label,n,text:number(n)+'台'}));
+   max=Math.max(10000,Math.ceil(p.active30/10000)*10000);scale=`同一快照 · 嵌套窗口，不相加；0—${number(max)}台`;
+  } else if(id===20){const v=value.value;
+   rows=[['subscriptionPage','订阅页'],['popup','弹窗']].map(([key,label])=>({key,label,n:v[key].value*100,text:`${percent(v[key].value)} · ${number(v[key].numerator)} / ${number(v[key].denominator)}人`}));
+   const highest=Math.max(...rows.map(r=>r.n)),step=highest<=20?5:highest<=50?10:25;max=Math.min(100,Math.max(step,Math.ceil((highest+step*.2)/step)*step));scale='相同转化率刻度 · 点的位置表示实际比例';
+  } else {const v=value.value;
+   rows=[['aiExhausted','AI额度'],['storageExhausted','存储'],['transferExhausted','传输']].map(([key,label])=>({key,label,n:v[key].numerator,text:`${number(v[key].numerator)}人 · ${percent(v[key].value)}`}));
+   max=Math.max(100,Math.ceil(Math.max(...rows.map(r=>r.n))/100)*100);scale=`耗尽人数同尺度 0—${number(max)}人 · 各项人群可重叠`;
+  }
+  const fig=element('figure','overview-compare-figure');fig.append(element('figcaption','',id===41?'活跃设备 · 窗口规模':id===20?'触点转化对照':'单项权益耗尽'),element('p','table-note',scale));
+  for(const row of rows){const item=element('div','overview-compare-row');item.dataset.key=row.key;item.dataset.value=row.n;item.dataset.max=max;
+   const head=element('div','overview-compare-head');head.append(element('span','',row.label),element('strong','',row.text));
+   const track=element('div','overview-compare-track'),bar=element('span','overview-compare-bar');track.setAttribute('aria-hidden','true');if(id===20){track.classList.add('rate-scale');bar.style.left=(row.n/max*100)+'%';}else bar.style.width=(row.n/max*100)+'%';track.append(bar);item.append(head,track);fig.append(item);
+  }
+  if(id===20){const axis=element('div','rate-scale-axis'),step=max<=25?5:max<=60?10:25;for(let n=0;n<=max;n+=step){const tick=element('span','',n+'%');tick.style.left=(n/max*100)+'%';axis.append(tick);}const delta=(value.value.subscriptionPage.value-value.value.popup.value)*100;fig.append(axis,element('p','rate-scale-difference',Math.abs(delta)<.00001?'两个触点转化率相同':`${delta>0?'订阅页':'弹窗'}高 ${number(Math.abs(delta),1)} 个百分点`),element('p','table-note','并列触点，各按自身触达人群计算；差异不代表因果。'));}
+  if(id===22)fig.append(element('p','table-note',`三项占比各以 ${number(value.value.anyExhausted.denominator)} 人为分母；去重并集不等于三项相加。`));
+  const first=values.firstElementChild;values.replaceChildren(first);
+  const summary=element('div','overview-compare-summary');values.replaceWith(summary);summary.append(values);
+  if(id===41)summary.append(fig);
+  else {summary.after(fig);const meta=card.querySelector('.context-meta');if(meta)summary.prepend(meta);card.classList.remove('context-card');card.classList.add('overview-compare-wide');if(id===22)card.querySelector('.topic-context')?.remove();}
+  card.classList.add('overview-compare-card');
+ }
+ if(page==='F')enhanceDeviceStateOverview(body.querySelector('#topic-F-metric-50'));
+ if(page==='B')enhanceActivityCompositionOverview(body.querySelector('#topic-B-metric-30'));
+ // Four numeric summaries use regular cards beside their related evidence.
+ for(const [id,neighborId] of ({A:[[14,15]],C:[[8,44],[45,42]],D:[[33,52]]}[page]||[])){
+  const card=body.querySelector(`#topic-${page}-metric-${id}`),neighbor=body.querySelector(`#topic-${page}-metric-${neighborId}`);
+  if(!card||!neighbor)continue;
+  const meta=card.querySelector(':scope>.context-meta'),notes=card.querySelector(':scope>.context-notes');
+  if(meta)meta.replaceWith(...meta.childNodes);
+  if(notes)notes.replaceWith(...notes.childNodes);
+  card.classList.remove('context-card','diagnosis-corner');card.classList.add('numeric-detail-card');
+  const host=neighbor.parentElement;
+  if(page==='C'){
+   const group=neighbor.closest('.topic-metrics'),summaries=group.querySelector('.summary-grid');
+   summaries.append(card);summaries.classList.add('numeric-three-cards');
+  }
+  else if(host.classList.contains('related-column'))host.append(card);
+  else {const column=element('div','numeric-card-column');neighbor.before(column);column.append(neighbor,card);}
+ }
+ for(const grid of body.querySelectorAll('.context-grid'))if(!grid.children.length)grid.remove();
+ if(page==='D'){
+  const grid=body.querySelector('#topic-D-group-3 .topic-metrics');
+  const cards=[23,33,52,32].map(id=>body.querySelector(`#topic-D-metric-${id}`));
+  if(grid&&cards.every(Boolean)){
+   const left=element('div','related-column'),right=element('div','related-column');
+   left.append(cards[0],cards[1]);right.append(cards[2],cards[3]);
+   cards[3].classList.add('numeric-detail-card');
+   grid.replaceChildren(left,right);grid.classList.add('related-evidence-layout');
+  }
+ }
  main.append(top,body);updateSectionNavigation();
 }
 
@@ -6142,8 +6516,12 @@ function registerIssue(page,id,{preserveEvidence=false}={}) {
 function registerIssueButton(page,id,{compact=false}={}) {
   const button=element('button','issue-register',compact?`登记 #${id} 问题`:`登记 #${id} ${catalogItem(id).name}问题`);button.type='button';
   button.dataset.metricId=String(id);
-  if(!hasRegistrationBaseline(id)){button.disabled=true;button.title='当前批次没有可用完整观察基线';}
-  button.setAttribute('aria-label',`登记 #${id} ${catalogItem(id).name} 的当前范围问题`);
+  if(!hasRegistrationBaseline(id)){
+    button.disabled=true;
+    button.textContent=`暂不能登记 #${id}：暂无可用基线`;
+    button.title=`${catalogItem(id).name}：当前范围尚无可用登记基线`;
+  }
+  button.setAttribute('aria-label',`${button.textContent}：${compact||button.disabled?catalogItem(id).name+'，':''}当前范围`);
   button.addEventListener('click',()=>registerIssue(page,id));
   return button;
 }
@@ -6543,7 +6921,7 @@ function actionQueue(page,defaultMetric) {
     button.dataset.actionId=item.id;
     const evidenceId=item.evidenceMetric??defaultFindingMetric[page];
     const evidenceLink=element('a','action-evidence-link','查看指标依据 ↗');evidenceLink.href=routeHref(contractFor(evidenceId).page,evidenceId);
-    evidenceLink.setAttribute('aria-label',`${item.id}，查看${catalogItem(evidenceId).name}指标依据`);
+    evidenceLink.setAttribute('aria-label',`查看指标依据：${item.id}，${catalogItem(evidenceId).name}`);
     const update=()=>{const state=simulatedActionState[key];const complete=Boolean(state?.complete);status.textContent=complete?'演示已研判':item.status;time.textContent=state?.updatedAt??item.updatedAt;button.textContent=complete?'撤销本地标记':'模拟标记已研判';button.setAttribute('aria-pressed',String(complete));};
     update();
     button.addEventListener('click',()=>{
@@ -6834,9 +7212,17 @@ function diagnosticFinding(page,id,observation,{current=true}={}) {
     finding.append(facts);
   }
   if(current&&id===54){const exceptions=qualityPlatformExceptionNote();if(exceptions){finding.querySelector('.finding-title').textContent='当前范围整体：'+dataQualityState(metric(54)).label;finding.append(exceptions);}}
-  const cross=element('a','insight-link',current?(observation?.evidencePanel==='groups'?'查看分组变化证据 ↓':'查看本条指标证据 ↓'):`查看 ${name} 证据 →`);
-  if(observation?.evidencePanel)cross.dataset.evidencePanel=observation.evidencePanel;
-  cross.href=routeHref(page,id,observation?.evidencePanel);finding.append(cross);
+  if(current&&metric(id).kind==='na') {
+    if(selectedFilters().length||filterErrors.length) {
+      const adjust=element('button','insight-link finding-adjust-filters','调整当前筛选 ↑');adjust.type='button';
+      adjust.addEventListener('click',()=>{const filters=document.querySelector('.filter-bar');if(!filters)return;filters.open=true;const summary=filters.querySelector('summary');summary.focus({preventScroll:true});filters.scrollIntoView({block:'start',behavior:'instant'});});
+      finding.append(adjust);
+    }
+  } else {
+    const cross=element('a','insight-link',current?(observation?.evidencePanel==='groups'?'查看分组变化证据 ↓':'查看本条指标证据 ↓'):`查看 ${name} 证据 →`);
+    if(observation?.evidencePanel)cross.dataset.evidencePanel=observation.evidencePanel;
+    cross.href=routeHref(page,id,observation?.evidencePanel);finding.append(cross);
+  }
   // Other-page links belong to an authored observation, never to an unrelated factual summary.
   if(observation) {
     const info=dataset.diagnostics[page];
@@ -6905,6 +7291,31 @@ function entitySamplesPanel(page) {
     detail.replaceChildren(...header,facts,
       element('p','entity-sample-context',record.detail??'该条是演示异常信号，不能替代原始事件或总体数据。'),
       element('p','entity-sample-review',`建议核对：${record.review}`),link);
+    // Explicit sample reference only; aggregate evidence and existing drafts are preserved.
+    if(page==='C'&&record.evidence.metricId===42&&new URLSearchParams(location.hash.split('?')[1]??'').get('metric')==='42') {
+      const attach=element('button','issue-register device-sample-attach','将编号填入 #42 问题草稿');attach.type='button';
+      const feedback=element('p','table-note device-sample-feedback');feedback.setAttribute('role','status');
+      const explain=element('p','table-note','仅关联独立演示样本编号；不作为总体统计证据，不自动保存。');
+      if(metric(42).kind==='na') {
+        attach.disabled=true;
+        explain.textContent='当前范围缺少可登记基线，补齐数据后可关联；此样本不作为总体统计证据。';
+      }
+      explain.id='device-sample-attach-explanation';
+      attach.setAttribute('aria-describedby',explain.id);
+      attach.addEventListener('click',()=>{
+        const form=document.querySelector('.action-record'),subject=form?.querySelector('[name="issueMetric"]'),sample=form?.querySelector('[name="linkedSample"]');
+        const say=message=>{feedback.textContent=message;document.querySelector('#announcement').textContent=message;};
+        if(!form||subject?.value!=='42'){say('当前问题单属于其他指标，未改动草稿。请先登记 #42，再关联此编号。');return;}
+        if(metric(42).kind==='na'){say('当前指标缺少可登记的基线，未关联编号。');return;}
+        if(sample.value.trim()&&sample.value.trim()!==record.id){say('已有其他关联编号，未覆盖。请在问题登记中人工核对后修改。');return;}
+        const unchanged=sample.value===record.id;
+        if(!unchanged){sample.value=record.id;sample.dispatchEvent(new Event('input',{bubbles:true}));}
+        registerIssue('C',42,{preserveEvidence:true});
+        const field=document.querySelector('.action-record [name="linkedSample"]');field?.focus();
+        document.querySelector('#announcement').textContent=unchanged?'草稿已关联此编号；未修改已保存记录。':'设备编号已填入草稿；原基线和处理说明保留，保存后生效。';
+      });
+      detail.append(attach,explain,feedback);
+    }
     if(announce) {
       // Safari can move the viewport when sticky content is replaced (as with issue forms).
       scrollTo(viewport);
@@ -7003,6 +7414,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
   // Keep the full calculation adjacent but reveal it on demand at desktop widths.
   for(const pair of left.querySelectorAll('.evidence-pair')) {
     const table=pair.querySelector(':scope > .data-table-scroll');
+    if(!table||table.classList.contains('unbinding-model-table'))continue;
     const disclosure=element('details','workspace-calculation');
     disclosure.append(element('summary','','查看计算依据与完整数值'),table);pair.append(disclosure);
   }
@@ -7110,6 +7522,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
       if(node.matches('.evidence-charts-grid')){[...node.children].forEach(supplemental);return;}
       if(node.matches('.detail-chart-panel')) {
         const spec=legacy.specs.find(([box])=>node.contains(box))?.[1];
+        if(selectedMetric===14&&spec?.kind==='boxplot'&&spec.metricId===14){const extra=element('details','workspace-context quantile-extra');extra.append(element('summary','','查看额外模拟箱线分布'),node);panels.get('groups').append(extra);return;}
         if(spec&&(selectedMetric===50||selectedMetric===52&&spec.metricId!==52||spec.metricId&&spec.metricId!==selectedMetric))contextual(node,'groups',`其他指标对照 · ${spec.title}`);
         else if(spec&&isTimelineSpec(spec))contextual(node,'change',`补充趋势 · ${spec.title}`);
         else panels.get('groups').append(node);
@@ -7120,6 +7533,7 @@ function renderDiagnosticWorkspace(page,top,body,overview,finding,selectedMetric
     [...legacy.evidence.children].forEach(supplemental);
     if(referenceData.children.length>2)panels.get('data').append(referenceData);
   }
+  if(page==='A'&&selectedMetric===14&&metric(14).kind==='group')panels.get('groups').prepend(firstImageQuantiles());
   const queue=actionQueue(page,selectedMetric);
   let form=queue.querySelector('.action-record');
   const queueDetails=element('details','workspace-context');queueDetails.append(element('summary','','查看核查对象与演示行动清单'));
@@ -7542,6 +7956,8 @@ function waitForChartLibrary() {
 }
 function showLoadingState(page=currentRoutePage(),total=1) {
   disposeCharts();closeDefinitionPopover();
+  // The previous page is no longer rendered; history traversal must rebuild it.
+  lastRenderedHash=undefined;
   const panel=element('section','load-panel');panel.setAttribute('aria-labelledby','load-title');
   const heading=element('h1','',page?`正在准备${pages[page].title}`:'正在准备经营数据');heading.id='load-title';
   const status=element('p','load-status',`已准备 0 / ${total} 组数据`);status.id='load-status';
@@ -7568,7 +7984,7 @@ function requestRouteData(page) {
   if(routeRequests.has(page))return routeRequests.get(page);
   const request=fetchDataPart(`route-${page||'home'}`).then(payload=>{
     if(payload.version!==1||payload.revision!==routeCore.revision||payload.page!==page)
-      throw new Error('当前页数据版本不一致，请重新加载。');
+      throw Object.assign(new Error('当前页数据版本不一致，请刷新页面。'),{code:'DATA_VERSION_MISMATCH'});
     preparedRoutes.set(page,payload);return payload;
   }).finally(()=>routeRequests.delete(page));
   routeRequests.set(page,request);return request;
@@ -7588,12 +8004,14 @@ function activateRouteData(page) {
 function showLoadError(error,page,options,revision) {
   if(revision!==routeLoadRevision)return;
   const panel=element('section','load-panel load-error');panel.setAttribute('role','alert');
-  panel.append(element('h1','',page?`${pages[page].title}暂时无法显示`:'数据未能完整加载'),
-    element('p','','请检查网络后重试。当前地址、筛选条件和已登记问题均已保留。'));
-  const retry=element('button','load-retry','重新加载');retry.type='button';
-  retry.addEventListener('click',()=>routeCore?prepareRoute(options):start());panel.append(retry);
+  const mismatch=error?.code==='DATA_VERSION_MISMATCH';
+  panel.append(element('h1','',mismatch?'页面与数据版本不一致':page?`${pages[page].title}暂时无法显示`:'数据未能完整加载'),
+    element('p','',mismatch?'请刷新整个页面以重新载入同一版本。当前地址、筛选条件和已保存的问题记录会保留。':'请检查网络后重试。当前地址、筛选条件和已登记问题均已保留。'));
+  if(mismatch&&actionDrafts.size)panel.append(element('p','', '还有未保存的草稿，请先切回原专题保存；刷新会离开当前页面。'));
+  const retry=element('button','load-retry',mismatch?'刷新整个页面':'重新加载');retry.type='button';
+  retry.addEventListener('click',()=>mismatch?location.reload():routeCore?prepareRoute(options):start());panel.append(retry);
   main.replaceChildren(panel);main.setAttribute('aria-busy','false');
-  document.querySelector('#announcement').textContent='当前页面数据加载失败，可重试或切换专题。';
+  document.querySelector('#announcement').textContent=mismatch?'页面与数据版本不一致，请先保存草稿，再刷新整个页面。':'当前页面数据加载失败，可重试或切换专题。';
   console.error(error);
 }
 async function prepareRoute(options={}) {
@@ -7679,8 +8097,12 @@ function bindAppEvents() {
     for(const {item,alias} of records) {
       const row=element('li','');
       const link=element('a','metric-search-result');link.href=routeHref(item.page,item.id);
-      const copy=element('span','metric-search-copy');copy.append(element('span','metric-search-name',item.name));
-      if(alias)copy.append(element('span','metric-search-alias',`匹配项：${alias}`));
+      const query=input.value.normalize('NFKC').trim();
+      const target=item.id===27?featureFunctions.find(key=>query.toLocaleLowerCase()===(optionLabel('functionType',key)+'使用率').toLocaleLowerCase()):null;
+      if(target){const params=new URLSearchParams(link.hash.split('?')[1]??'');if(target==='Live')params.delete('functionType');else params.set('functionType',target);params.delete('issue');link.href='#/B?'+params.toString();}
+      const copy=element('span','metric-search-copy');copy.append(element('span','metric-search-name',target?query:item.name));
+      if(target)copy.append(element('span','metric-search-alias',`核心功能使用率 · 进入后查看${optionLabel('functionType',target)}；仅切换所看功能，其余受支持筛选保留。`));
+      else if(alias)copy.append(element('span','metric-search-alias',`匹配项：${alias}`));
       link.append(element('span','metric-search-id',`#${String(item.id).padStart(2,'0')}`),
         copy,element('span','metric-search-page',pages[item.page].title));
       link.addEventListener('click',()=>search.close());row.append(link);results.append(row);
@@ -7761,7 +8183,7 @@ async function start() {
     const failed=parts.find(part=>part.status==='rejected');if(failed)throw failed.reason;
     const core=parts[0].value,payload=parts[1].value;
     if(core.version!==1||payload.version!==1||payload.revision!==core.revision||payload.page!==page)
-      throw new Error('当前页面数据版本不一致，请重新加载。');
+      throw Object.assign(new Error('当前页面数据版本不一致，请刷新页面。'),{code:'DATA_VERSION_MISMATCH'});
     routeCore=core;sourceData=core.sources;preparedRoutes.set(page,payload);activateRouteData(page);
     bindAppEvents();
     if(currentRoutePage()!==page){await prepareRoute();return;}

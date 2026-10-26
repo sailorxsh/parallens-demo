@@ -17,7 +17,35 @@ async parent=>{
     check((await card.locator('.topic-window').innerText()).trim().length>0,'Missing metric time window '+id);
     check(!/undefined|NaN|\[object Object\]/.test(await card.innerText()),'Broken summary values '+id);
     const displayed=await card.locator('.metric-secondary-values>div').evaluateAll(rows=>rows.map(row=>[row.querySelector('dt').textContent.trim(),row.querySelector('dd').textContent.trim()]));
-    for(const [label,value]of facts.rows)check(displayed.some(([name,text])=>name===label&&text===value),'A compound subitem is absent '+id+' '+label);
+    if(id===25&&facts.kind==='group') {
+     const rows=await card.locator('.window-count-row').evaluateAll(ns=>ns.map(e=>({key:e.dataset.key,label:e.firstElementChild.textContent,window:e.parentElement.querySelector('h4').textContent,value:Number(e.querySelector('strong').textContent.replace(/[^0-9.-]/g,''))})));
+     check(rows.length===6,'Activity chart omits a window or series');
+     for(const [key,window,label]of [['DAU','近1天','复合活跃'],['appDAU','近1天','App活跃'],['WAU','近7天','复合活跃'],['appWAU','近7天','App活跃'],['MAU','近30天','复合活跃'],['appMAU','近30天','App活跃']])check(rows.some(r=>r.key===key&&r.window===window&&r.label===label&&r.value===facts.value.value[key]),'Activity window label/count absent '+key);
+    } else if(id===21&&facts.kind==='group') {
+     const actual=await card.evaluate(e=>({anchors:[...e.querySelectorAll('.flow-anchor')].map(n=>[n.firstElementChild.textContent,Number(n.querySelector('strong').textContent.replace(/[^0-9.-]/g,''))]),flows:[...e.querySelectorAll('.flow-delta-row')].map(n=>({key:n.dataset.key,label:n.firstElementChild.textContent,value:Number(n.querySelector('strong').textContent.replace(/[^0-9.-]/g,''))}))}));
+     const v=facts.value.value;check(actual.anchors.length===2&&actual.anchors[0][0]==='期初有效订阅'&&actual.anchors[0][1]===v.opening&&actual.anchors[1][0]==='期末有效订阅'&&actual.anchors[1][1]===v.closing,'Flow opening/closing count absent');
+     check(actual.flows.length===4,'Flow chart omits a component');
+     for(const [key,label]of [['trialPaid','试用转正流入'],['directPaid','直接付费流入'],['recovered','恢复流入'],['lost','权益流失']])check(actual.flows.some(r=>r.key===key&&r.label===label&&r.value===v[key]*(key==='lost'?-1:1)),'Flow label/signed count absent '+key);
+     check(v.opening+actual.flows.reduce((sum,r)=>sum+r.value,0)===v.closing,'Flow bridge does not close');
+    } else if(id===20&&facts.kind==='group') {
+     check(displayed.some(([name,text])=>name===facts.rows[0][0]&&text===facts.rows[0][1]),'Combined touchpoint value/basis absent');
+     const rows=await card.locator('.overview-compare-row').evaluateAll(ns=>ns.map(e=>({key:e.dataset.key,label:e.querySelector('.overview-compare-head>span').textContent,text:e.querySelector('strong').textContent})));
+     check(rows.length===2,'Touchpoint graph omits a channel');
+     for(const [key,label]of [['subscriptionPage','订阅页'],['popup','弹窗']]){const expected=await p.evaluate(key=>{const v=metric(20).value[key];return `${percent(v.value)} · ${number(v.numerator)} / ${number(v.denominator)}人`;},key);check(rows.some(r=>r.key===key&&r.label===label&&r.text===expected),'Touchpoint rate/count absent '+key);}
+    } else if([41,22].includes(id)&&facts.kind!=='na') {
+     check(displayed.some(([name,text])=>name===facts.rows[0][0]&&text===facts.rows[0][1]),'Primary value/basis absent '+id);
+     const rows=await card.locator('.overview-compare-row').evaluateAll(ns=>ns.map(e=>({key:e.dataset.key,label:e.querySelector('.overview-compare-head>span').textContent,text:e.querySelector('strong').textContent,value:Number(e.querySelector('strong').textContent.split(/[人台]/)[0].replace(/,/g,''))})));
+     check(rows.length===3,'Overview count chart omits a category '+id);
+     const source=id===41?await p.evaluate(()=>deviceActivitySummary(41)):facts.value.value;
+     for(const [key,label]of (id===41?[['active1','近24小时'],['active7','近7天'],['active30','近30天']]:[['aiExhausted','AI额度'],['storageExhausted','存储'],['transferExhausted','传输']]))check(rows.some(r=>r.key===key&&r.label===label&&r.value===(id===41?source[key]:source[key].numerator)),'Overview category label/count absent '+id+' '+key);
+    } else if(id===50&&facts.kind==='group') {
+     const state=await p.evaluate(()=>deviceStateProjection());
+     if(!state.reason){
+      const rows=await card.locator('.state-row').evaluateAll(ns=>ns.map(e=>({key:e.dataset.key,label:e.querySelector('.state-row-head>span').textContent,count:Number(e.querySelector('strong').textContent.replace(/[^0-9]/g,'')),shared:e.querySelector('.state-subset').textContent})));
+      check(rows.length===3,'Device states omit a category');
+      for(const [key,label,subset]of [['boundActivated','已绑定且已激活','sharedBoundActivated'],['boundNotActivated','已绑定未激活','sharedBoundNotActivated'],['activatedUnbound','已激活未绑定',null]])check(rows.some(r=>r.key===key&&r.label===label&&r.count===state.value[key]&&(subset?Number(r.shared.replace(/[^0-9]/g,''))===state.value[subset]:r.shared.includes('未提供'))),'Device state or shared subset count absent '+key);
+     } else for(const [label,value]of facts.rows)check(displayed.some(([name,text])=>name===label&&text===value),'Unavailable device-state fallback absent '+label);
+    } else for(const [label,value]of facts.rows)check(displayed.some(([name,text])=>name===label&&text===value),'A compound subitem is absent '+id+' '+label);
     await card.locator('.topic-diagnose').focus();await p.keyboard.press('Enter');await ready();
     check(await p.locator(`#metric-evidence-${id}`).count()===1&&await p.locator('.topic-overview,.detail-kpi').count()===0,'Diagnosis destination or hierarchy incorrect '+id);
     check(JSON.stringify(await p.evaluate(id=>metric(id),id))===JSON.stringify(before),'Overview and diagnosis disagree '+id);

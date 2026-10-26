@@ -4,6 +4,7 @@ async(parent)=>{
  const context=await browser.newContext({viewport:{width:1600,height:1000},locale:'zh-CN',reducedMotion:'reduce'}),p=await context.newPage();
  const check=(ok,text)=>{if(!ok)throw Error(text);};p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>d.accept());
  const response=await parent.request.get(`${base}data/weekly.json`),weeks=await response.json();
+ const core=await(await parent.request.get(`${base}data/route-core.json`)).json();
  const ready=async()=>{
   await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));
   await p.evaluate(()=>document.fonts.ready);await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -84,12 +85,15 @@ async(parent)=>{
    {name:'small-group',before:[event(3,7,true),event(50,100,false)],after:[event(3,7,true),event(50,100,false)],suppressed:true}
   ]){
    await p.goto('about:blank');await p.setViewportSize({width:1600,height:1000});
-   await p.route('**/data/weekly.json',async route=>{
+   let injectionHits=0;
+   await p.route('**/data/route-core.json*',async route=>{
+    injectionHits++;
     const copy=JSON.parse(JSON.stringify(weeks));copy.forEach((w,i)=>{const rows=i<8?fixture.before:fixture.after;
      w.deviceEventsBird.records=rows;w.deviceEventsBird.empty=rows.reduce((s,r)=>s+r.empty,0);w.deviceEventsBird.triggers=rows.reduce((s,r)=>s+r.triggers,0);
-    });await route.fulfill({json:copy});
+    });await route.fulfill({json:{...core,sources:{...core.sources,weekly:copy}}});
    });
    await open('');
+   check(injectionHits>0,'Fixture did not reach the current route source');
    if(fixture.suppressed){check(await pair().count()===0&&(await p.locator('#C-panel-groups').innerText()).includes('少于30次')&&
     (await current().innerText()).includes('未据此生成分组变化判断'),'Small group fabricates a reliable contribution');}
    else{
@@ -98,7 +102,7 @@ async(parent)=>{
     check(option.yAxis[0].min<=Math.min(0,...fixture.changes)&&option.yAxis[0].max>=Math.max(0,...fixture.changes),'Mixed contributions are clipped');
     check((await pair().locator('svg').textContent()).includes(pp(fixture.changes[0])),'Visible signed label is missing');
    }
-   await p.unroute('**/data/weekly.json');results.push({kind:'counterfactual-fixture',name:fixture.name});
+   await p.unroute('**/data/route-core.json*');results.push({kind:'counterfactual-fixture',name:fixture.name});
   }
   // Current observation leads to this comparison, then the issue retains its original baseline and private draft.
   await p.goto('about:blank');await p.setViewportSize({width:1600,height:1000});
@@ -111,17 +115,15 @@ async(parent)=>{
   await form().getByRole('button',{name:'保存本地记录',exact:true}).click();
   const saved=await stored(),baseline=await form().locator('> .table-note').innerText();
   await p.screenshot({path:`output/playwright/v114-audit/10-device-registration-${browser.browserType().name()}.png`,scale:'css'});
-  await input('note').fill('查看设备活跃证据时保留的未保存草稿');
-  await p.locator('.detail-kpi[data-metric-id="41"] .detail-evidence-link').click();await ready();
-  check(await input('issueMetric').inputValue()==='42'&&await input('note').inputValue()==='查看设备活跃证据时保留的未保存草稿','Auxiliary evidence replaces the registered device issue');
-  await p.screenshot({path:`output/playwright/v114-audit/11-auxiliary-issue-${browser.browserType().name()}.png`,scale:'css'});
-  await p.goBack();await ready();
-  check(await input('issueMetric').inputValue()==='42'&&await form().locator('> .table-note').innerText()===baseline&&await stored()===saved,'Returning changes original baseline or saved record');
+  await input('note').fill('查看其他专题时保留的未保存草稿');
+  // The former diagnostic KPI strip no longer exists. Exercise current cross-page navigation.
+  await p.locator('.nav-link[href="#/E"]').click();await ready();await p.goBack();await ready();
+  check(await input('issueMetric').inputValue()==='42'&&await input('note').inputValue()==='查看其他专题时保留的未保存草稿'&&await form().locator('> .table-note').innerText()===baseline&&await stored()===saved,'Cross-page return changes issue, draft or baseline');
   await p.reload();await ready();
   check(await input('note').inputValue()==='K6固件2.8对总体变化贡献16pp；待日志核验，不确认因果。'&&await form().locator('> .table-note').innerText()===baseline,'Reload loses saved evidence or baseline');
   await p.screenshot({path:`output/playwright/v114-audit/12-reopened-issue-${browser.browserType().name()}.png`,scale:'css'});
   check(!errors.length,errors.join('; '));return {status:'PASS',checks:['raw event denominators and matched periods','scope recomputation','zero and signed adverse colors',
-   'native point-to-row and keyboard evidence','three desktop widths and 150/200 text','unsupported source boundaries','home → observation → exact evidence → registration → auxiliary evidence → back/reload'],results,errors};
+   'native point-to-row and keyboard evidence','three desktop widths and 150/200 text','unsupported source boundaries','home → observation → exact evidence → registration → another topic → back/reload'],results,errors};
  }catch(error){error.message+=`\nRoute: ${p.url()}\nBrowser errors: ${JSON.stringify(errors)}`;throw error;}
  finally{await context.close();}
  async function chartLabelBounds(){return pair().locator('.detail-chart').evaluate(n=>{

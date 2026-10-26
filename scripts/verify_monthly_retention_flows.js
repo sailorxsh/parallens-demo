@@ -98,8 +98,8 @@ async(parent)=>{
    await choose('2026-07');check(await control().inputValue()==='2026-07','Enlarged month select is not operable');
   }
   // A source contract failure must render a pending state, not a stale curve.
-  await p.route('**/data/metric-trends.json*',async route=>{
-   const response=await route.fetch(),data=await response.json();data.m24.points[0].denominator=0;
+  await p.route('**/data/route-core.json*',async route=>{
+   const response=await route.fetch(),data=await response.json();data.sources.metricTrends.m24.points[0].denominator=0;
    await route.fulfill({response,json:data});
   });
   await open('');await p.reload();await ready();
@@ -108,7 +108,7 @@ async(parent)=>{
   await p.getByRole('tab',{name:'完整数据',exact:true}).click();await ready();
   const anchorRows=await p.locator('#B-panel-data tr').filter({hasText:'月度复合活跃'}).allTextContents();
   check(anchorRows.length===2&&anchorRows.every(row=>row.includes('待核验')&&!row.includes('77.1%')&&!row.includes('72.0%')),'Supplemental table silently falls back to invalid source totals');
-  await p.unroute('**/data/metric-trends.json*');await p.reload();await ready();
+  await p.unroute('**/data/route-core.json*');await p.reload();await ready();
   check(await p.evaluate(()=>metric(24).numerator===54000),'Source repair does not restore current evidence');
   check(errors.length===0,`Browser errors: ${errors.join('; ')}`);
   return {status:'PASS',states,geometry,legacy:{issueId:old.issueId,baseline:old.baseline,baselineAt:old.baselineAt},july,errors};

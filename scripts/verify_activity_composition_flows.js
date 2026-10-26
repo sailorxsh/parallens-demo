@@ -132,7 +132,7 @@ async(parent)=>{
    const isolated=await browser.newContext({viewport:{width:1600,height:1000},reducedMotion:'reduce'}),q=await isolated.newPage();
    try{
     q.on('pageerror',e=>errors.push(e.message));
-    await q.route('**/data/metric-values.json',r=>r.fulfill({json:fixture}));
+    await q.route('**/data/route-core.json*',async r=>{const response=await r.fetch(),data=await response.json();data.sources.metrics=fixture;await r.fulfill({response,json:data});});
     await q.goto(`${base}#/B?metric=30`);await q.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy="false"]'));
     const value=await q.evaluate(()=>metric(30));
     check(value.availability==='pending'&&await q.locator('.evidence-pair[data-evidence-metric="30"]').count()===0,'Raw totals conflicting with joint facts produce a plausible graph');

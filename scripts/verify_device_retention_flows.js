@@ -27,6 +27,12 @@ async(parent)=>{
     await p.getByRole('tab',{name:'完整数据',exact:true}).click();await ready();
     const selected=p.locator('#C-panel-data .device-retention-calculation tr[aria-current=date]');
     check(await selected.count()===1&&(await selected.innerText()).includes(id),'Calculation table does not highlight the current cohort');
+    const registration=p.locator('.detail-finding .issue-register');
+    if(v.D7.kind!=='rate'&&v.D30.kind!=='rate'){
+     check(await registration.isDisabled()&&(await registration.innerText()).includes('暂无可用基线'),'Unavailable registration looks actionable or hides its reason');
+     const visual=await registration.evaluate(n=>({background:getComputedStyle(n).backgroundColor,cursor:getComputedStyle(n).cursor}));
+     check(visual.background==='rgb(220, 226, 216)'&&visual.cursor==='default','Unavailable registration retains active styling');
+    }else check(await registration.isEnabled(),'A mature retention measure cannot be registered');
     states.push({scope,id,d:row[2],D7:row[3],D30:row[6],mature:state.c.mature});
    }
   }
@@ -104,10 +110,10 @@ async(parent)=>{
    geometry.push({width,font,...g});await p.screenshot({path:`output/playwright/v142-audit/${engine}-retention-${width}-${font}.png`});
    await choose('2026-08-10');check(await control().inputValue()==='2026-08-10','Cohort control cannot be operated at larger text');
   }
-  await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.route('**/data/device-retention-facts.json*',async route=>{const response=await route.fetch(),data=await response.json();data.cohorts[0].records[0].activated++;await route.fulfill({response,json:data});});
+  await p.evaluate(()=>document.documentElement.style.fontSize='16px');await p.route('**/data/route-C.json*',async route=>{const response=await route.fetch(),data=await response.json();data.sources.deviceRetentionFacts.cohorts[0].records[0].activated++;await route.fulfill({response,json:data});});
   await open();await p.reload();await ready();check(await p.evaluate(()=>metric(43).availability==='pending'&&metric(41).kind==='rate'),'Invalid source falls back to old aggregates or breaks other C metrics');
   check(await p.locator('.device-retention-heatmap').count()===0&&(await p.locator('#metric-evidence-43').innerText()).includes('待核验'),'Invalid source still plots retained stale cohort values');
-  await p.unroute('**/data/device-retention-facts.json*');await p.reload();await ready();check(await p.evaluate(()=>metric(43).value.D30.numerator)===1450,'Source repair fails to recover retention');
+  await p.unroute('**/data/route-C.json*');await p.reload();await ready();check(await p.evaluate(()=>metric(43).value.D30.numerator)===1450,'Source repair fails to recover retention');
   // New source stays usable even if the deferred chart library never becomes ready.
   let releaseLibrary;const libraryGate=new Promise(resolve=>releaseLibrary=resolve);
   await p.route('**/vendor/echarts.min.js*',async route=>{await libraryGate;await route.continue();});

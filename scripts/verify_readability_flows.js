@@ -13,13 +13,15 @@ async (parent) => {
     await settle();
   };
   const layout=()=>p.evaluate(()=>{
-    const nodes=[...document.querySelectorAll('.home-result,.detail-kpi,.income-evidence,.income-context,.heading-meta')];
+    const nodes=[...document.querySelectorAll('.home-result,.topic-metric,.topic-highlight,.evidence-card,.heading-meta')];
     return {overflow:document.documentElement.scrollWidth>innerWidth+1,
       clipped:nodes.filter(n=>n.scrollWidth>n.clientWidth+2).map(n=>n.className),
       evidenceWidth:document.querySelector('.income-evidence')?.getBoundingClientRect().width,
       titleWidth:document.querySelector('.page-heading>div:first-child')?.getBoundingClientRect().width,
       headingHeight:document.querySelector('h1').getBoundingClientRect().height,
-      columns:getComputedStyle(document.querySelector('.home-results')||document.querySelector('.detail-kpis')).gridTemplateColumns.split(' ').length,
+      homeResults:document.querySelectorAll('.home-result').length,
+      topicIds:[...document.querySelectorAll('.topic-metric')].map(n=>Number(n.dataset.metricId)),
+      expectedIds:topicGroups[location.hash.slice(2).split('?')[0]]?.flatMap(group=>group[1])||[],
       journeyColumns:document.querySelector('.journey-rail')&&getComputedStyle(document.querySelector('.journey-rail')).gridTemplateColumns.split(' ').length,
       chartMismatch:[chart,statusChart,...sparklines,...detailCharts].filter(instance=>instance&&!instance.isDisposed()&&instance.getDom().isConnected&&instance.getDom().clientWidth&&instance.getDom().clientHeight)
         .filter(instance=>Math.abs(instance.getWidth()-instance.getDom().clientWidth)>=1||Math.abs(instance.getHeight()-instance.getDom().clientHeight)>=1)
@@ -44,7 +46,8 @@ async (parent) => {
       for(const page of ['',...'ABCDEFG']) {
         await open(page);const state=await layout();
         check(!state.overflow&&!state.clipped.length&&!state.chartMismatch.length,`Normal desktop clipping: ${page} ${width} ${JSON.stringify(state)}`);
-        check(state.columns===4,`${page||'HOME'} loses normal four-card density at ${width}`);
+        if(!page)check(state.homeResults===4,'Home loses its four results');
+        else check(JSON.stringify([...state.topicIds].sort((a,b)=>a-b))===JSON.stringify([...state.expectedIds].sort((a,b)=>a-b)),`${page} hides or duplicates an overview metric`);
         if(!page)check(state.journeyColumns===6,'Normal desktop no longer shows six journey nodes in a row');
         states.push({page,width,scale:1,...state});
       }
@@ -54,7 +57,7 @@ async (parent) => {
       await open(page);await p.evaluate(size=>document.documentElement.style.fontSize=`${size}px`,size);await settle();
       const state=await layout();
       check(!state.overflow&&!state.clipped.length&&!state.chartMismatch.length,`Enlarged clipping: ${page} ${size} ${JSON.stringify(state)}`);
-      if(page)check(state.evidenceWidth>=700,'Enlarged evidence remains an unreadable narrow column');
+      if(page)check(state.topicIds.length===state.expectedIds.length,'Enlarged overview loses metrics');
       else check(state.titleWidth>=700&&state.headingHeight<80,'Enlarged home title is vertically squeezed');
       states.push({page,width:1366,scale:size/16,...state});
       await p.locator('.metric-search-trigger').focus();await p.locator('.sidebar-nav .nav-link').last().focus();await settle();
@@ -88,7 +91,7 @@ async (parent) => {
     check(sampleState.visible&&sampleState.focusRatio>=3&&sampleState.width>=2,'Trial sample keeps the low-contrast focus override');
     focus.push({selector:'trial sample',...sampleState});
     check(errors.length===0,errors.join('; '));
-    return {status:'PASS',states,focus,checks:['three desktop widths across HOME/A–G','normal four results and six nodes',
+    return {status:'PASS',states,focus,checks:['three desktop widths across HOME/A–G','home four results and six nodes; all configured topic metrics',
       '150/200 percent HTML text reflow across HOME/A–G','scrollable enlarged sidebar','nine light/dark keyboard focus targets',
       'registration and filter control boundaries','definition fit and Escape','chart size follows CSS reflow']};
   } finally {await context.close();}

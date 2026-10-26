@@ -13,6 +13,11 @@ async parent => {
      return {id,correct:+note.dataset.min===Math.min(...values)&&+note.dataset.max===Math.max(...values),fits:r.left>=card.left&&r.right<=card.right&&note.scrollWidth<=note.clientWidth+1,text:note.textContent};
     }));
     if (!ranges.length || ranges.some(r=>!r.correct||!r.fits||/undefined|NaN/.test(r.text))) throw Error('Invalid trend range '+JSON.stringify(ranges));
+    const domains = await page.evaluate(() => [...document.querySelectorAll('.topic-sparkline')].map(box => {
+     const history = metricHistory(Number(box.dataset.metricId)), domain = box.nextElementSibling;
+     return domain?.classList.contains('topic-time-domain') && domain.textContent === history.labels[0]+' → '+history.labels.at(-1)+history.labels.length+'个观测点';
+    }));
+    if (domains.some(ok=>!ok)) throw Error('Overview trend domain differs from source labels');
     const markers = await page.evaluate(() => [...document.querySelectorAll('.topic-sparkline-marker')].map(marker => {
      const rect = marker.getBoundingClientRect(), svg = marker.parentElement.querySelector('svg'), matrix = svg.getScreenCTM();
      const vertices = [...svg.querySelector('path').getAttribute('d').matchAll(/[ML]([\d.]+),([\d.]+)/g)].map(m => new DOMPoint(+m[1], +m[2]).matrixTransform(matrix));

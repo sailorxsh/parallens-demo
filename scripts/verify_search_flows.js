@@ -29,6 +29,7 @@ async (page) => {
       check((await lookup('')).length===53,'An empty query does not expose all metrics');
       for(const [query,id] of [['DAU',25],['日活',25],['WAU',25],['周活',25],['月活',25],
         ['多设备主账号占比',48],['当前绑定设备',8],['上传成功率',46],['直播成功率',46],['推送成功率',46],
+        ['直播使用率',27],['事件回看使用率',27],['AI识别查看使用率',27],['通知配置',27],['7日回绑',51],['30日回绑',51],['支付失败率',18],['活跃来源',30],['会话时长 P90',26],['激活耗时 P90',13],['绑定耗时 P90',11],
         ['事件丢失率',54],['ID映射覆盖率',54],['＃２５',25],['dau 活跃',25],['退订',23],['设备离线',52]]) {
         check((await lookup(query)).includes(id),`Missing visible metric or subitem: ${query}`);
         check(!await dialog.evaluate(node=>node.scrollWidth>node.clientWidth+1),`Search overflows at ${width}: ${query}`);
@@ -39,6 +40,7 @@ async (page) => {
       check((await lookup('DAU')).length===1,'DAU matches unrelated metrics');
       for(const query of ['#3','#03','＃３'])check((await lookup(query)).join(',')==='3',`Explicit metric ID matches other IDs: ${query}`);
       check((await lookup('#30')).join(',')==='30'&&(await lookup('#3 #30')).length===0,'Explicit metric IDs are ambiguous');
+      check((await lookup('支付失败率')).join(',')==='18'&&(await p.locator('.metric-search-alias').innerText()).includes('非全站支付'),'Payment alias loses trial cohort scope');
       await lookup('DAU');
       check((await p.locator('.metric-search-alias').innerText()).includes('DAU'),'Alias lookup does not explain the catalog result');
       await dialog.screenshot({path:`output/playwright/v48-search-dau-${width}.png`});
@@ -71,6 +73,18 @@ async (page) => {
     check((await lookup('直播成功率')).includes(46),'A selected function hides another searchable subitem');
     check((await lookup('MRR')).join(',')==='3','Original MRR search changed');
     check((await lookup('DAU MRR')).length===0,'Terms are matched across different metrics');
+    // Exact feature names are explicit destinations; generic discovery retains its scope.
+    await p.keyboard.press('Escape');
+    for(const [query,start,target] of [['直播使用率','Recognition','Live'],['事件回看使用率','Recognition','Playback'],['ai识别查看使用率','Playback','Recognition'],['核心功能使用率','Recognition','Recognition']]) {
+      await p.goto(`${base}#/B?metric=27&country=US&functionType=${start}`);
+      await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
+      const previous=p.url();await p.locator('#open-metric-search').click();await lookup(query);
+      if(query!=='核心功能使用率')check((await p.locator('.metric-search-alias').innerText()).includes('仅切换所看功能'),'Explicit feature target is not explained before navigation');
+      await p.keyboard.press('Enter');await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
+      check(await p.evaluate(target=>featureUsageProjection().functionType===target&&filterState.country==='US',target),'Feature lookup enters the wrong function or loses country');
+      await p.goBack();await p.waitForFunction(()=>lastRenderedHash===location.hash&&document.querySelector('#main[aria-busy=false]'));
+      check(p.url()===previous,'Feature lookup cannot restore the original scope');
+    }
     check(errors.length===0,`Runtime errors: ${errors.join('; ')}`);
     return {status:'PASS',checks:['visible metric names and independent subitems','original names and abbreviations',
       'full-width numbers and multiple terms','three desktop sizes','alias explanations','keyboard open/select/dismiss',

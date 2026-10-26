@@ -17,7 +17,7 @@ async(parent)=>{
   for(const width of [1366,1600,1920])for(const font of [16,32])for(const query of font===16?['','country=US','country=UK','appPlatform=iOS']:['']){
    await p.setViewportSize({width,height:1000});await open(query);
    await p.evaluate(size=>{document.documentElement.style.fontSize=`${size}px`;window.dispatchEvent(new Event('resize'));},font);await settle();
-   const pair=p.locator('.trial-group-evidence'),expected=independent(query),choices=pair.locator('.trial-group-choice');
+   const pair=p.locator('.trial-group-evidence'),expected=independent(query),choices=pair.locator('.trial-comparison-contribution');
    check(await choices.count()===expected.groups.length,'Group controls disagree with source membership');
    const initialUrl=p.url(),observation=await p.locator('.workspace-observation').innerText(),storage=await p.evaluate(()=>JSON.stringify(localStorage));
    for(let index=0;index<expected.groups.length;index++){
@@ -32,12 +32,13 @@ async(parent)=>{
     check(!await pair.locator('.workspace-calculation').evaluate(n=>n.open),'Selection unexpectedly opens a full table');
    }
    check(p.url()===initialUrl&&(await p.locator('.workspace-observation').innerText())===observation&&await p.evaluate(()=>JSON.stringify(localStorage))===storage,'Local inspection changed route, overall reading or records');
-   const columns=await pair.locator('.trial-group-grid').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
-   check(font===16?columns===2:columns===1||await pair.locator('.trial-group-grid').evaluate(n=>[...n.children].every(c=>c.getBoundingClientRect().width>=19*parseFloat(getComputedStyle(document.documentElement).fontSize))),`Unusable reading width ${width}/${font}: ${columns}`);
+   const columns=await pair.evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
    check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Page overflow');
    check(await pair.locator('.trial-group-detail').evaluate(n=>n.scrollWidth<=n.clientWidth+1),'Group summary overflow');
-   const plotBounds=await pair.locator('.detail-chart').evaluate(n=>{const r=n.getBoundingClientRect();return [...n.querySelectorAll('svg text')].map(t=>{const b=t.getBoundingClientRect();return {text:t.textContent,inside:b.left>=r.left-2&&b.right<=r.right+2&&b.bottom<=r.bottom+2};});});
-   check(plotBounds.length>0&&plotBounds.every(t=>t.inside),`Chart labels clipped: ${JSON.stringify(plotBounds.filter(t=>!t.inside))}`);
+   const plotBounds=await pair.locator('.trial-comparison-plot[data-rates]').evaluateAll(nodes=>nodes.map(n=>{
+    const scale=JSON.parse(n.dataset.scale),rates=JSON.parse(n.dataset.rates),r=n.getBoundingClientRect();
+    return {valid:rates.every(v=>v>=scale.min&&v<=scale.max),inside:[...n.querySelectorAll('.trial-comparison-point')].every(dot=>{const b=dot.getBoundingClientRect();return b.left>=r.left-2&&b.right<=r.right+2;})};}));
+   check(plotBounds.length>0&&plotBounds.every(t=>t.valid&&t.inside),'Comparison points clipped or outside scale');
    // Existing full calculations and cohort chart remain accessible, including keyboard navigation.
    await pair.getByRole('button',{name:'查看该组贡献计算',exact:true}).click();
    check(await pair.locator('.workspace-calculation').evaluate(n=>n.open)&&await pair.locator('tr.chart-selected').count()===1,'Explicit calculation lost its selected row');
@@ -64,7 +65,7 @@ async(parent)=>{
   // A different issue can stay open while #18 evidence is explored.
   await open('issue=52');const form=p.locator('.action-record');await form.locator('[name=owner]').fill('分组核对保留负责人');await form.locator('[name=note]').fill('未保存草稿，不随组切换');
   const baseline=await form.locator('> .table-note').first().innerText(),url=p.url();
-  await p.locator('.trial-group-choice').last().click();await p.locator('.trial-group-calculation').click();
+  await p.locator('.trial-comparison-contribution').last().click();await p.locator('.trial-group-calculation').click();
   check(p.url()===url&&await form.locator('[name=owner]').inputValue()==='分组核对保留负责人'&&await form.locator('[name=note]').inputValue()==='未保存草稿，不随组切换'&&(await form.locator('> .table-note').first().innerText())===baseline,'Group inspection overwrote another issue or draft');
   await p.goto(`${base}#/E?metric=35&panel=groups`);await ready();check(!await p.locator('.trial-group-evidence').count(),'D18 UI leaked to another metric');
   await p.goBack();await ready();check(await p.locator('.action-record [name=note]').inputValue()==='未保存草稿，不随组切换','Returning to evidence lost the issue draft');

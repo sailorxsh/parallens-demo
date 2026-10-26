@@ -9,7 +9,7 @@ async(parent)=>{
   {name:'mixed',counts:[200,236]},{name:'unchanged',counts:[194,256]},{name:'small-opposing',counts:[195,255]},
   {name:'small-increase',counts:[195,256]},{name:'small-decline',counts:[194,255]}];
  let fixture;
- const section=()=>p.locator('#D-panel-groups .evidence-pair').filter({has:p.getByRole('heading',{name:'转正率变化 · 互斥分组贡献',exact:true})});
+ const section=()=>p.locator('.trial-comparison-contributions');
  const recordsFor=item=>{
   const data=structuredClone(original);
   for(const week of [10,11,12])for(const [group,matches] of [target,r=>!target(r)].entries()){
@@ -25,34 +25,32 @@ async(parent)=>{
   return [target,r=>!target(r)].map(matches=>(count(periods[1].filter(matches))/periods[1].length-count(periods[0].filter(matches))/periods[0].length)*100);
  };
  try{
-  await p.route('**/data/trial-facts.json',route=>route.fulfill({json:fixture}));
+  await p.route('**/data/route-D.json*',async route=>{const payload=JSON.parse(fs.readFileSync('data/route-D.json','utf8'));payload.sources.trialFacts=fixture;await route.fulfill({json:payload});});
   for(const [width,font] of [[1366,16],[1600,16],[1920,16],[1366,32]])for(const item of cases){
    await p.setViewportSize({width,height:1000});fixture=recordsFor(item);const values=expected(fixture);
-   await p.goto('about:blank');await p.goto(`${base}#/D?metric=18&panel=groups`);await section().locator('svg').waitFor();
+   await p.goto('about:blank');await p.goto(`${base}#/D?metric=18&panel=groups`);await section().waitFor();
    await p.evaluate(font=>document.documentElement.style.fontSize=`${font}px`,font);
    await section().scrollIntoViewIfNeeded();await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-   const state=await section().locator('.detail-chart').evaluate(n=>{
-    const c=echarts.getInstanceByDom(n),o=c.getOption(),axis=o.yAxis[0],r=n.getBoundingClientRect();
-    const tickValues=Array.from({length:Math.round((axis.max-axis.min)/axis.interval)+1},(_,i)=>axis.min+i*axis.interval);
-    const ticks=tickValues.map(v=>axis.axisLabel.formatter(v)),pixels=tickValues.map(v=>c.convertToPixel({yAxisIndex:0},v));
-    return {values:o.series[0].data.map(d=>d.value),colors:o.series[0].data.map(d=>d.itemStyle.color),min:axis.min,max:axis.max,step:axis.interval,ticks,pixels,
-     text:n.textContent,clipped:[...n.querySelectorAll('svg text')].filter(t=>{const b=t.getBoundingClientRect();return b.x<r.x-1||b.right>r.right+1||b.y<r.y-1||b.bottom>r.bottom+1;}).map(t=>t.textContent)};
+   const state=await section().evaluate(n=>{
+    const min=Number(n.dataset.min),max=Number(n.dataset.max),rows=[...n.querySelectorAll('[data-contribution]')];
+    return {min,max,values:rows.map(b=>Number(b.dataset.contribution)),text:n.textContent,tracks:rows.map(b=>({value:Number(b.dataset.contribution),left:parseFloat(b.querySelector('.trial-comparison-bar').style.left),width:parseFloat(b.querySelector('.trial-comparison-bar').style.width),overflow:b.scrollWidth>b.clientWidth+1}))};
    });
-   check(state.values.every((v,i)=>Math.abs(v-values[i])<1e-8),'Plotted contribution differs from raw outcome records');
+   check(state.values.every((v,i)=>Math.abs(v-values[i])<1e-8),`Plotted contribution differs from raw outcome records (${item.name}: ${state.values} versus ${values})`);
    const significant=values.map(v=>Math.abs(v)<1e-10?0:v);
    check(state.min<=Math.min(0,...significant)&&state.max>=Math.max(0,...significant)&&state.max>state.min,'Axis excludes zero or clips a contribution');
    if(significant.every(v=>v<=0)&&significant.some(v=>v<0))check(state.max===0,'Negative-only data reserves an unused positive range');
    if(significant.every(v=>v>=0))check(state.min===0,'Nonnegative data reserves an unused negative range');
    if(significant.some(v=>v<0)&&significant.some(v=>v>0))check(state.min<0&&state.max>0,'Mixed data hides one direction');
-   check(new Set(state.ticks).size===state.ticks.length,'Distinct tick values have identical rounded labels');
-   if(['small-increase','small-decline'].includes(item.name))check(state.text.includes('0.05pp'),'Actual SVG omits the distinct 0.05-point tick');
-   check(state.pixels.slice(2).every((value,i)=>Math.abs((value-state.pixels[i+1])-(state.pixels[1]-state.pixels[0]))<1e-6),'Positive and negative values use unequal distance per unit');
-   check(!state.clipped.length,'Actual SVG labels are clipped: '+state.clipped.join(','));
+   for(const t of state.tracks){const origin=(0-state.min)/(state.max-state.min)*100,pos=(t.value-state.min)/(state.max-state.min)*100;
+    // CSSOM serializes percentage values to limited decimal precision; 0.0001% is below 0.002px at desktop widths.
+    check(Math.abs(t.left-Math.min(origin,pos))<1e-4&&Math.abs(t.width-Math.abs(pos-origin))<1e-4,`Signed contribution uses nonuniform distance or wrong direction (${item.name}: ${JSON.stringify(t)} expected ${Math.min(origin,pos)},${Math.abs(pos-origin)})`);
+    check(!t.overflow,'Contribution label overflows');}
+   if(['small-increase','small-decline'].includes(item.name))check(values.filter(v=>Math.abs(v)>1e-10).every(v=>state.text.includes(`${v.toFixed(2)} pp`)),'Small contribution rounded away');
    check(!await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),'Contribution introduces page overflow');
-   if(item.name==='unchanged')check(state.colors.every(color=>color==='#718078'),'Stable contributions acquire an increase/decrease encoding');
+   if(item.name==='unchanged')check(state.tracks.every(t=>t.width<1e-8),'Stable contribution has a nonzero bar');
    if(width===1600&&['decline','mixed','small-increase'].includes(item.name))await p.screenshot({path:`output/playwright/trial-axis-${browser.browserType().name()}-${item.name}.png`});
    states.push({fixture:item.name,width,font,...state});
   }
-  check(!errors.length,errors.join('; '));return {status:'PASS',states,checks:['32 valid source fixtures/layout states','independent contribution values','zero retained and one-sided data uses its own direction','mixed positive/negative values preserved','uniform distance per unit','distinct tick precision including actual 0.05-point SVG tick','neutral stable outcome','actual SVG bounds and page overflow']};
+  check(!errors.length,errors.join('; '));return {status:'PASS',states,checks:['32 valid source fixtures/layout states','independent contribution values','zero retained and one-sided data uses its own direction','mixed positive/negative values preserved','uniform distance per unit','small contribution labels retain precision','stable outcome has zero-length bar','contribution row and page overflow']};
  }finally{await context.close();}
 }
