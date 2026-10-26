@@ -7,3 +7,7 @@ scripts/__pycache__/
 /round*.png
 /.playwright-cli/
 /output/playwright/
+
+# Local process documents and generated validation output
+/design-qa.md
+/data/validation-report.json
